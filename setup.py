@@ -7,7 +7,7 @@ except IOError:
     long_desc = 'This is a way to add the ability to set and test permissions by model and assign permissions to individual users and groups'
 
 try:
-    version = objectpermissions.get_version()
+    version = object_permissions.VERSION
 except ImportError:
     version = ''
 
