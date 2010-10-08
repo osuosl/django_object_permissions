@@ -1,11 +1,44 @@
-## Example of how to use the rapi client
-#  This is just a placeholder for now.
-# TODO Write real README file explaining project and list resources for more
-#  information
-import client
+========================================
+Django Object Permissions 
+========================================
 
-HOSTNAME = 'ganeti-test.osuosl.bak'
+This is an implementation of Object Permissions, a.k.a. row level permissions.
+Object Permissions allow you to assign a permission to an instance of any
+Model in your django project.  This app provides a authentication backend
+that works with Django >= 1.2.
 
-curl_config = client.GenericCurlConfig()
-rapi_client = client.GanetiRapiClient(HOSTNAME, curl_config_fn=curl_config)
-print rapi_client.GetVersion();
+This specific implementation includes the ability to assign permissions to
+Users and UserGroups.  Later versions may include the ability to create
+PermissionGroups and ObjectPermissionGroups
+
+
+----------------------------------------
+Installation
+----------------------------------------
+
+a) run setup.py to install
+b) copy object_permissions into your django project
+
+
+
+----------------------------------------
+Configuring Your Django Project
+----------------------------------------
+1) Add "object_permissions" to INSTALLED_APPS
+2) run ./manage.py syncdb
+3) add object_permissions.urls to urls if you wish to add views for editing user_groups
+
+
+
+----------------------------------------
+Using Object Permissions
+----------------------------------------
+from object_permissions import *
+
+register('permission', Model)
+user.grant('permission', object)
+user.revoke('permission', object)
+user.has_perm('permission', object)
+
+group.grant('permission', object)
+group.revoke('permission', object)
