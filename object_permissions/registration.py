@@ -11,7 +11,7 @@ import object_permissions
 __all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
                'get_user_perms', 'get_group_perms', 'get_model_perms', \
                'revoke_all', 'revoke_all_group', 'get_users', 'set_user_perms', \
-               'set_group_perms', 'get_groups')
+               'set_group_perms', 'get_groups', 'filter_on_perms')
 
 
 _DELAYED = []
@@ -203,6 +203,36 @@ def get_groups(object):
             object_permissions__object_id=object.id).distinct()
 
 
+def filter_on_perms(user, model, perms, **clauses):
+    """
+    Filters objects that the User has permissions on.  This includes any objects
+    the user has permissions based on belonging to a UserGroup.
+    
+    @param user: user who must have permissions
+    @param model: model on which to filter
+    @param perms: list of perms to match
+    @param clauses: additional clauses to be added to the queryset
+    @return a queryset of matching objects
+    """
+    ct = ContentType.objects.get_for_model(model)
+    
+    # permissions user has
+    ids = list(ObjectPermission.objects.filter(
+            user = user,
+            permission__content_type=ct,
+            permission__name__in=perms
+        ).values_list('object_id', flat=True))
+    
+    # permissions user's groups have
+    ids += list(GroupObjectPermission.objects.filter(
+            group__users = user,
+            permission__content_type=ct,
+            permission__name__in=perms
+        ).values_list('object_id', flat=True))
+    
+    return model.objects.filter(id__in=ids, **clauses)
+
+
 # register internal perms
 register('admin', UserGroup)
 
@@ -213,6 +243,7 @@ setattr(User, 'revoke', revoke)
 setattr(User, 'revoke_all', revoke_all)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
+setattr(User, 'filter_on_perms', filter_on_perms)
 
 setattr(UserGroup, 'grant', grant_group)
 setattr(UserGroup, 'revoke', revoke_group)

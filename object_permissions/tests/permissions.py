@@ -369,3 +369,46 @@ class TestModelPermissions(TestCase):
         self.assertEqual([u'Perm3'], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
     
+    def test_filter(self):
+        """
+        Test filtering objects
+        """
+        for perm in self.perms:
+            register(perm, Group)
+        
+        object2 = Group.objects.create(name='test2')
+        object2.save()
+        object3 = Group.objects.create(name='test3')
+        object3.save()
+        
+        user0.grant('Perm1', object0)
+        user0.grant('Perm2', object1)
+        user1.grant('Perm3', object2)
+        user1.grant('Perm4', object3)
+        
+        # retrieve single perm
+        self.assert_(object0 in user0.filter_on_perms(Group, ['Perm1']))
+        self.assert_(object1 in user0.filter_on_perms(Group, ['Perm2']))
+        self.assert_(object2 in user1.filter_on_perms(Group, ['Perm3']))
+        self.assert_(object3 in user1.filter_on_perms(Group, ['Perm4']))
+        
+        # retrieve multiple perms
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'])
+        self.assert_(object0 in query)
+        self.assert_(object1 in query)
+        self.assertEqual(2, query.count())
+        query = user1.filter_on_perms(Group, ['Perm1','Perm3', 'Perm4'])
+        self.assert_(object2 in query)
+        self.assert_(object3 in query)
+        self.assertEqual(2, query.count())
+        
+        # retrieve no results
+        query = user0.filter_on_perms(Group, ['Perm3'])
+        self.assertEqual(0, query.count())
+        query = user1.filter_on_perms(Group, ['Perm1'])
+        self.assertEqual(0, query.count())
+        
+        # extra kwargs
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        self.assert_(object0 in query)
+        self.assertEqual(1, query.count())

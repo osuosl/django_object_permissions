@@ -239,8 +239,8 @@ class TestUserGroups(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        group0 = self.test_save(name='TestGroup0')
-        group1 = self.test_save(name='TestGroup1')
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
         
         for perm in perms:
             register(perm, Group)
@@ -277,8 +277,8 @@ class TestUserGroups(TestCase):
         """
         Test setting perms to an exact set
         """
-        group0 = self.test_save(name='TestGroup0')
-        group1 = self.test_save(name='TestGroup1')
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
         perms1 = self.perms
         perms2 = ['Perm1', 'Perm2']
         perms3 = ['Perm2', 'Perm3']
@@ -341,8 +341,8 @@ class TestUserGroups(TestCase):
         """
         Tests retrieving list of UserGroups with perms on an object
         """
-        group0 = self.test_save(name='TestGroup0')
-        group1 = self.test_save(name='TestGroup1')
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
         
         for perm in self.perms:
             register(perm, Group)
@@ -355,6 +355,62 @@ class TestUserGroups(TestCase):
         self.assert_(group0 in get_groups(object1))
         self.assert_(group1 in get_groups(object1))
         self.assert_(len(get_groups(object1))==2)
+    
+    def test_filter(self):
+        """
+        Test filtering objects
+        """
+        for perm in self.perms:
+            register(perm, Group)
+        
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
+        
+        object2 = Group.objects.create(name='test2')
+        object2.save()
+        object3 = Group.objects.create(name='test3')
+        object3.save()
+        object4 = Group.objects.create(name='test4')
+        object4.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
+        group1.grant('Perm3', object2)
+        group1.grant('Perm4', object3)
+        user0.grant('Perm4', object4)
+        
+        # retrieve single perm
+        self.assert_(object0 in user0.filter_on_perms(Group, ['Perm1']))
+        self.assert_(object1 in user0.filter_on_perms(Group, ['Perm2']))
+        self.assert_(object2 in user1.filter_on_perms(Group, ['Perm3']))
+        self.assert_(object3 in user1.filter_on_perms(Group, ['Perm4']))
+        
+        # retrieve multiple perms
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'])
+        self.assert_(object0 in query)
+        self.assert_(object1 in query)
+        self.assertEqual(2, query.count())
+        query = user1.filter_on_perms(Group, ['Perm1', 'Perm3', 'Perm4'])
+        self.assert_(object2 in query)
+        self.assert_(object3 in query)
+        self.assertEqual(2, query.count())
+        
+        # mix of group and users
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm4'])
+        self.assert_(object0 in query)
+        self.assert_(object4 in query)
+        self.assertEqual(2, query.count())
+        
+        # retrieve no results
+        query = user0.filter_on_perms(Group, ['Perm3'])
+        self.assertEqual(0, query.count())
+        query = user1.filter_on_perms(Group, ['Perm1'])
+        self.assertEqual(0, query.count())
+        
+        # extra kwargs
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        self.assert_(object0 in query)
+        self.assertEqual(1, query.count())
     
 class TestUserGroupViews(TestCase):
     perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
