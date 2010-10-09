@@ -22,6 +22,13 @@ class TestModelPermissions(TestCase):
         self.object0.save()
         self.object1 = Group.objects.create(name='test1')
         self.object1.save()
+        
+        dict_ = globals()
+        dict_['user0']=self.user0
+        dict_['user1']=self.user1
+        dict_['object0']=self.object0
+        dict_['object1']=self.object1
+        dict_['perms']=self.perms
     
     def tearDown(self):
         Group.objects.all().delete()
@@ -39,13 +46,10 @@ class TestModelPermissions(TestCase):
             * PermissionType must be unique
             * Granted Permissions must be unique to user/object combinations
         """
-        user = self.user0
-        object = self.object0
-        ct = ContentType.objects.get_for_model(object)
-        
+        ct = ContentType.objects.get_for_model(object0)
         pt = ObjectPermissionType(name='Perm1', content_type=ct)
         pt.save()
-        ObjectPermission(user=user, object_id=object.id, permission=pt).save()
+        ObjectPermission(user=user0, object_id=object0.id, permission=pt).save()
         
         try:
             ObjectPermissionType(name='Perm1', content_type=ct).save()
@@ -54,7 +58,7 @@ class TestModelPermissions(TestCase):
             pass
         
         try:
-            ObjectPermission(user=user, object_id=object.id, permission=pt).save()
+            ObjectPermission(user=user0, object_id=object0.id, permission=pt).save()
             self.fail('Integrity Error not raised for duplicate ObjectPermission')
         except IntegrityError:
             pass
@@ -90,11 +94,6 @@ class TestModelPermissions(TestCase):
               combinations
             * granting unknown permission raises error
         """
-        user0 = self.user0
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        
         for perm in self.perms:
             register(perm, Group)
         
@@ -160,12 +159,6 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        user0 = self.user0
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        perms = self.perms
-        
         for perm in perms:
             register(perm, Group)
             grant(user0, perm, object0)
@@ -224,12 +217,6 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        user0 = self.user0
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        perms = self.perms
-        
         for perm in perms:
             register(perm, Group)
             grant(user0, perm, object0)
@@ -318,27 +305,19 @@ class TestModelPermissions(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        user = self.user0
-        object = self.object0
-        
         for perm in self.perms:
             register(perm, Group)
-        grant(user, 'Perm1', object)
+        grant(user0, 'Perm1', object0)
         
-        self.assertTrue(user.has_perm('Perm1', object))
-        self.assertFalse(user.has_perm('Perm1', None))
-        self.assertFalse(user.has_perm('DoesNotExist'), object)
-        self.assertFalse(user.has_perm('Perm2', object))
+        self.assertTrue(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', None))
+        self.assertFalse(user0.has_perm('DoesNotExist'), object0)
+        self.assertFalse(user0.has_perm('Perm2', object0))
     
     def test_get_users(self):
         """
         Tests retrieving list of users with perms on an object
         """
-        user0 = self.user0
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        
         for perm in self.perms:
             register(perm, Group)
         grant(user0, 'Perm1', object0)
@@ -352,11 +331,6 @@ class TestModelPermissions(TestCase):
         self.assert_(len(get_users(object1))==2)
     
     def test_get_user_permissions(self):
-        user0 = self.user0
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        
         for perm in self.perms:
             register(perm, Group)
         
