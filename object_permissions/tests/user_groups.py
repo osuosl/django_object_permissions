@@ -22,18 +22,24 @@ class TestUserGroups(TestCase):
         User(id=1, username='anonymous').save()
         settings.ANONYMOUS_USER_ID=1
         
-        self.user = User(id=2, username='tester0')
-        self.user.set_password('secret')
-        self.user.save()
-        self.user1 = User(id=3, username='tester1')
-        self.user1.set_password('secret')
-        self.user1.save()
+        user0 = User(id=2, username='tester0')
+        user0.set_password('secret')
+        user0.save()
+        user1 = User(id=3, username='tester1')
+        user1.set_password('secret')
+        user1.save()
         
+        object0 = Group.objects.create(name='test0')
+        object0.save()
+        object1 = Group.objects.create(name='test1')
+        object1.save()
         
-        self.object0 = Group.objects.create(name='test0')
-        self.object0.save()
-        self.object1 = Group.objects.create(name='test1')
-        self.object1.save()
+        dict_ = globals()
+        dict_['user0']=user0
+        dict_['user1']=user1
+        dict_['object0']=object0
+        dict_['object1']=object1
+        dict_['perms']=self.perms
         
         # XXX specify permission manually, it is not auto registering for some reason
         register('admin', UserGroup)
@@ -59,17 +65,14 @@ class TestUserGroups(TestCase):
             * group name is unique
             * Granted Permissions must be unique to UserGroup/object combinations
         """
-        user = self.user
-        object = self.object0
-        ct = ContentType.objects.get_for_model(object)
-        
+        ct = ContentType.objects.get_for_model(object0)
         pt = ObjectPermissionType(name='Perm1', content_type=ct)
         pt.save()
         
         group = UserGroup(name='TestGroup')
         group.save()
         
-        GroupObjectPermission(group=group, object_id=object.id, permission=pt).save()
+        GroupObjectPermission(group=group, object_id=object0.id, permission=pt).save()
         
         try:
             UserGroup(name='TestGroup').save()
@@ -78,15 +81,19 @@ class TestUserGroups(TestCase):
             pass
         
         try:
-            GroupObjectPermission(group=group, object_id=object.id, permission=pt).save()
+            GroupObjectPermission(group=group, object_id=object0.id, permission=pt).save()
             self.fail('Integrity Error not raised for duplicate GroupObjectPermission')
         except IntegrityError:
             pass
 
-    def test_save(self, name='test'):
+    def test_save(self, name='test', user=None):
         """ Test saving an UserGroup """
         group = UserGroup(name=name)
         group.save()
+        
+        if user:
+            group.users.add(user)
+        
         return group
     
     def test_permissions(self):
@@ -103,18 +110,8 @@ class TestUserGroups(TestCase):
               combinations
             * granting unknown permission raises error
         """
-        user0 = self.user
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        
-        group0 = UserGroup(name='TestGroup0')
-        group0.save()
-        group0.users.add(user0)
-        
-        group1 = UserGroup(name='TestGroup1')
-        group1.save()
-        group1.users.add(user1)
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         for perm in self.perms:
             register(perm, Group)
@@ -181,17 +178,8 @@ class TestUserGroups(TestCase):
             * revoking property UserGroup does not have does not give an error
             * revoking unknown permission raises error
         """
-        user0 = self.user
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        
-        group0 = self.test_save(name='TestGroup0')
-        group0.users.add(user0)
-        
-        group1 = self.test_save(name='TestGroup1')
-        group1.users.add(user1)
-        perms = self.perms
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         for perm in perms:
             register(perm, Group)
@@ -251,13 +239,8 @@ class TestUserGroups(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        user0 = self.user
-        user1 = self.user1
         group0 = self.test_save(name='TestGroup0')
         group1 = self.test_save(name='TestGroup1')
-        object0 = self.object0
-        object1 = self.object1
-        perms = self.perms
         
         for perm in perms:
             register(perm, Group)
@@ -296,9 +279,6 @@ class TestUserGroups(TestCase):
         """
         group0 = self.test_save(name='TestGroup0')
         group1 = self.test_save(name='TestGroup1')
-        object0 = self.object0
-        object1 = self.object1
-        
         perms1 = self.perms
         perms2 = ['Perm1', 'Perm2']
         perms3 = ['Perm2', 'Perm3']
@@ -346,31 +326,23 @@ class TestUserGroups(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        user = self.user
-        group = UserGroup(name='TestGroup')
-        group.save()
-        group.users.add(user)
-        object = self.object0
+        group = self.test_save('TestGroup0', user0)
         
         for perm in self.perms:
             register(perm, Group)
-        group.grant('Perm1', object)
+        group.grant('Perm1', object0)
         
-        self.assertTrue(user.has_perm('Perm1', object))
-        self.assertFalse(user.has_perm('Perm1', None))
-        self.assertFalse(user.has_perm('DoesNotExist'), object)
-        self.assertFalse(user.has_perm('Perm2', object))
+        self.assertTrue(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', None))
+        self.assertFalse(user0.has_perm('DoesNotExist'), object0)
+        self.assertFalse(user0.has_perm('Perm2', object0))
     
     def test_get_groups(self):
         """
         Tests retrieving list of UserGroups with perms on an object
         """
-        group0 = UserGroup(name='TestGroup0')
-        group0.save()
-        group1 = UserGroup(name='TestGroup1')
-        group1.save()
-        object0 = self.object0
-        object1 = self.object1
+        group0 = self.test_save(name='TestGroup0')
+        group1 = self.test_save(name='TestGroup1')
         
         for perm in self.perms:
             register(perm, Group)
