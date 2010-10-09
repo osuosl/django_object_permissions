@@ -13,7 +13,8 @@ class ObjectPermissionType(models.Model):
 
 class ObjectPermission(models.Model):
     user = models.ForeignKey(User, related_name='object_permissions')
-    permission = models.ForeignKey(ObjectPermissionType)
+    permission = models.ForeignKey(ObjectPermissionType, \
+                                   related_name='object_permissions')
     object_id = models.PositiveIntegerField()
     
     class Meta:
@@ -36,7 +37,8 @@ class UserGroup(models.Model):
 
 class GroupObjectPermission(models.Model):
     group = models.ForeignKey(UserGroup, related_name='object_permissions')
-    permission = models.ForeignKey(ObjectPermissionType)
+    permission = models.ForeignKey(ObjectPermissionType, \
+                                   related_name='group_object_permissions')
     object_id = models.PositiveIntegerField()
     
     class Meta:
