@@ -82,13 +82,13 @@
 
 {% block content %}
 
-<h2>{{group.name}}</h2>
-<h2>Users<h2>
+<h1>{{group.name}}</h1>
 <div id="add_user" class="add">Add User</div>
 <table id="users">
     <tr>
         <th>Name</th>
         <th>Permissions</th>
+        <th></th>
     </tr>
     {% for user in group.users.all %}
         {% include "user_group/user_row.html" %}
