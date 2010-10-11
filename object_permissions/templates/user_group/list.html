@@ -80,9 +80,11 @@
 {% endblock %}
 
 {% block content %}
+    <h1>User Groups</h1>
+
     <div id="add_group" class="add">Add Group</div>
     <table id="groups">
-        <tr><th>Name</th></tr>
+        <tr><th>Name</th><th></th><th></th></tr>
         {% for group in groups %}
             {% include "user_group/group_row.html" %}
         {% endfor %}
