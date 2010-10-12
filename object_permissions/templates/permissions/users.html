@@ -97,7 +97,6 @@
                 html = $(responseText);
                 id = html.attr('id')
                 $row = $('#users #' + id);
-                console.log($row, id);
                 if ($row.length == 1) {
                     $row.replaceWith(html);
                 } else {
