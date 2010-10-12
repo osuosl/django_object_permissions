@@ -10,6 +10,14 @@
     <script type="text/javascript" src="{{MEDIA_URL}}/js/jquery.form.js"></script>
     <script type="text/javascript">
         $(document).ready(function() {
+            // unbind all functions, this ensures that they are never bound more
+            // than once.  This is a problem when using jquery ajax tabs
+            $('#add_user').unbind();
+            $('.ajax_form .submit').die();
+            $('.user .delete').die();
+            $('.group .delete').die();
+            $('.permissions').die();
+            
             // Add user button
             $('#add_user').click(function(){
                 $('.qtip').qtip('destroy');
