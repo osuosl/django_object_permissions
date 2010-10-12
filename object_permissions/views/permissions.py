@@ -1,7 +1,14 @@
-from django import forms
-from django.contrib.auth.models import User
+import json
 
-from object_permissions import get_user_perms, get_model_perms, grant, revoke
+from django import forms
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render_to_response
+from django.template import RequestContext
+
+from object_permissions import get_user_perms, get_group_perms, \
+    get_model_perms, grant, revoke, get_users, get_groups
 from object_permissions.models import UserGroup
 
 
@@ -79,3 +86,85 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
                 self._errors["permissions"] = self.error_class([msg])
         
         return data
+
+
+def view_users(request, object_, url, template='permissions/users.html'):
+    """
+    Generic view for rendering a list of Users who have permissions on an
+    object.
+    
+    This view does not perform any validation of user permissions, that should
+    be done in another view which calls this view for display
+    
+    @param request: HttpRequest
+    @param object: object to list Users and Groups for
+    @param url: base url for editing permissions
+    @param template: template for rendering User/Group list.
+    """
+    users = get_users(object_)
+    groups = get_groups(object_)
+    return render_to_response(template, \
+            {'object': object_,
+             'users':users,
+             'groups':groups,
+             'url':url}, \
+        context_instance=RequestContext(request),
+    )
+
+
+def view_permissions(request, object_, url, user_id=None, group_id=None,
+                key='id',
+                user_template='permissions/user_row.html',
+                group_template='permissions/group_row.html'
+                ):
+    """
+    Update a User or Group permissions on an object.  This is a generic view
+    intended to be used for editing permissions on any object.  It must be
+    configured with a model and url.  It may also be customized by adding custom
+    templates or changing the pk field.
+    
+    @param object: object permissions are being set on
+    @param url: name of url being edited
+    @param user_id: ID of User being edited
+    @param group_id: ID of Group being edited
+    @param user_template: template used to render user rows
+    @param group_template: template used to render group rows
+    """
+    if request.method == 'POST':
+        form = ObjectPermissionFormNewUsers(object_, request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            if form.update_perms():
+                # return html to replace existing user row
+                form_user = form.cleaned_data['user']
+                group = form.cleaned_data['group']
+                if form_user:
+                    return render_to_response(user_template, \
+                                        {'object':object_, 'user':form_user})
+                else:
+                    return render_to_response(group_template, \
+                                        {'object':object_, 'group':group})
+                
+            else:
+                # no permissions, send ajax response to remove user
+                return HttpResponse('0', mimetype='application/json')
+        
+        # error in form return ajax response
+        content = json.dumps(form.errors)
+        return HttpResponse(content, mimetype='application/json')
+
+    if user_id:
+        form_user = get_object_or_404(User, id=user_id)
+        data = {'permissions':get_user_perms(form_user, object_), \
+                'user':user_id}
+    elif group_id:
+        group = get_object_or_404(UserGroup, id=group_id)
+        data = {'permissions':get_group_perms(group, object_), \
+                'group':group_id}
+    else:
+        data = {}
+    form = ObjectPermissionFormNewUsers(object_, data)
+    return render_to_response('permissions/form.html', \
+                {'form':form, 'object':object_, 'user_id':user_id, \
+                'group_id':group_id, 'url':url}, \
+               context_instance=RequestContext(request))
