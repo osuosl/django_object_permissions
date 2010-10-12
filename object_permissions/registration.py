@@ -203,6 +203,37 @@ def get_groups(object):
             object_permissions__object_id=object.id).distinct()
 
 
+def perms_on_any(user, model, perms):
+    """
+    Determines whether the user has any of the listed perms on any instances of
+    the Model.  This checks both user permissions and group permissions.
+    
+    @param user: user who must have permissions
+    @param model: model on which to filter
+    @param perms: list of perms to match
+    @return true if has perms on any instance of model
+    """
+    ct = ContentType.objects.get_for_model(model)
+    
+    # permissions user has
+    if ObjectPermission.objects.filter(
+            user = user,
+            permission__content_type=ct,
+            permission__name__in=perms
+        ).exists():
+            return True
+    
+    # permissions user's groups have
+    if GroupObjectPermission.objects.filter(
+            group__users = user,
+            permission__content_type=ct,
+            permission__name__in=perms
+        ).exists():
+            return True
+    
+    return False
+
+
 def filter_on_perms(user, model, perms, **clauses):
     """
     Filters objects that the User has permissions on.  This includes any objects
@@ -244,6 +275,7 @@ setattr(User, 'revoke_all', revoke_all)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'filter_on_perms', filter_on_perms)
+setattr(User, 'perms_on_any', filter_on_perms)
 
 setattr(UserGroup, 'grant', grant_group)
 setattr(UserGroup, 'revoke', revoke_group)

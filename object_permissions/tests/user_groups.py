@@ -412,6 +412,42 @@ class TestUserGroups(TestCase):
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
+    def test_any(self):
+        """
+        Test checking if a user has perms on any instance of the model
+        """
+        for perm in self.perms:
+            register(perm, Group)
+        
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
+        
+        object2 = Group.objects.create(name='test2')
+        object2.save()
+        object3 = Group.objects.create(name='test3')
+        object3.save()
+        object4 = Group.objects.create(name='test4')
+        object4.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
+        group1.grant('Perm3', object2)
+        user0.grant('Perm4', object4)
+        
+        # check single perm
+        self.assert_(user0.perms_on_any(Group, ['Perm1']))
+        self.assert_(user0.perms_on_any(Group, ['Perm2']))
+        self.assert_(user1.perms_on_any(Group, ['Perm3']))
+        
+        # check multiple perms
+        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm4']))
+        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm2']))
+        self.assert_(user1.perms_on_any(Group, ['Perm3', 'Perm4']))
+        
+        # no results
+        self.assertFalse(user0.perms_on_any(Group, ['Perm3']))
+        self.assertFalse(user1.perms_on_any(Group, ['Perm4']))
+    
 class TestUserGroupViews(TestCase):
     perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
     
