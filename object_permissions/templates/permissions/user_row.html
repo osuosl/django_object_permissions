@@ -1,12 +1,17 @@
+
+
 {% load object_permission_tags %}
-<tr id="user_{{user.id}}">
-<td>{{user.username}}</td>
+<tr id="user_{{user.id}}" class="user">
+<td class="name">{{user.username}}</td>
 <td class="permissions">
+    <a href="{{url}}/user/{{user.id}}" class="permissions">
     {% for permission in user|permissions:object %}
         {{permission}}{%if not forloop.last%}, {%endif%}
     {% empty %}
     <i>None</i>
     {% endfor %}
+    </a>
 </td>
+{%block table_cells%}{%endblock%}
 <td><div class="delete"></div></td>
 </tr>

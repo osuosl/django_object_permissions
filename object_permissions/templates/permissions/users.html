@@ -75,8 +75,6 @@
                 });
                 return false;
             });
-            
-            {% block javascript_ready %}{%endblock%}
         });
         
         function update(responseText, statusText, xhr, $form) {
@@ -99,24 +97,23 @@
                 html = $(responseText);
                 id = html.attr('id')
                 $row = $('#users #' + id);
+                console.log($row, id);
                 if ($row.length == 1) {
-                    $row.replaceWith(html)
+                    $row.replaceWith(html);
                 } else {
                     $("#users").append(html);
                 }
             }
         }
-        
-        {% block javascript %}{%endblock%}
     </script>
+    {% block head %}{%endblock%}
 
 <div id="add_user" class="add">Add User</div>
 <table id="users">
     <tr>
         <th>Name</th>
         <th>Permissions</th>
-        {% block table_headers%}
-        {% endblock %}
+        {% block table_headers%}{% endblock %}
         <th></th>
     </tr>
     {% for user in users %}

@@ -1,13 +1,16 @@
 {% load object_permission_tags %}
 
-<tr id="group_{{group.id}}">
-<td>{{group.name}}</td>
+<tr id="group_{{group.id}}" class="group">
+<td class="name">{{group.name}}</td>
 <td class="permissions">
+    <a href="{{url}}/group/{{group.id}}" class="permissions">
     {% for permission in group|permissions:object %}
         {{permission}}{%if not forloop.last%}, {%endif%}
     {% empty %}
     <i>None</i>
     {% endfor %}
+    </a>
 </td>
+{%block table_cells%}{%endblock%}
 <td><div class="delete"></div></td>
 </tr>

@@ -140,10 +140,10 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
                 group = form.cleaned_data['group']
                 if form_user:
                     return render_to_response(user_template, \
-                                        {'object':object_, 'user':form_user})
+                                {'object':object_, 'user':form_user, 'url':url})
                 else:
                     return render_to_response(group_template, \
-                                        {'object':object_, 'group':group})
+                                {'object':object_, 'group':group, 'url':url})
                 
             else:
                 # no permissions, send ajax response to remove user
