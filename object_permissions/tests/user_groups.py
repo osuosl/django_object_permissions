@@ -457,6 +457,9 @@ class TestUserGroupViews(TestCase):
         """
         user = self.user
         group = self.test_save()
+        group0 = self.test_save(name='group1')
+        group1 = self.test_save(name='group2')
+        group2 = self.test_save(name='group3')
         c = Client()
         url = '/user_groups/'
         
@@ -465,26 +468,38 @@ class TestUserGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertTemplateUsed(response, 'registration/login.html')
         
-        # unauthorized user
+        # unauthorized user (user with admin on no groups)
         self.assert_(c.login(username=user.username, password='secret'))
         response = c.get(url)
         self.assertEqual(403, response.status_code)
         
         # authorized (permission)
-        # XXX need to implement permissions system for subset of UserGroups
-        # grant(user, '')
-        # response = c.get(url % (cluster.slug, vm.hostname))
-        # self.assertEqual(200, response.status_code)
-        # self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        # self.assertTemplateUsed(response, 'virtual_machine/detail.html')
+        user.grant('admin', group)
+        user.grant('admin', group1)
+        response = c.get(url)
+        self.assertEqual(200, response.status_code)
+        self.assertEquals('text/html; charset=utf-8', response['content-type'])
+        self.assertTemplateUsed(response, 'user_group/list.html')
+        groups = response.context['groups']
+        self.assert_(group in groups)
+        self.assert_(group1 in groups)
+        self.assertEqual(2, len(groups))
         
         # authorized (superuser)
+        user.revoke('admin', group0)
+        user.revoke('admin', group1)
         user.is_superuser = True
         user.save()
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'user_group/list.html')
+        groups = response.context['groups']
+        self.assert_(group in groups)
+        self.assert_(group0 in groups)
+        self.assert_(group1 in groups)
+        self.assert_(group2 in groups)
+        self.assertEqual(4, len(groups))
     
     def test_view_detail(self):
         """

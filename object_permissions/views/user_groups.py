@@ -57,10 +57,14 @@ def list(request):
     """
     List all user groups.
     """
-    if not request.user.is_superuser:
-        return HttpResponseForbidden()
+    user = request.user
+    if request.user.is_superuser:
+        groups = UserGroup.objects.all()
+    else:
+        groups = user.filter_on_perms(UserGroup, ['admin'])
+        if not groups:
+            return HttpResponseForbidden()
 
-    groups = UserGroup.objects.all()
     return render_to_response("user_group/list.html", \
                               {'groups':groups}, \
                               context_instance=RequestContext(request)) 
