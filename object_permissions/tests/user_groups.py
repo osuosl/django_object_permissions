@@ -463,7 +463,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.get(url, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized user
         self.assert_(c.login(username=user.username, password='secret'))
@@ -503,7 +503,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.get(url % args, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized user
         self.assert_(c.login(username=user.username, password='secret'))
@@ -536,7 +536,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.post(url % group.id, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized user
         self.assert_(c.login(username=user.username, password='secret'))
@@ -598,7 +598,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.post(url, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized user
         self.assert_(c.login(username=user.username, password='secret'))
@@ -654,7 +654,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.delete(url % group0.id, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized user
         self.assert_(c.login(username=user.username, password='secret'))
@@ -703,7 +703,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.get(url % args, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized
         self.assert_(c.login(username=user.username, password='secret'))
@@ -776,7 +776,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.get(url % args, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # invalid permissions
         self.assert_(c.login(username=user.username, password='secret'))
@@ -858,7 +858,7 @@ class TestUserGroupViews(TestCase):
         # anonymous user
         response = c.get(url % args, follow=True)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'login.html')
+        self.assertTemplateUsed(response, 'registration/login.html')
         
         # unauthorized
         self.assert_(c.login(username=user.username, password='secret'))
