@@ -15,7 +15,7 @@
             $('.qtip').qtip('destroy');
             $(this).qtip({
                 content: {
-                   url: '{{SITE_ROOT}}/user_group/{{group.id}}/user/add/',
+                   url: '{% url user_group-add-user group.id %}',
                    title: {text:'Add User', button:'close'},
                 },
                 position: {  corner:{target:'center', tooltip:'center'}},
@@ -34,7 +34,7 @@
         // Delete user button
         $('#users .delete').live("click", function() {
             id = this.parentNode.parentNode.id.substring(5);
-            $.post('/user_group/{{group.id}}/user/remove/', {'user':id},
+            $.post('{% url user_group-remove-user group.id %}', {'user':id},
                 function(code){
                     if(code==1) {$('#user_'+id).remove();}
                 }, "json");
@@ -46,7 +46,7 @@
             $('.qtip').qtip('destroy');
             $(this).qtip({
                 content: {
-                   url: "{{SITE_ROOT}}/user_group/{{group.id}}/user/?user="+id,
+                   url: "{% url user_group-user-permissions group.id %}?user="+id,
                    title: {text:'Permissions: '+id, button:'close'},
                 },
                 position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
@@ -81,8 +81,8 @@
 {% endblock %}
 
 {% block content %}
-
 <h1>{{group.name}}</h1>
+
 <div id="add_user" class="add">Add User</div>
 <table id="users">
     <tr>
