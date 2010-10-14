@@ -4,9 +4,6 @@
     <script type="text/javascript" src="{{MEDIA_URL}}/js/jquery.ajax.delete.js"></script>
     <script type="text/javascript" src="{{MEDIA_URL}}/js/jquery.form.js"></script>
     <script type="text/javascript">
-    
-        var edit_options =
-    
         $(document).ready(function() {
             // Add user button
             $('#add_group').click(function(){
@@ -26,10 +23,11 @@
             
             $('#groups .edit').click(function(){
                 $('.qtip').qtip('destroy');
-                id = this.parentNode.id.substring(6);
+                id = this.parentNode.parentNode.id.substring(6);
+                console.log(123, id);
                 $(this).qtip( {
                     content: {
-                       url: '{{SITE_ROOT}}/user_group/' + id,
+                       url: '{% url usergroup %}/'+id,
                        title: {text:'Add User', button:'close'},
                        method: "post",
                     },
@@ -48,8 +46,8 @@
             
             // Delete user button
             $('#groups .delete').live("click", function() {
-                id = this.parentNode.id.substring(6);
-                $.delete('/user_group/'+id,
+                id = this.parentNode.parentNode.id.substring(6);
+                $.delete('{% url usergroup %}/'+id,
                     function(code){
                         if(code==1) {$('#group_'+id).remove();}
                     }, "json");

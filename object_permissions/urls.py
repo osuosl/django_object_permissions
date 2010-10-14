@@ -4,9 +4,9 @@ from django.conf.urls.defaults import *
 
 urlpatterns = patterns('ganeti_webmgr.object_permissions.views.user_groups',
     # UserGroups
-    url(r'^user_groups/$', 'list', name="user_group-list"),
-    url(r'^user_group/?$', 'detail', name="user_group-add"),
-    url(r'^user_group/(?P<id>\d+)/?$', 'detail', name="user_group-detail"),
+    url(r'^user_groups/$', 'list', name="usergroup-list"),
+    url(r'^user_group/?$', 'detail', name="usergroup"),
+    url(r'^user_group/(?P<id>\d+)/?$', 'detail', name="usergroup-detail"),
     url(r'^user_group/(?P<id>\d+)/user/add/?$','add_user', name="usergroup-add-user"),
     url(r'^user_group/(?P<id>\d+)/user/remove/?$','remove_user', name="usergroup-remove-user"),
     url(r'^user_group/(?P<id>\d+)/permissions/?$','user_permissions', name="usergroup-permissions"),
