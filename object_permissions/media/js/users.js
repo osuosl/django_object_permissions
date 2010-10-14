@@ -19,9 +19,10 @@ $(document).ready(function() {
                title: {text:'Add User', button:'close'}
             },
             position: {  corner:{target:'center', tooltip:'center'}},
-            style: {name: 'blue', border:{radius:5}},
+            style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee'},
             show: {when:false, ready:true},
-            hide: {fixed: true, when:false}
+            hide: {fixed: true, when:false},
+            onShow:function(){console.log(123);}
         });
     });
     
@@ -69,11 +70,7 @@ $(document).ready(function() {
                title: {text:'Permissions: ', button:'close'}
             },
             position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
-            style: {name: 'blue',
-                    border:{radius:5},
-                    width:200,
-                    tip: 'bottomMiddle'
-                    },
+            style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee', tip: 'bottomMiddle'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false}
         });
