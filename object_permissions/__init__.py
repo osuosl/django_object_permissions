@@ -1,0 +1,1 @@
+from object_permissions.registration import *
