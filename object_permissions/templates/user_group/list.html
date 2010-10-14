@@ -84,7 +84,7 @@
 
     <div id="add_group" class="add">Add Group</div>
     <table id="groups">
-        <tr><th>Name</th><th></th><th></th></tr>
+        <tr><th>Name</th><th class="actions"></th></tr>
         {% for group in groups %}
             {% include "user_group/group_row.html" %}
         {% endfor %}
