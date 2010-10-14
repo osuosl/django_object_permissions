@@ -633,7 +633,7 @@ class TestUserGroupViews(TestCase):
         response = c.post(url % group.id, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/group_row.html')
+        self.assertTemplateUsed(response, 'user_group/group_row.html')
         group = UserGroup.objects.get(id=group.id)
         self.assertEqual('EDITED_NAME', group.name)
     
@@ -685,7 +685,7 @@ class TestUserGroupViews(TestCase):
         response = c.post(url, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/group_row.html')
+        self.assertTemplateUsed(response, 'user_group/group_row.html')
         self.assert_(UserGroup.objects.filter(name='ADD_NEW_GROUP').exists())
     
     def test_view_delete(self):
