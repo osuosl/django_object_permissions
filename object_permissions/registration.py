@@ -6,6 +6,7 @@ from django.db import models
 from models import ObjectPermission, ObjectPermissionType, UserGroup, \
     GroupObjectPermission
 import object_permissions
+from object_permissions.signals import granted, revoked
 
 
 __all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
@@ -64,6 +65,7 @@ def grant(user, perm, object):
     properties = dict(user=user, permission=pt, object_id=object.id)
     if not ObjectPermission.objects.filter(**properties).exists():
         ObjectPermission(**properties).save()
+    granted.send(sender=user, perm=perm, object=object)
 
 
 def grant_group(group, perm, object):
@@ -75,6 +77,7 @@ def grant_group(group, perm, object):
     properties = dict(group=group, permission=pt, object_id=object.id)
     if not GroupObjectPermission.objects.filter(**properties).exists():
         GroupObjectPermission(**properties).save()
+    granted.send(sender=group, perm=perm, object=object)
 
 
 def set_user_perms(user, perms, object):
@@ -117,26 +120,38 @@ def revoke(user, perm, object):
         .filter(user=user, object_id=object.id,  \
                 permission__content_type=ct, permission__name=perm) \
         .delete()
-
+    revoked.send(sender=user, perm=perm, object=object)
 
 def revoke_all(user, object):
     """
     Revokes all permissions from a User
     """
     ct = ContentType.objects.get_for_model(object)
-    ObjectPermission.objects \
-        .filter(user=user, object_id=object.id, permission__content_type=ct) \
-        .delete()
-
+    query = ObjectPermission.objects \
+        .filter(user=user, object_id=object.id, permission__content_type=ct)
+    if revoked.receivers:
+        perms = list(query.values_list('permission__name', flat=True))
+        query.delete()
+        for perm in perms:
+            revoked.send(sender=user, perm=perm, object=object)
+    else:
+        query.delete()
+    
 
 def revoke_all_group(group, object):
     """
     Revokes all permissions from a User
     """
     ct = ContentType.objects.get_for_model(object)
-    GroupObjectPermission.objects \
-        .filter(group=group, object_id=object.id, permission__content_type=ct) \
-        .delete()
+    query = GroupObjectPermission.objects \
+        .filter(group=group, object_id=object.id, permission__content_type=ct)
+    if revoked.receivers:
+        perms = list(query.values_list('permission__name', flat=True))
+        query.delete()
+        for perm in perms:
+            revoked.send(sender=group, perm=perm, object=object)
+    else:
+        query.delete()
 
 
 def revoke_group(group, perm, object):
@@ -148,6 +163,7 @@ def revoke_group(group, perm, object):
         .filter(group=group, object_id=object.id,  \
                 permission__content_type=ct, permission__name=perm) \
         .delete()
+    revoked.send(sender=group, perm=perm, object=object)
 
 
 def get_user_perms(user, object):
@@ -279,5 +295,6 @@ setattr(User, 'perms_on_any', filter_on_perms)
 
 setattr(UserGroup, 'grant', grant_group)
 setattr(UserGroup, 'revoke', revoke_group)
+setattr(UserGroup, 'revoke_all', revoke_all_group)
 setattr(UserGroup, 'get_perms', get_group_perms)
 setattr(UserGroup, 'set_perms', set_group_perms)
