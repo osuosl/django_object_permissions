@@ -1,13 +1,19 @@
-<style>
-    /*li { margin-left:0; list-style:none;}
-    #add_user, .permissions, .delete, .quota { cursor:pointer; }
-    .quota.default {color:#C1C1C1; font-style:italic}
-    .delete {color:red;}
-    
-    */
-</style>
 <script type="text/javascript">var user_url = "{{url}}";</script>
 <script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/jquery.form.js"></script>
 <script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/users.js"></script>
 
-{% include "permissions/table.html" %}
+<div id="add_user" class="add">Add User</div>
+<table id="users">
+    <tr>
+        <th>Name</th>
+        <th>Permissions</th>
+        {% block table_headers%}{% endblock %}
+        <th></th>
+    </tr>
+    {% for user in users %}
+        {%block user_row%}{% include "permissions/user_row.html" %}{%endblock%}
+    {% endfor %}
+    {% for group in groups %}
+        {%block group_row%}{% include "permissions/group_row.html" %}{%endblock%}
+    {% endfor %}
+</table>
