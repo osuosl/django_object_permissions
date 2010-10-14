@@ -85,7 +85,11 @@ def detail(request, id=None):
     
     method = request.method
     if method == 'GET':
-        return render_to_response("user_group/detail.html", {'group':group}, \
+        return render_to_response("user_group/detail.html",
+                            {'object':group,
+                             'users':group.users.all(),
+                             'url':reverse('usergroup-permissions', args=[id])
+                             }, \
                               context_instance=RequestContext(request))
     
     elif method == 'POST':
@@ -94,7 +98,7 @@ def detail(request, id=None):
             form = UserGroupForm(request.POST, instance=group)
             if form.is_valid():
                 group = form.save()
-                return render_to_response("user_group/group_row.html", \
+                return render_to_response("permissions/group_row.html", \
                         {'group':group}, \
                         context_instance=RequestContext(request))
             
@@ -135,8 +139,9 @@ def add_user(request, id):
             user_group.users.add(user)
             
             # return html for new user row
-            return render_to_response("user_group/user_row.html", \
-                                      {'user':user, 'group':user_group})
+            url = reverse('usergroup-permissions', args=[id])
+            return render_to_response("permissions/user_row.html", \
+                        {'user':user, 'object':user_group, 'url':url})
         
         # error in form return ajax response
         content = json.dumps(form.errors)
@@ -179,40 +184,41 @@ def remove_user(request, id):
 
 
 @login_required
-def user_permissions(request, id):
+def user_permissions(request, id, user_id=None):
     """
     Ajax call to update a user's permissions
     
     @param id: id of UserGroup
     """
     user = request.user
-    user_group = get_object_or_404(UserGroup, id=id)
+    group = get_object_or_404(UserGroup, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', user_group)):
+    if not (user.is_superuser or user.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
-        form = ObjectPermissionForm(user_group, request.POST)
+        form = ObjectPermissionForm(group, request.POST)
         if form.is_valid():
             form.update_perms()
             user = form.cleaned_data['user']
             
             # return html to replace existing user row
-            return render_to_response("user_group/user_row.html", \
-                                      {'group':user_group, 'user':user})
+            url = reverse('usergroup-permissions', args=[id])
+            return render_to_response("permissions/user_row.html", \
+                            {'object':group, 'user':user, 'url':url})
         
         # error in form return ajax response
         content = json.dumps(form.errors)
         return HttpResponse(content, mimetype='application/json')
     
-    if 'user' not in request.GET:
-        return HttpResponseNotFound()
-    
     # render a form for an existing user only
-    user_id = request.GET['user']
     form_user = get_object_or_404(User, id=user_id)
-    data = {'permissions':get_user_perms(form_user, user_group), 'user':user_id}
-    form = ObjectPermissionForm(user_group, data)
-    return render_to_response("user_group/permissions.html", \
-                        {'form':form, 'group':user_group, 'user_id':user_id}, \
-                        context_instance=RequestContext(request))
+    data = {'permissions':get_user_perms(form_user, group), 'user':user_id}
+    form = ObjectPermissionForm(group, data)
+    return render_to_response("permissions/form.html", \
+                    {
+                    'form':form,
+                     'user_id':user_id,
+                     'url':reverse('usergroup-permissions', args=[group.id])
+                     }, \
+                    context_instance=RequestContext(request))

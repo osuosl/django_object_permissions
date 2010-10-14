@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %} User Group: {{ group.name }}{% endblock %}
+{% block title %} User Group: {{ object.name }}{% endblock %}
 
 {% block head %}
 <style>
@@ -15,7 +15,7 @@
             $('.qtip').qtip('destroy');
             $(this).qtip({
                 content: {
-                   url: '{% url user_group-add-user group.id %}',
+                   url: '{% url usergroup-add-user object.id %}',
                    title: {text:'Add User', button:'close'},
                 },
                 position: {  corner:{target:'center', tooltip:'center'}},
@@ -34,7 +34,7 @@
         // Delete user button
         $('#users .delete').live("click", function() {
             id = this.parentNode.parentNode.id.substring(5);
-            $.post('{% url user_group-remove-user group.id %}', {'user':id},
+            $.post('{% url usergroup-remove-user object.id %}', {'user':id},
                 function(code){
                     if(code==1) {$('#user_'+id).remove();}
                 }, "json");
@@ -46,7 +46,7 @@
             $('.qtip').qtip('destroy');
             $(this).qtip({
                 content: {
-                   url: "{% url user_group-user-permissions group.id %}?user="+id,
+                   url: this.href,
                    title: {text:'Permissions: '+id, button:'close'},
                 },
                 position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
@@ -54,6 +54,7 @@
                 show: {when:false, ready:true},
                 hide: {fixed: true, when:false}
             });
+            return false;
         });
     });
     
@@ -81,18 +82,6 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{group.name}}</h1>
-
-<div id="add_user" class="add">Add User</div>
-<table id="users">
-    <tr>
-        <th>Name</th>
-        <th>Permissions</th>
-        <th></th>
-    </tr>
-    {% for user in group.users.all %}
-        {% include "user_group/user_row.html" %}
-    {% endfor %}
-</table>
-
+<h1>{{object.name}}</h1>
+{% include "permissions/table.html" %}
 {% endblock %}
