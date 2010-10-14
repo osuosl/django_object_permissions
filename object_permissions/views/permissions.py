@@ -147,7 +147,7 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
                 
             else:
                 # no permissions, send ajax response to remove user
-                return HttpResponse('0', mimetype='application/json')
+                return HttpResponse('1', mimetype='application/json')
         
         # error in form return ajax response
         content = json.dumps(form.errors)

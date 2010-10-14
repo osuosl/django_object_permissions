@@ -1,0 +1,15 @@
+<div id="add_user" class="add">Add User</div>
+<table id="users">
+    <tr>
+        <th>Name</th>
+        <th>Permissions</th>
+        {% block table_headers%}{% endblock %}
+        <th></th>
+    </tr>
+    {% for user in users %}
+        {%block user_row%}{% include "permissions/user_row.html" %}{%endblock%}
+    {% endfor %}
+    {% for group in groups %}
+        {%block group_row%}{% include "permissions/group_row.html" %}{%endblock%}
+    {% endfor %}
+</table>
