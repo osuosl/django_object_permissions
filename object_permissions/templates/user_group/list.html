@@ -10,8 +10,8 @@
                 $('.qtip').qtip('destroy');
                 $(this).qtip( {
                     content: {
-                       url: '{{SITE_ROOT}}/user_group/',
-                       title: {text:'Add User', button:'close'},
+                       url: '{% url usergroup %}',
+                       title: {text:'Add Group: ', button:'close'},
                        method: "post",
                     },
                     position: {  corner:{target:'center', tooltip:'center'}},
@@ -31,7 +31,7 @@
                 $(this).qtip( {
                     content: {
                        url: '{% url usergroup %}/'+id,
-                       title: {text:'Add User', button:'close'},
+                       title: {text:'Edit Group: ', button:'close'},
                        method: "post",
                     },
                     position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},

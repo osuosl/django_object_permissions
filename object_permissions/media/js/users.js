@@ -16,7 +16,7 @@ $(document).ready(function() {
         $(this).qtip({
             content: {
                url: user_url,
-               title: {text:'Add User', button:'close'}
+               title: {text:'Add User: ', button:'close'}
             },
             position: {  corner:{target:'center', tooltip:'center'}},
             style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee'},

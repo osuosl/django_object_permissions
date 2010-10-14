@@ -6,7 +6,7 @@
     {% for permission in user|permissions:object %}
         {{permission}}{%if not forloop.last%}, {%endif%}
     {% empty %}
-    <i>None</i>
+    <span class="none">None</span>
     {% endfor %}
     </a>
 </td>
