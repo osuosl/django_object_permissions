@@ -98,7 +98,7 @@ def detail(request, id=None):
             form = UserGroupForm(request.POST, instance=group)
             if form.is_valid():
                 group = form.save()
-                return render_to_response("permissions/group_row.html", \
+                return render_to_response("user_group/group_row.html", \
                         {'group':group}, \
                         context_instance=RequestContext(request))
             
