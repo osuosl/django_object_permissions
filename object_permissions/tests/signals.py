@@ -57,6 +57,11 @@ class TestSignals(TestCase):
         if not t in self.granted:
             self.fail('Signal was not received: %s, %s, %s' % t)
     
+    def assertNotGranted(self, sender, perm, object):
+        t = sender, perm, object
+        if t in self.granted:
+            self.fail('Signal was received: %s, %s, %s' % t)
+    
     def revoked_receiver(self, sender, perm, object, **kwargs):
         """ receiver for callbacks """
         self.revoked.append((sender, perm, object))
@@ -67,21 +72,49 @@ class TestSignals(TestCase):
         if not t in self.revoked:
             self.fail('Signal was not received: %s, %s, %s' % t)
     
+    def assertNotRevoked(self, sender, perm, object):
+        """ asserts that a signal was received """
+        t = sender, perm, object
+        if t in self.revoked:
+            self.fail('Signal was received: %s, %s, %s' % t)
+    
     def test_grant(self):
         user.grant('Perm1', object_)
         self.assertGranted(user, 'Perm1', object_)
+        
+        # test second grant
+        self.granted = []
+        user.grant('Perm1', object_)
+        self.assertNotGranted(user, 'Perm1', object_)
     
     def test_revoke(self):
+        user.grant('Perm1', object_)
         user.revoke('Perm1', object_)
         self.assertRevoked(user, 'Perm1', object_)
+        
+        # test second revoke
+        self.revoked = []
+        user.revoke('Perm1', object_)
+        self.assertNotRevoked(user, 'Perm1', object_)
     
     def test_grant_group(self):
         group.grant('Perm1', object_)
         self.assertGranted(group, 'Perm1', object_)
+        
+        # test second grant
+        self.granted = []
+        group.grant('Perm1', object_)
+        self.assertNotGranted(group, 'Perm1', object_)
     
     def test_revoke_group(self):
+        group.grant('Perm1', object_)
         group.revoke('Perm1', object_)
         self.assertRevoked(group, 'Perm1', object_)
+        
+        # test second revoke
+        self.revoked = []
+        group.revoke('Perm1', object_)
+        self.assertNotRevoked(group, 'Perm1', object_)
     
     def test_revoke_all(self):
         user.grant('Perm1', object_)
@@ -89,6 +122,12 @@ class TestSignals(TestCase):
         user.revoke_all(object_)
         self.assertRevoked(user, 'Perm1', object_)
         self.assertRevoked(user, 'Perm2', object_)
+        
+        # test second revoke
+        self.revoked = []
+        user.revoke_all(object_)
+        self.assertFalse(self.revoked)
+    
     
     def test_revoke_all_group(self):
         group.grant('Perm1', object_)
@@ -96,6 +135,11 @@ class TestSignals(TestCase):
         group.revoke_all(object_)
         self.assertRevoked(group, 'Perm1', object_)
         self.assertRevoked(group, 'Perm2', object_)
+        
+        # test second revoke
+        self.revoked = []
+        user.revoke_all(object_)
+        self.assertFalse(self.revoked)
     
     def test_set_group_perms(self):
         user.grant('Perm1', object_)
