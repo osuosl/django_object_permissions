@@ -28,10 +28,11 @@ $(document).ready(function() {
         });
     });
     
-    // Add user submit button
-    $(".ajax_form .submit").live("click", function(){
+    // form submit button
+    $(".ajax_form").live("submit", function(){
         $("#errors").empty();
-        $(this).parent(".ajax_form").ajaxSubmit({success: update});
+        $(this).ajaxSubmit({success: update});
+        return false;
     });
     
     // Delete user button

@@ -24,10 +24,9 @@
                 });
             });
             
-            $('#groups .edit').click(function(){
+            $('#groups .edit').live("click", function(){
                 $('.qtip').qtip('destroy');
                 id = this.parentNode.parentNode.id.substring(6);
-                console.log(123, id);
                 $(this).qtip( {
                     content: {
                        url: '{% url usergroup %}/'+id,
@@ -45,9 +44,10 @@
             });
             
             // submit button
-            $(".ajax_form .submit").live("click", function(){
+            $(".ajax_form").live("submit", function(){
                 $("#errors").empty();
-                $(this).parent('.ajax_form').ajaxSubmit({success: update});
+                $(this).ajaxSubmit({success: update});
+                return false;
             });
             
             // Delete user button
