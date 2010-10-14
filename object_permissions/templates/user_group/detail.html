@@ -21,7 +21,10 @@
                 position: {  corner:{target:'center', tooltip:'center'}},
                 style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee'},
                 show: {when:false, ready:true},
-                hide: {fixed: true, when:false}
+                hide: {fixed: true, when:false},
+                api:{onShow:function(){
+                    $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+                }}
             });
         });
         
@@ -52,7 +55,10 @@
                 position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
                 style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee', tip: 'bottomMiddle'},
                 show: {when:false, ready:true},
-                hide: {fixed: true, when:false}
+                hide: {fixed: true, when:false},
+                api:{onShow:function(){
+                    $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+                }}
             });
             return false;
         });

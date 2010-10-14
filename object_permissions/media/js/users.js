@@ -22,7 +22,9 @@ $(document).ready(function() {
             style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
-            onShow:function(){console.log(123);}
+            api:{onShow:function(){
+                $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+            }}
         });
     });
     
@@ -72,7 +74,10 @@ $(document).ready(function() {
             position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
             style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee', tip: 'bottomMiddle'},
             show: {when:false, ready:true},
-            hide: {fixed: true, when:false}
+            hide: {fixed: true, when:false},
+            api:{onShow:function(){
+                $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+            }}
         });
         return false;
     });
@@ -82,10 +87,8 @@ function update(responseText, statusText, xhr, $form) {
     if (xhr.getResponseHeader('Content-Type') == 'application/json') {
         if (responseText == 1) {
             // 1 code means success but no more permissions
-            if (no_perms != undefined && no_perms) {
-                $('.qtip').qtip('hide');
-                $("#users #" + html.attr('id')).remove();
-            }
+            $('.qtip').qtip('hide');
+            $("#users #" + html.attr('id')).remove();
         } else {
             // parse errors
             errors = responseText
