@@ -2,7 +2,7 @@ import os
 
 from django.conf.urls.defaults import *
 
-urlpatterns = patterns('ganeti_webmgr.object_permissions.views.user_groups',
+urlpatterns = patterns('object_permissions.views.user_groups',
     # UserGroups
     url(r'^user_groups/$', 'list', name="usergroup-list"),
     url(r'^user_group/?$', 'detail', name="usergroup"),
