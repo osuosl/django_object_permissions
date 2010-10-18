@@ -270,14 +270,36 @@ def filter_on_perms(user, model, perms, **clauses):
     
     # permissions user has
     ids = list(ObjectPermission.objects.filter(
-            user = user,
+            user=user,
             permission__content_type=ct,
             permission__name__in=perms
         ).values_list('object_id', flat=True))
     
     # permissions user's groups have
     ids += list(GroupObjectPermission.objects.filter(
-            group__users = user,
+            group__users=user,
+            permission__content_type=ct,
+            permission__name__in=perms
+        ).values_list('object_id', flat=True))
+    
+    return model.objects.filter(id__in=ids, **clauses)
+
+
+def filter_on_group_perms(usergroup, model, perms, **clauses):
+    """
+    Filters objects that the UserGroup has permissions on.
+    
+    @param usergroup: UserGroup who must have permissions
+    @param model: model on which to filter
+    @param perms: list of perms to match
+    @param clauses: additional clauses to be added to the queryset
+    @return a queryset of matching objects
+    """
+    ct = ContentType.objects.get_for_model(model)
+    
+    # permissions user's groups have
+    ids = list(GroupObjectPermission.objects.filter(
+            group=usergroup,
             permission__content_type=ct,
             permission__name__in=perms
         ).values_list('object_id', flat=True))
@@ -303,3 +325,4 @@ setattr(UserGroup, 'revoke', revoke_group)
 setattr(UserGroup, 'revoke_all', revoke_all_group)
 setattr(UserGroup, 'get_perms', get_group_perms)
 setattr(UserGroup, 'set_perms', set_group_perms)
+setattr(UserGroup, 'filter_on_perms', filter_on_group_perms)

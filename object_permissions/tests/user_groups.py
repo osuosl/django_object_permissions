@@ -448,6 +448,58 @@ class TestUserGroups(TestCase):
         self.assertFalse(user0.perms_on_any(Group, ['Perm3']))
         self.assertFalse(user1.perms_on_any(Group, ['Perm4']))
     
+    def test_filter_group(self):
+        """
+        Test filtering objects based only on the groups perms
+        """
+        """
+        Test filtering objects
+        """
+        for perm in self.perms:
+            register(perm, Group)
+        
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
+        
+        object2 = Group.objects.create(name='test2')
+        object2.save()
+        object3 = Group.objects.create(name='test3')
+        object3.save()
+        object4 = Group.objects.create(name='test4')
+        object4.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
+        group1.grant('Perm3', object2)
+        group1.grant('Perm4', object3)
+        
+        # retrieve single perm
+        self.assert_(object0 in group0.filter_on_perms(Group, ['Perm1']))
+        self.assert_(object1 in group0.filter_on_perms(Group, ['Perm2']))
+        self.assert_(object2 in group1.filter_on_perms(Group, ['Perm3']))
+        self.assert_(object3 in group1.filter_on_perms(Group, ['Perm4']))
+        
+        # retrieve multiple perms
+        query = group0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'])
+        self.assert_(object0 in query)
+        self.assert_(object1 in query)
+        self.assertEqual(2, query.count())
+        query = group1.filter_on_perms(Group, ['Perm1', 'Perm3', 'Perm4'])
+        self.assert_(object2 in query)
+        self.assert_(object3 in query)
+        self.assertEqual(2, query.count())
+        
+        # retrieve no results
+        query = group0.filter_on_perms(Group, ['Perm3'])
+        self.assertEqual(0, query.count())
+        query = group1.filter_on_perms(Group, ['Perm1'])
+        self.assertEqual(0, query.count())
+        
+        # extra kwargs
+        query = group0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        self.assert_(object0 in query)
+        self.assertEqual(1, query.count())
+    
 class TestUserGroupViews(TestCase):
     perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
     
