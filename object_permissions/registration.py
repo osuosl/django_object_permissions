@@ -255,7 +255,7 @@ def perms_on_any(user, model, perms):
     return False
 
 
-def filter_on_perms(user, model, perms, **clauses):
+def filter_on_perms(user, model, perms, groups=True, **clauses):
     """
     Filters objects that the User has permissions on.  This includes any objects
     the user has permissions based on belonging to a UserGroup.
@@ -263,6 +263,7 @@ def filter_on_perms(user, model, perms, **clauses):
     @param user: user who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
+    @param groups: include perms the user has from membership in UserGroups
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
@@ -276,11 +277,12 @@ def filter_on_perms(user, model, perms, **clauses):
         ).values_list('object_id', flat=True))
     
     # permissions user's groups have
-    ids += list(GroupObjectPermission.objects.filter(
-            group__users=user,
-            permission__content_type=ct,
-            permission__name__in=perms
-        ).values_list('object_id', flat=True))
+    if groups:
+        ids += list(GroupObjectPermission.objects.filter(
+                group__users=user,
+                permission__content_type=ct,
+                permission__name__in=perms
+            ).values_list('object_id', flat=True))
     
     return model.objects.filter(id__in=ids, **clauses)
 

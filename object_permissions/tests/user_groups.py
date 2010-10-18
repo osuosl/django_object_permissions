@@ -411,6 +411,11 @@ class TestUserGroups(TestCase):
         query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
+        
+        # exclude groups
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm4'], groups=False)
+        self.assert_(object4 in query)
+        self.assertEqual(1, query.count())
     
     def test_any(self):
         """
@@ -451,9 +456,6 @@ class TestUserGroups(TestCase):
     def test_filter_group(self):
         """
         Test filtering objects based only on the groups perms
-        """
-        """
-        Test filtering objects
         """
         for perm in self.perms:
             register(perm, Group)

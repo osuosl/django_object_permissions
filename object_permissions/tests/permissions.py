@@ -412,6 +412,13 @@ class TestModelPermissions(TestCase):
         query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
+        
+        # exclude groups
+        self.assert_(object0 in user0.filter_on_perms(Group, ['Perm1'], groups=False))
+        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], groups=False)
+        self.assert_(object0 in query)
+        self.assert_(object1 in query)
+        self.assertEqual(2, query.count())
     
     def test_any(self):
         """
