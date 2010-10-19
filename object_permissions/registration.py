@@ -334,7 +334,7 @@ setattr(User, 'revoke_all', revoke_all)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'filter_on_perms', filter_on_perms)
-setattr(User, 'perms_on_any', filter_on_perms)
+setattr(User, 'perms_on_any', perms_on_any)
 
 setattr(UserGroup, 'grant', grant_group)
 setattr(UserGroup, 'revoke', revoke_group)
