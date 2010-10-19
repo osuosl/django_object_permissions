@@ -334,8 +334,28 @@ class TestUserGroups(TestCase):
         
         self.assertTrue(user0.has_perm('Perm1', object0))
         self.assertFalse(user0.has_perm('Perm1', None))
-        self.assertFalse(user0.has_perm('DoesNotExist'), object0)
+        self.assertFalse(user0.has_perm('DoesNotExist', object0))
         self.assertFalse(user0.has_perm('Perm2', object0))
+    
+    def test_group_has_perm(self):
+        """
+        Test UserGroup.has_perm
+        
+        Verifies:
+            * None object always returns false
+            * Nonexistent perm returns false
+            * Perm user does not possess returns false
+        """
+        group = self.test_save('TestGroup0', user0)
+        
+        for perm in self.perms:
+            register(perm, Group)
+        group.grant('Perm1', object0)
+        
+        self.assertTrue(group.has_perm('Perm1', object0))
+        self.assertFalse(group.has_perm('Perm1', None))
+        self.assertFalse(group.has_perm('DoesNotExist', object0))
+        self.assertFalse(group.has_perm('Perm2', object0))
     
     def test_get_groups(self):
         """

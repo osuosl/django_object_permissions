@@ -203,6 +203,20 @@ def get_model_perms(model):
     return list(query)
 
 
+def group_has_perm(group, perm, object):
+    """
+    check if a UserGroup has a permission on an object
+    """
+    if object is None:
+        return False
+    
+    ct = ContentType.objects.get_for_model(object)
+    return GroupObjectPermission.objects \
+        .filter(group=group, object_id=object.id, \
+                permission__name=perm, permission__content_type=ct) \
+        .exists()
+
+
 def get_users(object):
     """
     Return a list of Users with permissions directly on a given object.  This
@@ -325,6 +339,7 @@ setattr(User, 'perms_on_any', filter_on_perms)
 setattr(UserGroup, 'grant', grant_group)
 setattr(UserGroup, 'revoke', revoke_group)
 setattr(UserGroup, 'revoke_all', revoke_all_group)
+setattr(UserGroup, 'has_perm', group_has_perm)
 setattr(UserGroup, 'get_perms', get_group_perms)
 setattr(UserGroup, 'set_perms', set_group_perms)
 setattr(UserGroup, 'filter_on_perms', filter_on_group_perms)
