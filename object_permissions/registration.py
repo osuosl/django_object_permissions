@@ -238,7 +238,7 @@ def get_groups(object):
             object_permissions__object_id=object.id).distinct()
 
 
-def perms_on_any(user, model, perms):
+def perms_on_any(user, model, perms, groups=True):
     """
     Determines whether the user has any of the listed perms on any instances of
     the Model.  This checks both user permissions and group permissions.
@@ -259,12 +259,13 @@ def perms_on_any(user, model, perms):
             return True
     
     # permissions user's groups have
-    if GroupObjectPermission.objects.filter(
-            group__users = user,
-            permission__content_type=ct,
-            permission__name__in=perms
-        ).exists():
-            return True
+    if groups:
+        if GroupObjectPermission.objects.filter(
+                group__users = user,
+                permission__content_type=ct,
+                permission__name__in=perms
+            ).exists():
+                return True
     
     return False
 

@@ -440,14 +440,24 @@ class TestModelPermissions(TestCase):
         self.assert_(user0.perms_on_any(Group, ['Perm1']))
         self.assert_(user0.perms_on_any(Group, ['Perm2']))
         self.assert_(user1.perms_on_any(Group, ['Perm3']))
+        self.assert_(user0.perms_on_any(Group, ['Perm1'], False))
+        self.assert_(user0.perms_on_any(Group, ['Perm2'], False))
+        self.assert_(user1.perms_on_any(Group, ['Perm3'], False))
         
         # check multiple perms
         self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm4']))
         self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm2']))
         self.assert_(user1.perms_on_any(Group, ['Perm3', 'Perm4']))
+        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm4'], False))
+        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm2'], False))
+        self.assert_(user1.perms_on_any(Group, ['Perm3', 'Perm4'], False))
         
         # no results
         self.assertFalse(user0.perms_on_any(Group, ['Perm3']))
         self.assertFalse(user1.perms_on_any(Group, ['Perm4']))
         self.assertFalse(user0.perms_on_any(Group, ['Perm3', 'Perm4']))
         self.assertFalse(user1.perms_on_any(Group, ['Perm1', 'Perm4']))
+        self.assertFalse(user0.perms_on_any(Group, ['Perm3'], False))
+        self.assertFalse(user1.perms_on_any(Group, ['Perm4'], False))
+        self.assertFalse(user0.perms_on_any(Group, ['Perm3', 'Perm4'], False))
+        self.assertFalse(user1.perms_on_any(Group, ['Perm1', 'Perm4'], False))

@@ -472,6 +472,11 @@ class TestUserGroups(TestCase):
         # no results
         self.assertFalse(user0.perms_on_any(Group, ['Perm3']))
         self.assertFalse(user1.perms_on_any(Group, ['Perm4']))
+        
+        # excluding group perms
+        self.assert_(user0.perms_on_any(Group, ['Perm4'], False))
+        self.assert_(user0.perms_on_any(Group, ['Perm2', 'Perm4'], False))
+        self.assertFalse(user0.perms_on_any(Group, ['Perm2'], False))
     
     def test_filter_group(self):
         """
