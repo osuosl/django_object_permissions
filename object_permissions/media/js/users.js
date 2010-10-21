@@ -37,30 +37,35 @@ $(document).ready(function() {
     
     // Delete user button
     $('.user .delete').live("click", function() {
-        $('.qtip').qtip('destroy');
-        id = this.parentNode.parentNode.id.substring(5);
-        data = {user:id, permissions:[]};
-        $.post(user_url, data,
-            function(code){
-                if (code==1) {
-                    $("#user_" + id).remove();
-                }
-            },
-            "json");
+        name = $(this).parent().parent().children('.name').html();
+        if (confirm("Remove this user: " + name)) {
+            $('.qtip').qtip('destroy');
+            id = this.parentNode.parentNode.id.substring(5);
+            data = {user:id, permissions:[]};
+            $.post(user_url, data,
+                function(code){
+                    if (code==1) {
+                        $("#user_" + id).remove();
+                    }
+                },
+                "json");
+        }
     });
     
     // Delete group button
     $('.group .delete').live("click", function() {
-        $('.qtip').qtip('destroy');
-        id = this.parentNode.parentNode.id.substring(6);
-        data = {group:id, permissions:[]};
-        $.post(user_url, data,
-            function(code){
-                if (code==1) {
-                    $("#group_" + id).remove();
-                }
-            },
-            "json");
+        name = $(this).parent().parent().children('.name').html();
+        if (confirm("Remove this group: "+ name)) {
+            id = this.parentNode.parentNode.id.substring(6);
+            data = {group:id, permissions:[]};
+            $.post(user_url, data,
+                function(code){
+                    if (code==1) {
+                        $("#group_" + id).remove();
+                    }
+                },
+                "json");
+        }
     });
     
     // Update Permission Button
