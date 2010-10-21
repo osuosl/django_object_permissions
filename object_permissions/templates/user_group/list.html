@@ -52,11 +52,14 @@
             
             // Delete user button
             $('#groups .delete').live("click", function() {
-                id = this.parentNode.parentNode.id.substring(6);
-                $.delete('{% url usergroup %}/'+id,
-                    function(code){
-                        if(code==1) {$('#group_'+id).remove();}
-                    }, "json");
+                name = $(this).parent().parent().children('.name').children('a').html();
+                if (confirm("Delete group: " + name)) {
+                    id = this.parentNode.parentNode.id.substring(6);
+                    $.delete('{% url usergroup %}/'+id,
+                        function(code){
+                            if(code==1) {$('#group_'+id).remove();}
+                        }, "json");
+                }
             });
             
             function update(responseText, statusText, xhr, $form) {
