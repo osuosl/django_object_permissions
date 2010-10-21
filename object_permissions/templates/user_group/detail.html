@@ -38,11 +38,14 @@
         
         // Delete user button
         $('#users .delete').live("click", function() {
-            id = this.parentNode.parentNode.id.substring(5);
-            $.post('{% url usergroup-remove-user object.id %}', {'user':id},
-                function(code){
-                    if(code==1) {$('#user_'+id).remove();}
-                }, "json");
+            name = $(this).parent().parent().children('.name').html();
+            if (confirm("Remove user: " + name)) {
+                id = this.parentNode.parentNode.id.substring(5);
+                $.post('{% url usergroup-remove-user object.id %}', {'user':id},
+                    function(code){
+                        if(code==1) {$('#user_'+id).remove();}
+                    }, "json");
+            }
         });
         
         // Update Permission Button
