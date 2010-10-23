@@ -55,7 +55,7 @@
                 name = $(this).parent().parent().children('.name').children('a').html();
                 if (confirm("Delete group: " + name)) {
                     id = this.parentNode.parentNode.id.substring(6);
-                    $.delete('{% url usergroup %}/'+id,
+                    $.delete_('{% url usergroup %}/'+id,
                         function(code){
                             if(code==1) {$('#group_'+id).remove();}
                         }, "json");
