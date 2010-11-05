@@ -72,16 +72,16 @@ class TestModelPermissions(TestCase):
             * registering a second time does nothing
             * registering additional perms creates them
         """
-        register('Perm1', Group)
+        register(['Perm1'], Group)
         ct = ContentType.objects.get_for_model(Group)
         self.assertEquals([u'Perm1'], get_model_perms(Group))
         
-        register('Perm1', Group)
+        register(['Perm1'], Group)
         self.assertEquals([u'Perm1'], get_model_perms(Group))
         
-        register('Perm2', Group)
-        register('Perm3', Group)
-        register('Perm4', Group)
+        register(['Perm2'], Group)
+        register(['Perm3'], Group)
+        register(['Perm4'], Group)
         self.assertEqual(self.perms, get_model_perms(Group))
     
     def test_grant_user_permissions(self):
@@ -94,8 +94,7 @@ class TestModelPermissions(TestCase):
               combinations
             * granting unknown permission raises error
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         # grant single property
         grant(user0, 'Perm1', object0)
@@ -159,8 +158,9 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
+        register(perms, Group)
+
         for perm in perms:
-            register(perm, Group)
             grant(user0, perm, object0)
             grant(user0, perm, object1)
             grant(user1, perm, object0)
@@ -217,8 +217,9 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
+        register(perms, Group)
+
         for perm in perms:
-            register(perm, Group)
             grant(user0, perm, object0)
             grant(user0, perm, object1)
             grant(user1, perm, object0)
@@ -262,8 +263,7 @@ class TestModelPermissions(TestCase):
         perms3 = ['Perm2', 'Perm3']
         perms4 = []
         
-        for perm in self.perms:
-            register(perm, Group)
+        register(perms, Group)
         
         # grant single property
         set_user_perms(user0, perms1, object0)
@@ -305,8 +305,7 @@ class TestModelPermissions(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(perms, Group)
         grant(user0, 'Perm1', object0)
         
         self.assertTrue(user0.has_perm('Perm1', object0))
@@ -318,8 +317,7 @@ class TestModelPermissions(TestCase):
         """
         Tests retrieving list of users with perms on an object
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         grant(user0, 'Perm1', object0)
         grant(user0, 'Perm3', object1)
         grant(user1, 'Perm2', object1)
@@ -331,8 +329,7 @@ class TestModelPermissions(TestCase):
         self.assert_(len(get_users(object1))==2)
     
     def test_get_user_permissions(self):
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         # grant single property
         grant(user0, 'Perm1', object0)
@@ -373,8 +370,7 @@ class TestModelPermissions(TestCase):
         """
         Test filtering objects
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         object2 = Group.objects.create(name='test2')
         object2.save()
@@ -424,8 +420,7 @@ class TestModelPermissions(TestCase):
         """
         Test checking if a user has perms on any instance of the model
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         object2 = Group.objects.create(name='test2')
         object2.save()

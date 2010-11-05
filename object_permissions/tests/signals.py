@@ -24,9 +24,7 @@ class TestSignals(TestCase):
         object = Group(name='testgroup')
         object.save()
         
-        register('Perm1', Group)
-        register('Perm2', Group)
-        register('Perm3', Group)
+        register(['Perm1', 'Perm2', 'Perm3'], Group)
         
         granted.connect(self.granted_receiver)
         revoked.connect(self.revoked_receiver)

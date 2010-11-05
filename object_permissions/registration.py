@@ -16,29 +16,38 @@ __all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
 
 
 _DELAYED = []
-def register(perm, model):
+def register(perms, model):
     """
-    Register a permission for a Model.  This will insert a row into the
-    permission table if one does not already exist.
+    Register permissions for a Model.
+
+    The permissions should be a list of names of permissions, e.g. ["eat",
+    "order", "pay"]. This function will insert a row into the permission table
+    if one does not already exist.
     """
+
     try:
-        _register(perm, model)
+        _register(perms, model)
     except db.utils.DatabaseError:
         # there was an error, likely due to a missing table.  Delay this
         # registration.
-        _DELAYED.append((perm, model))
+        _DELAYED.append((perms, model))
 
 
-def _register(perm, model):
+def _register(perms, model):
     """
-    Real method for registering permissions.  This inner function is used
-    because it must also be called back from _register_delayed
+    Real method for registering permissions.
+
+    This method is private; please don't call it from outside code.
+    This inner function is required because its logic must also be available
+    to call back from _register_delayed for delayed registrations.
     """
+
     ct = ContentType.objects.get_for_model(model)
-    obj, new = ObjectPermissionType.objects \
-               .get_or_create(name=perm, content_type=ct)
-    if new:
-        obj.save()
+    for perm in perms:
+        obj, new = ObjectPermissionType.objects \
+                   .get_or_create(name=perm, content_type=ct)
+        if new:
+            obj.save()
 
 
 def _register_delayed(**kwargs):

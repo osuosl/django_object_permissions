@@ -14,7 +14,7 @@ class TestBackend(TestCase):
         settings.ANONYMOUS_USER_ID = 0
         user = User(id=1, username="tester")
         user.save()
-        register('Permission', UserGroup)
+        register(['Permission'], UserGroup)
         object_ = UserGroup(name='testing')
         object_.save()
         user.grant('Permission', object_)
