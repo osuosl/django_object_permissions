@@ -42,7 +42,7 @@ class TestUserGroups(TestCase):
         dict_['perms']=self.perms
         
         # XXX specify permission manually, it is not auto registering for some reason
-        register('admin', UserGroup)
+        register(['admin'], UserGroup)
     
     def tearDown(self):
         User.objects.all().delete()
@@ -113,8 +113,7 @@ class TestUserGroups(TestCase):
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
         
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         # grant single property
         group0.grant('Perm1', object0)
@@ -181,8 +180,8 @@ class TestUserGroups(TestCase):
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
         
+        register(perms, Group)
         for perm in perms:
-            register(perm, Group)
             group0.grant(perm, object0)
             group0.grant(perm, object1)
             group1.grant(perm, object0)
@@ -242,8 +241,8 @@ class TestUserGroups(TestCase):
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
         
+        register(perms, Group)
         for perm in perms:
-            register(perm, Group)
             grant_group(group0, perm, object0)
             grant_group(group0, perm, object1)
             grant_group(group1, perm, object0)
@@ -284,8 +283,7 @@ class TestUserGroups(TestCase):
         perms3 = ['Perm2', 'Perm3']
         perms4 = []
         
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         # grant single property
         set_group_perms(group0, perms1, object0)
         self.assertEqual(perms1, get_group_perms(group0, object0))
@@ -328,8 +326,7 @@ class TestUserGroups(TestCase):
         """
         group = self.test_save('TestGroup0', user0)
         
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         group.grant('Perm1', object0)
         
         self.assertTrue(user0.has_perm('Perm1', object0))
@@ -348,8 +345,7 @@ class TestUserGroups(TestCase):
         """
         group = self.test_save('TestGroup0', user0)
         
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         group.grant('Perm1', object0)
         
         self.assertTrue(group.has_perm('Perm1', object0))
@@ -364,8 +360,7 @@ class TestUserGroups(TestCase):
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
         
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         group0.grant('Perm1', object0)
         group0.grant('Perm3', object1)
         group1.grant('Perm2', object1)
@@ -380,8 +375,7 @@ class TestUserGroups(TestCase):
         """
         Test filtering objects
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
@@ -441,8 +435,7 @@ class TestUserGroups(TestCase):
         """
         Test checking if a user has perms on any instance of the model
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
@@ -482,8 +475,7 @@ class TestUserGroups(TestCase):
         """
         Test filtering objects based only on the groups perms
         """
-        for perm in self.perms:
-            register(perm, Group)
+        register(self.perms, Group)
         
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
@@ -550,7 +542,7 @@ class TestUserGroupViews(TestCase):
         self.object1.save()
         
         # XXX specify permission manually, it is not auto registering for some reason
-        register('admin', UserGroup)
+        register(['admin'], UserGroup)
     
     def tearDown(self):
         User.objects.all().delete()
@@ -899,7 +891,7 @@ class TestUserGroupViews(TestCase):
         group = self.test_save()
         c = Client()
         group.users.add(user)
-        register('Perm1', UserGroup)
+        register(['Perm1'], UserGroup)
         url = '/user_group/%d/user/remove/'
         args = group.id
         
@@ -978,8 +970,7 @@ class TestUserGroupViews(TestCase):
         group.users.add(user)
         group1 = self.test_save('other_group')
         
-        register('Perm1', UserGroup)
-        register('Perm2', UserGroup)
+        register(['Perm1', 'Perm2'], UserGroup)
         
         c = Client()
         url = '/user_group/%d/permissions/user/%s/'
