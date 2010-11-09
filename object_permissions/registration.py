@@ -67,7 +67,7 @@ def _register(perms, model):
         warn("Tried to double-register %s for permissions!" % model)
         return
 
-    name = model.__name__
+    name = "%s_Perms" % model.__name__
     fields = {
         "__module__": "",
         "user": models.ForeignKey(User),
@@ -82,7 +82,7 @@ def _register(perms, model):
 
     fields["Meta"] = Meta
 
-    perm_model = type("%sPerms" % name, (models.Model,), fields)
+    perm_model = type(name, (models.Model,), fields)
 
     permission_map[model] = perm_model
 
