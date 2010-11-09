@@ -14,6 +14,11 @@ __all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
                'revoke_all', 'revoke_all_group', 'get_users', 'set_user_perms', \
                'set_group_perms', 'get_groups', 'filter_on_perms')
 
+permission_map = {}
+"""
+A mapping of Models to Models. The key is a registered Model, and the value is
+the Model that stores the permissions on that Model.
+"""
 
 _DELAYED = []
 def register(perms, model):
@@ -56,6 +61,22 @@ def _register(perms, model):
         if new:
             obj.save()
 
+    if model in permission_map:
+        raise ValueError("Tried to double-register %s for permissions!" %
+                model)
+
+    name = model.__name__
+    fields = {
+        "user": models.ForeignKey(User),
+        # "group": models.ForeignKey(Group),
+        "obj": models.ForeignKey(model),
+    }
+    for perm in perms:
+        fields[perm] = models.BooleanField()
+
+    perm_model = type("%sPerms" % name, (models.Model,), fields)
+
+    permission_map[model] = perm_model
 
 def _register_delayed(**kwargs):
     """
@@ -341,7 +362,7 @@ def filter_on_group_perms(usergroup, model, perms, **clauses):
 
 
 # register internal perms
-register('admin', UserGroup)
+register(['admin'], UserGroup)
 
 
 # make some methods available as bound methods
