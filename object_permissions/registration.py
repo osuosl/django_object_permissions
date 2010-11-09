@@ -1,3 +1,5 @@
+from warnings import warn
+
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django import db
@@ -62,17 +64,23 @@ def _register(perms, model):
             obj.save()
 
     if model in permission_map:
-        raise ValueError("Tried to double-register %s for permissions!" %
-                model)
+        warn("Tried to double-register %s for permissions!" % model)
+        return
 
     name = model.__name__
     fields = {
+        "__module__": "",
         "user": models.ForeignKey(User),
         # "group": models.ForeignKey(Group),
         "obj": models.ForeignKey(model),
     }
     for perm in perms:
         fields[perm] = models.BooleanField()
+
+    class Meta:
+        app_label = "object_permissions"
+
+    fields["Meta"] = Meta
 
     perm_model = type("%sPerms" % name, (models.Model,), fields)
 
