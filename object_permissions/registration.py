@@ -23,7 +23,14 @@ def register(perms, model):
     The permissions should be a list of names of permissions, e.g. ["eat",
     "order", "pay"]. This function will insert a row into the permission table
     if one does not already exist.
+
+    For backwards compatibility, this function can also take a single
+    permission instead of a list. This feature should be considered
+    deprecated; please fix your code if you depend on this.
     """
+
+    if isinstance(perms, (str, unicode)):
+        perms = [perms]
 
     try:
         _register(perms, model)
