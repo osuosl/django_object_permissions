@@ -71,7 +71,7 @@ def _register(perms, model):
     fields = {
         "__module__": "",
         "user": models.ForeignKey(User),
-        # "group": models.ForeignKey(Group),
+        "group": models.ForeignKey(UserGroup, related_name="+"),
         "obj": models.ForeignKey(model),
     }
     for perm in perms:
