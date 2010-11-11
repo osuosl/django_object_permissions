@@ -373,7 +373,7 @@ def filter_on_perms(user, model, perms, groups=True, **clauses):
     }
 
     if groups:
-        d["group__users"] = user
+        d["%s_operms__group__users" % model.__name__] = user
 
     for perm in perms:
         if perm in get_model_perms(model):
@@ -396,7 +396,7 @@ def filter_on_group_perms(group, model, perms, **clauses):
     """
 
     d = {
-            "%s_gperms__group" % model.__name__: group,
+            "%s_operms__group" % model.__name__: group,
     }
 
     for perm in perms:
