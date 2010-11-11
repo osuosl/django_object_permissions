@@ -14,22 +14,21 @@ class TestBackend(TestCase):
         settings.ANONYMOUS_USER_ID = 0
         user = User(id=1, username="tester")
         user.save()
-        register(['Permission'], UserGroup)
         object_ = UserGroup(name='testing')
         object_.save()
-        user.grant('Permission', object_)
+        user.grant('admin', object_)
         g = globals()
         g['anonymous'] = AnonymousUser()
         g['user'] = user
         g['object_'] = object_
-    
+
     def tearDown(self):
         User.objects.all().delete()
         settings.ANONYMOUS_USER_ID = 0
-    
+
     def test_trivial(self):
         ObjectPermBackend()
-    
+
     def test_no_anonymous_user_setting(self):
         """
         Tests the backend when there is no anonymous user setting
@@ -37,14 +36,14 @@ class TestBackend(TestCase):
         del settings.ANONYMOUS_USER_ID
         self.assertFalse(hasattr(settings, 'ANONYMOUS_USER_ID'))
         backend = ObjectPermBackend()
-        self.assertFalse(anonymous.has_perm('Permission', object_))
-        self.assert_(user.has_perm('Permission', object_))
-    
+        self.assertFalse(anonymous.has_perm('admin', object_))
+        self.assert_(user.has_perm('admin', object_))
+
     def test_anonymous_user_does_not_exist(self):
         """
         Tests to ensure that anonymous user is auto created if it does not
         already exist
         """
         backend = ObjectPermBackend()
-        self.assertFalse(anonymous.has_perm('Permission', object_))
-        self.assert_(backend.has_perm(user, 'Permission', object_))
+        self.assertFalse(anonymous.has_perm('admin', object_))
+        self.assert_(backend.has_perm(user, 'admin', object_))

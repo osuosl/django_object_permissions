@@ -1,11 +1,9 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User, Group
-from django.contrib.contenttypes.models import ContentType
-from django.db import IntegrityError
 from django.test import TestCase
 
 from object_permissions import register, grant, revoke, get_user_perms, \
-    get_model_perms, revoke_all, get_users, set_user_perms
-from object_permissions.models import ObjectPermission, ObjectPermissionType
+    revoke_all, get_users, set_user_perms
 
 
 class TestModelPermissions(TestCase):
@@ -29,61 +27,16 @@ class TestModelPermissions(TestCase):
         dict_['object0']=self.object0
         dict_['object1']=self.object1
         dict_['perms']=self.perms
-    
+
+        register(self.perms, Group)
+
     def tearDown(self):
         Group.objects.all().delete()
         User.objects.all().delete()
-        ObjectPermission.objects.all().delete()
-        ObjectPermissionType.objects.all().delete()
 
     def test_trivial(self):
-        ObjectPermissionType()
-        ObjectPermission()
+        pass
 
-    def test_models(self):
-        """
-        test model constraints:
-            * PermissionType must be unique
-            * Granted Permissions must be unique to user/object combinations
-        """
-        ct = ContentType.objects.get_for_model(object0)
-        pt = ObjectPermissionType(name='Perm1', content_type=ct)
-        pt.save()
-        ObjectPermission(user=user0, object_id=object0.id, permission=pt).save()
-        
-        try:
-            ObjectPermissionType(name='Perm1', content_type=ct).save()
-            self.fail('Integrity Error not raised for duplicate ObjectPermissionType')
-        except IntegrityError:
-            pass
-        
-        try:
-            ObjectPermission(user=user0, object_id=object0.id, permission=pt).save()
-            self.fail('Integrity Error not raised for duplicate ObjectPermission')
-        except IntegrityError:
-            pass
-
-    def test_register(self):
-        """
-        Tests registering a permission
-        
-        Verifies:
-            * registering permission creates perm
-            * registering a second time does nothing
-            * registering additional perms creates them
-        """
-        register(['Perm1'], Group)
-        ct = ContentType.objects.get_for_model(Group)
-        self.assertEquals([u'Perm1'], get_model_perms(Group))
-        
-        register(['Perm1'], Group)
-        self.assertEquals([u'Perm1'], get_model_perms(Group))
-        
-        register(['Perm2'], Group)
-        register(['Perm3'], Group)
-        register(['Perm4'], Group)
-        self.assertEqual(self.perms, get_model_perms(Group))
-    
     def test_grant_user_permissions(self):
         """
         Grant a user permissions
@@ -94,8 +47,6 @@ class TestModelPermissions(TestCase):
               combinations
             * granting unknown permission raises error
         """
-        register(self.perms, Group)
-        
         # grant single property
         grant(user0, 'Perm1', object0)
         self.assert_(user0.has_perm('Perm1', object0))
@@ -143,10 +94,10 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user1.has_perm('Perm2', object0))
         self.assertFalse(user1.has_perm('Perm2', object1))
         self.assert_(user1.has_perm('Perm3', object0))
-        
+
         def grant_unknown():
             grant(user1, 'UnknownPerm', object0)
-        self.assertRaises(ObjectPermissionType.DoesNotExist, grant_unknown)
+        self.assertRaises(ObjectDoesNotExist, grant_unknown)
     
     def test_revoke_user_permissions(self):
         """
@@ -158,8 +109,6 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        register(perms, Group)
-
         for perm in perms:
             grant(user0, perm, object0)
             grant(user0, perm, object1)
@@ -217,8 +166,6 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        register(perms, Group)
-
         for perm in perms:
             grant(user0, perm, object0)
             grant(user0, perm, object1)
@@ -262,9 +209,7 @@ class TestModelPermissions(TestCase):
         perms2 = ['Perm1', 'Perm2']
         perms3 = ['Perm2', 'Perm3']
         perms4 = []
-        
-        register(perms, Group)
-        
+
         # grant single property
         set_user_perms(user0, perms1, object0)
         self.assertEqual(perms1, get_user_perms(user0, object0))
@@ -305,7 +250,6 @@ class TestModelPermissions(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        register(perms, Group)
         grant(user0, 'Perm1', object0)
         
         self.assertTrue(user0.has_perm('Perm1', object0))
@@ -317,7 +261,6 @@ class TestModelPermissions(TestCase):
         """
         Tests retrieving list of users with perms on an object
         """
-        register(self.perms, Group)
         grant(user0, 'Perm1', object0)
         grant(user0, 'Perm3', object1)
         grant(user1, 'Perm2', object1)
@@ -329,7 +272,6 @@ class TestModelPermissions(TestCase):
         self.assert_(len(get_users(object1))==2)
     
     def test_get_user_permissions(self):
-        register(self.perms, Group)
         
         # grant single property
         grant(user0, 'Perm1', object0)
@@ -370,7 +312,6 @@ class TestModelPermissions(TestCase):
         """
         Test filtering objects
         """
-        register(self.perms, Group)
         
         object2 = Group.objects.create(name='test2')
         object2.save()
@@ -420,8 +361,7 @@ class TestModelPermissions(TestCase):
         """
         Test checking if a user has perms on any instance of the model
         """
-        register(self.perms, Group)
-        
+
         object2 = Group.objects.create(name='test2')
         object2.save()
         object3 = Group.objects.create(name='test3')
