@@ -1,11 +1,9 @@
 from django.contrib.auth.models import User, Group
-from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 
-from object_permissions import register, grant, revoke, get_user_perms, \
-    get_model_perms, revoke_all, get_users, set_user_perms
-from object_permissions.models import *
+from object_permissions import register
+from object_permissions.models import UserGroup
 from object_permissions.signals import granted, revoked
 
 
@@ -38,10 +36,7 @@ class TestSignals(TestCase):
         User.objects.all().delete()
         UserGroup.objects.all().delete()
         Group.objects.all().delete()
-        ObjectPermission.objects.all().delete()
-        GroupObjectPermission.objects.all().delete()
-        ObjectPermissionType.objects.all().delete()
-        
+
         granted.disconnect(self.granted_receiver)
         revoked.disconnect(self.revoked_receiver)
     

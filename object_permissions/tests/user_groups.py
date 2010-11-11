@@ -6,8 +6,7 @@ from django.test import TestCase
 from django.test.client import Client
 
 from object_permissions import *
-from object_permissions.models import ObjectPermissionType, ObjectPermission, \
-    UserGroup, GroupObjectPermission
+from object_permissions.models import UserGroup
 
 
 __all__ = ('TestUserGroups','TestUserGroupViews')
@@ -48,43 +47,10 @@ class TestUserGroups(TestCase):
         User.objects.all().delete()
         Group.objects.all().delete()
         UserGroup.objects.all().delete()
-        ObjectPermission.objects.all().delete()
-        GroupObjectPermission.objects.all().delete()
-        ObjectPermissionType.objects.all().delete()
-        
+
     def test_trivial(self):
         """ Test instantiating a UserGroup """
         group = UserGroup()
-        perm = GroupObjectPermission()
-    
-    def test_model(self):
-        """
-        Test model constraints
-        
-        Verifies:
-            * group name is unique
-            * Granted Permissions must be unique to UserGroup/object combinations
-        """
-        ct = ContentType.objects.get_for_model(object0)
-        pt = ObjectPermissionType(name='Perm1', content_type=ct)
-        pt.save()
-        
-        group = UserGroup(name='TestGroup')
-        group.save()
-        
-        GroupObjectPermission(group=group, object_id=object0.id, permission=pt).save()
-        
-        try:
-            UserGroup(name='TestGroup').save()
-            self.fail('Integrity Error not raised for duplicate UserGroup')
-        except IntegrityError:
-            pass
-        
-        try:
-            GroupObjectPermission(group=group, object_id=object0.id, permission=pt).save()
-            self.fail('Integrity Error not raised for duplicate GroupObjectPermission')
-        except IntegrityError:
-            pass
 
     def test_save(self, name='test', user=None):
         """ Test saving an UserGroup """
@@ -548,10 +514,7 @@ class TestUserGroupViews(TestCase):
         User.objects.all().delete()
         Group.objects.all().delete()
         UserGroup.objects.all().delete()
-        ObjectPermission.objects.all().delete()
-        GroupObjectPermission.objects.all().delete()
-        ObjectPermissionType.objects.all().delete()
-    
+
     def test_save(self, name='test'):
         """ Test saving an UserGroup """
         group = UserGroup(name=name)
