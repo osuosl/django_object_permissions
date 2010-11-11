@@ -116,7 +116,7 @@ def grant(user, perm, obj):
     permissions = permission_map[model]
     properties = dict(user=user, obj=obj)
 
-    user_perms = permissions.objects.get_or_create(**properties)
+    user_perms, chaff = permissions.objects.get_or_create(**properties)
 
     # XXX could raise FieldDoesNotExist
     setattr(user_perms, perm, True)
@@ -134,7 +134,7 @@ def grant_group(group, perm, obj):
     permissions = permission_map[model]
     properties = dict(group=group, obj=obj)
 
-    group_perms = permissions.objects.get_or_create(**properties)
+    group_perms, chaff = permissions.objects.get_or_create(**properties)
 
     # XXX could raise FieldDoesNotExist
     setattr(group_perms, perm, True)
@@ -154,7 +154,7 @@ def set_user_perms(user, perms, obj):
     for perm in perms:
         all_perms[perm] = True
 
-    user_perms = permissions.objects.get_or_create(user=user, obj=obj)
+    user_perms, chaff = permissions.objects.get_or_create(user=user, obj=obj)
 
     for perm, enabled in all_perms.iteritems():
         setattr(user_perms, perm, enabled)
@@ -175,7 +175,7 @@ def set_group_perms(group, perms, obj):
     for perm in perms:
         all_perms[perm] = True
 
-    group_perms = permissions.objects.get_or_create(group=group, obj=obj)
+    group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
 
     for perm, enabled in all_perms.iteritems():
         setattr(group_perms, perm, enabled)
@@ -193,7 +193,7 @@ def revoke(user, perm, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    user_perms = permissions.objects.get_or_create(user=user, obj=obj)
+    user_perms, chaff = permissions.objects.get_or_create(user=user, obj=obj)
 
     setattr(user_perms, perm, False)
 
@@ -208,7 +208,7 @@ def revoke_group(group, perm, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    group_perms = permissions.objects.get_or_create(group=group, obj=obj)
+    group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
 
     setattr(group_perms, perm, False)
 
