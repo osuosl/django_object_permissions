@@ -1,7 +1,6 @@
 from warnings import warn
 
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.models import ContentType
 from django import db
 from django.db import models
 
@@ -68,9 +67,12 @@ def _register(perms, model):
     name = "%s_Perms" % model.__name__
     fields = {
         "__module__": "",
-        "user": models.ForeignKey(User),
-        "group": models.ForeignKey(UserGroup, related_name="+"),
-        "obj": models.ForeignKey(model),
+        "user": models.ForeignKey(User,
+            related_name="%s_uperms" % model.__name__),
+        "group": models.ForeignKey(UserGroup,
+            related_name="%s_gperms" % model.__name__),
+        "obj": models.ForeignKey(model,
+            related_name="%s_operms" % model.__name__),
     }
     for perm in perms:
         fields[perm] = models.BooleanField(default=False)
@@ -99,47 +101,44 @@ def _register_delayed(**kwargs):
 
 models.signals.post_syncdb.connect(_register_delayed)
 
-def grant(user, perm, object):
+
+def grant(user, perm, obj):
     """
     Grants a permission to a User
     """
 
-    model = object.__class__
+    model = obj.__class__
     permissions = permission_map[model]
-    properties = dict(user=user, object_id=object.id)
+    properties = dict(user=user, obj=obj)
 
-    user_perms = permissions.objects.filter(**properties)
-    if not user_perms.exists():
-        user_perms = permissions(**properties)
+    user_perms = permissions.objects.get_or_create(**properties)
 
     # XXX could raise FieldDoesNotExist
     setattr(user_perms, perm, True)
     user_perms.save()
 
-    granted.send(sender=user, perm=perm, object=object)
+    granted.send(sender=user, perm=perm, object=obj)
 
 
-def grant_group(group, perm, object):
+def grant_group(group, perm, obj):
     """
     Grants a permission to a UserGroup
     """
 
-    model = object.__class__
+    model = obj.__class__
     permissions = permission_map[model]
-    properties = dict(group=group, object_id=object.id)
+    properties = dict(group=group, obj=obj)
 
-    group_perms = permissions.objects.filter(**properties)
-    if not group_perms.exists():
-        group_perms = permissions(**properties)
+    group_perms = permissions.objects.get_or_create(**properties)
 
     # XXX could raise FieldDoesNotExist
     setattr(group_perms, perm, True)
     group_perms.save()
 
-    granted.send(sender=group, perm=perm, object=object)
+    granted.send(sender=group, perm=perm, object=obj)
 
 
-def set_user_perms(user, perms, object):
+def set_user_perms(user, perms, obj):
     """
     Set perms to the list specified
     """
@@ -150,20 +149,17 @@ def set_user_perms(user, perms, object):
     for perm in perms:
         all_perms[perm] = True
 
-    user_perms = permissions.objects.filter(user=user, object_id=object.id)
+    user_perms = permissions.objects.get_or_create(user=user, obj=obj)
 
-    if user_perms.exists():
-        for perm, enabled in all_perms.iteritems():
-            setattr(user_perms, perm, enabled)
-    else:
-        user_perms = permissions(user=user, object_id=object.id,
-                **dict(all_perms))
-        user_perms.save()
+    for perm, enabled in all_perms.iteritems():
+        setattr(user_perms, perm, enabled)
+
+    user_perms.save()
 
     return perms
 
 
-def set_group_perms(group, perms, object):
+def set_group_perms(group, perms, obj):
     """
     Set group's perms to the list specified
     """
@@ -174,100 +170,100 @@ def set_group_perms(group, perms, object):
     for perm in perms:
         all_perms[perm] = True
 
-    group_perms = permissions.objects.filter(group=group, object_id=object.id)
+    group_perms = permissions.objects.get_or_create(group=group, obj=obj)
 
-    if group_perms.exists():
-        for perm, enabled in all_perms.iteritems():
-            setattr(group_perms, perm, enabled)
-    else:
-        group_perms = permissions(group=group, object_id=object.id,
-                **dict(all_perms))
-        group_perms.save()
+    for perm, enabled in all_perms.iteritems():
+        setattr(group_perms, perm, enabled)
+
+    group_perms.save()
 
     return perms
 
 
-def revoke(user, perm, object):
+def revoke(user, perm, obj):
     """
     Revokes a permission from a User
     """
 
-    ct = ContentType.objects.get_for_model(object)
-    query = ObjectPermission.objects \
-                .filter(user=user, object_id=object.id,  \
-                    permission__content_type=ct, permission__name=perm)
-    if query.exists():
-        query.delete()
-        revoked.send(sender=user, perm=perm, object=object)
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    user_perms = permissions.objects.get_or_create(user=user, obj=obj)
+
+    setattr(user_perms, perm, False)
+
+    revoked.send(sender=user, perm=perm, object=obj)
 
 
-def revoke_all(user, object):
-    """
-    Revokes all permissions from a User
-    """
-    ct = ContentType.objects.get_for_model(object)
-    query = ObjectPermission.objects \
-        .filter(user=user, object_id=object.id, permission__content_type=ct)
-    if revoked.receivers:
-        # only perform second query if there are receivers attached
-        perms = list(query.values_list('permission__name', flat=True))
-        query.delete()
-        for perm in perms:
-            revoked.send(sender=user, perm=perm, object=object)
-    else:
-        query.delete()
-
-
-def revoke_all_group(group, object):
-    """
-    Revokes all permissions from a User
-    """
-    ct = ContentType.objects.get_for_model(object)
-    query = GroupObjectPermission.objects \
-        .filter(group=group, object_id=object.id, permission__content_type=ct)
-    if revoked.receivers:
-        # only perform second query if there are receivers attached
-        perms = list(query.values_list('permission__name', flat=True))
-        query.delete()
-        for perm in perms:
-            revoked.send(sender=group, perm=perm, object=object)
-    else:
-        query.delete()
-
-
-def revoke_group(group, perm, object):
+def revoke_group(group, perm, obj):
     """
     Revokes a permission from a UserGroup
     """
-    ct = ContentType.objects.get_for_model(object)
-    query = GroupObjectPermission.objects \
-                .filter(group=group, object_id=object.id,  \
-                    permission__content_type=ct, permission__name=perm) 
-    if query.exists():
-        query.delete()
-        revoked.send(sender=group, perm=perm, object=object)
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    group_perms = permissions.objects.get_or_create(group=group, obj=obj)
+
+    setattr(group_perms, perm, False)
+
+    revoked.send(sender=group, perm=perm, object=obj)
 
 
-def get_user_perms(user, object):
+def revoke_all(user, obj):
+    """
+    Revokes all permissions from a User
+    """
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    permissions.objects.filter(user=user, obj=obj).delete()
+
+
+def revoke_all_group(group, obj):
+    """
+    Revokes all permissions from a User
+    """
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    permissions.objects.filter(group=group, obj=obj).delete()
+
+
+def get_user_perms(user, obj):
     """
     Return a list of perms that a User has.
     """
-    ct = ContentType.objects.get_for_model(object)
-    query = ObjectPermission.objects \
-        .filter(user=user, object_id=object.id, permission__content_type=ct) \
-        .values_list('permission__name', flat=True)
-    return list(query)
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    try:
+        q = permissions.objects.get(user=user, obj=obj)
+        return [field.name for field in q._meta.fields
+                if isinstance(field, models.BooleanField)
+                and getattr(q, field.name)]
+    except permissions.DoesNotExist:
+        return []
 
 
-def get_group_perms(group, object):
+def get_group_perms(group, obj):
     """
     Return a list of perms that a UserGroup has.
     """
-    ct = ContentType.objects.get_for_model(object)
-    query = GroupObjectPermission.objects \
-        .filter(group=group, object_id=object.id, permission__content_type=ct) \
-        .values_list('permission__name', flat=True)
-    return list(query)
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    try:
+        q = permissions.objects.get(group=group, obj=obj)
+        return [field.name for field in q._meta.fields
+                if isinstance(field, models.BooleanField)
+                and getattr(q, field.name)]
+    except permissions.DoesNotExist:
+        return []
 
 
 def get_model_perms(model):
@@ -278,70 +274,76 @@ def get_model_perms(model):
     return permissions_for_model[model]
 
 
-def group_has_perm(group, perm, object):
+def group_has_perm(group, perm, obj):
     """
     check if a UserGroup has a permission on an object
     """
-    if object is None:
-        return False
-    
-    ct = ContentType.objects.get_for_model(object)
-    return GroupObjectPermission.objects \
-        .filter(group=group, object_id=object.id, \
-                permission__name=perm, permission__content_type=ct) \
-        .exists()
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    d = {
+            perm: True,
+    }
+
+    return permissions.objects.filter(group=group, obj=obj, **d).exists()
 
 
-def get_users(object):
+def get_users(obj):
     """
     Return a list of Users with permissions directly on a given object.  This
     will not include users that have permissions via a UserGroup
     """
-    ct = ContentType.objects.get_for_model(object)
-    return User.objects.filter(
-            object_permissions__permission__content_type=ct, \
-            object_permissions__object_id=object.id).distinct()
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    name = "%s_uperms__obj" % model.__name__
+    d = {
+            name: obj,
+    }
+
+    return User.objects.filter(**d).distinct()
 
 
-def get_groups(object):
+def get_groups(obj):
     """
     Return a list of UserGroups with permissions on a given object
     """
-    ct = ContentType.objects.get_for_model(object)
-    return UserGroup.objects.filter(
-            object_permissions__permission__content_type=ct, \
-            object_permissions__object_id=object.id).distinct()
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    name = "%s_gperms__obj" % model.__name__
+    d = {
+            name: obj,
+    }
+
+    return UserGroup.objects.filter(**d).distinct()
 
 
 def perms_on_any(user, model, perms, groups=True):
     """
     Determines whether the user has any of the listed perms on any instances of
     the Model.  This checks both user permissions and group permissions.
-    
+
     @param user: user who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
     @return true if has perms on any instance of model
     """
-    ct = ContentType.objects.get_for_model(model)
-    
+
+    permissions = permission_map[model]
+    d = dict((perm, True) for perm in perms
+            if perm in get_model_perms(model))
+
     # permissions user has
-    if ObjectPermission.objects.filter(
-            user = user,
-            permission__content_type=ct,
-            permission__name__in=perms
-        ).exists():
+    if permissions.objects.filter(user=user, **d).exists():
+        return True
+    elif groups:
+        if permissions.objects.filter(group__users=user, **d).exists():
             return True
-    
-    # permissions user's groups have
-    if groups:
-        if GroupObjectPermission.objects.filter(
-                group__users = user,
-                permission__content_type=ct,
-                permission__name__in=perms
-            ).exists():
-                return True
-    
+
     return False
 
 
@@ -349,7 +351,7 @@ def filter_on_perms(user, model, perms, groups=True, **clauses):
     """
     Filters objects that the User has permissions on.  This includes any objects
     the user has permissions based on belonging to a UserGroup.
-    
+
     @param user: user who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
@@ -357,46 +359,45 @@ def filter_on_perms(user, model, perms, groups=True, **clauses):
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
-    ct = ContentType.objects.get_for_model(model)
-    
-    # permissions user has
-    ids = list(ObjectPermission.objects.filter(
-            user=user,
-            permission__content_type=ct,
-            permission__name__in=perms
-        ).values_list('object_id', flat=True))
-    
-    # permissions user's groups have
+
+    d = {
+            "%s_operms__user" % model.__name__: user,
+    }
+
     if groups:
-        ids += list(GroupObjectPermission.objects.filter(
-                group__users=user,
-                permission__content_type=ct,
-                permission__name__in=perms
-            ).values_list('object_id', flat=True))
-    
-    return model.objects.filter(id__in=ids, **clauses)
+        d["group__users"] = user
+
+    for perm in perms:
+        if perm in get_model_perms(model):
+            d["%s_operms__%s" (model.__name__, perm)] = True
+
+    d.extend(clauses)
+
+    return model.objects.filter(**d)
 
 
-def filter_on_group_perms(usergroup, model, perms, **clauses):
+def filter_on_group_perms(group, model, perms, **clauses):
     """
     Filters objects that the UserGroup has permissions on.
-    
+
     @param usergroup: UserGroup who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
-    ct = ContentType.objects.get_for_model(model)
-    
-    # permissions user's groups have
-    ids = list(GroupObjectPermission.objects.filter(
-            group=usergroup,
-            permission__content_type=ct,
-            permission__name__in=perms
-        ).values_list('object_id', flat=True))
-    
-    return model.objects.filter(id__in=ids, **clauses)
+
+    d = {
+            "%s_gperms__group" % model.__name__: group,
+    }
+
+    for perm in perms:
+        if perm in get_model_perms(model):
+            d["%s_operms__%s" (model.__name__, perm)] = True
+
+    d.extend(clauses)
+
+    return model.objects.filter(**d)
 
 
 # register internal perms
