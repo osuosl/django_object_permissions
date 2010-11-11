@@ -4,9 +4,7 @@ from django.contrib.auth.models import User
 from django import db
 from django.db import models
 
-from models import ObjectPermission, ObjectPermissionType, UserGroup, \
-    GroupObjectPermission
-import object_permissions
+from models import UserGroup
 from object_permissions.signals import granted, revoked
 
 class RegistrationException(Exception):
@@ -282,6 +280,21 @@ def get_model_perms(model):
     return permissions_for_model[model]
 
 
+def user_has_perm(user, perm, obj):
+    """
+    check if a UserGroup has a permission on an object
+    """
+
+    model = obj.__class__
+    permissions = permission_map[model]
+
+    d = {
+            perm: True,
+    }
+
+    return permissions.objects.filter(user=user, obj=obj, **d).exists()
+
+
 def group_has_perm(group, perm, obj):
     """
     check if a UserGroup has a permission on an object
@@ -416,6 +429,7 @@ register(['admin'], UserGroup)
 setattr(User, 'grant', grant)
 setattr(User, 'revoke', revoke)
 setattr(User, 'revoke_all', revoke_all)
+setattr(User, 'has_perm', user_has_perm)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'filter_on_perms', filter_on_perms)
