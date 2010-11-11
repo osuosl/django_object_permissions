@@ -148,7 +148,7 @@ def set_user_perms(user, perms, obj):
     Set perms to the list specified
     """
 
-    model = object.__class__
+    model = obj.__class__
     permissions = permission_map[model]
     all_perms = dict((p, False) for p in get_model_perms(model))
     for perm in perms:
@@ -169,7 +169,7 @@ def set_group_perms(group, perms, obj):
     Set group's perms to the list specified
     """
 
-    model = object.__class__
+    model = obj.__class__
     permissions = permission_map[model]
     all_perms = dict((p, False) for p in get_model_perms(model))
     for perm in perms:
