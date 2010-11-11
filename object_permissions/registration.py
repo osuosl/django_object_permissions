@@ -9,6 +9,8 @@ from models import ObjectPermission, ObjectPermissionType, UserGroup, \
 import object_permissions
 from object_permissions.signals import granted, revoked
 
+class RegistrationException(Exception):
+    pass
 
 __all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
                'get_user_perms', 'get_group_perms', 'get_model_perms', \
@@ -41,6 +43,7 @@ def register(perms, model):
     """
 
     if isinstance(perms, (str, unicode)):
+        warn("Using a single permission is deprecated!")
         perms = [perms]
 
     try:
@@ -85,6 +88,7 @@ def _register(perms, model):
     perm_model = type(name, (models.Model,), fields)
 
     permission_map[model] = perm_model
+    permissions_for_model[model] = perms
 
 def _register_delayed(**kwargs):
     """
@@ -145,7 +149,7 @@ def set_user_perms(user, perms, obj):
 
     model = object.__class__
     permissions = permission_map[model]
-    all_perms = dict((p, False) for p in permissions_for_model[model])
+    all_perms = dict((p, False) for p in get_model_perms(model))
     for perm in perms:
         all_perms[perm] = True
 
@@ -166,7 +170,7 @@ def set_group_perms(group, perms, obj):
 
     model = object.__class__
     permissions = permission_map[model]
-    all_perms = dict((p, False) for p in permissions_for_model[model])
+    all_perms = dict((p, False) for p in get_model_perms(model))
     for perm in perms:
         all_perms[perm] = True
 
@@ -271,6 +275,9 @@ def get_model_perms(model):
     Return a list of perms that a model has registered
     """
 
+    if model not in permissions_for_model:
+        raise RegistrationException(
+            "Tried to get permissions for unregistered model %s" % model)
     return permissions_for_model[model]
 
 
