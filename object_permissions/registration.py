@@ -70,9 +70,10 @@ def _register(perms, model):
     name = "%s_Perms" % model.__name__
     fields = {
         "__module__": "",
-        "user": models.ForeignKey(User,
+        # XXX user xor group null?
+        "user": models.ForeignKey(User, null=True,
             related_name="%s_uperms" % model.__name__),
-        "group": models.ForeignKey(UserGroup,
+        "group": models.ForeignKey(UserGroup, null=True,
             related_name="%s_gperms" % model.__name__),
         "obj": models.ForeignKey(model,
             related_name="%s_operms" % model.__name__),
