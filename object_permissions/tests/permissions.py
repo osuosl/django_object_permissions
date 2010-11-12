@@ -1,10 +1,10 @@
-from django.core.exceptions import ObjectDoesNotExist
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 
 from object_permissions import register, grant, revoke, get_user_perms, \
     revoke_all, get_users, set_user_perms
-from object_permissions.registration import TestModel
+from object_permissions.registration import TestModel, UnknownPermissionException
 
 
 class TestModelPermissions(TestCase):
@@ -93,10 +93,10 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user1.has_perm('Perm2', object0))
         self.assertFalse(user1.has_perm('Perm2', object1))
         self.assert_(user1.has_perm('Perm3', object0))
-
+        
         def grant_unknown():
             grant(user1, 'UnknownPerm', object0)
-        self.assertRaises(ObjectDoesNotExist, grant_unknown)
+        self.assertRaises(UnknownPermissionException, grant_unknown)
     
     def test_revoke_user_permissions(self):
         """

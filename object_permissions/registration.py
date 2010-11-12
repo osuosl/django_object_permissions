@@ -9,8 +9,14 @@ from django.db.models import Q
 from models import UserGroup
 from object_permissions.signals import granted, revoked
 
+
 class RegistrationException(Exception):
     pass
+
+
+class UnknownPermissionException(Exception):
+    pass
+
 
 __all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
                'get_user_perms', 'get_group_perms', 'get_model_perms', \
@@ -126,14 +132,14 @@ def grant(user, perm, obj):
     """
 
     model = obj.__class__
+    
+    if perm not in get_model_perms(model):
+        raise UnknownPermissionException(perm)
+    
     permissions = permission_map[model]
     properties = dict(user=user, obj=obj)
 
-    
-
     user_perms, chaff = permissions.objects.get_or_create(**properties)
-
-    # XXX could raise FieldDoesNotExist
     setattr(user_perms, perm, True)
     user_perms.save()
 
