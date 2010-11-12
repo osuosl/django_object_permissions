@@ -154,12 +154,13 @@ def grant_group(group, perm, obj):
     """
 
     model = obj.__class__
+    if perm not in get_model_perms(model):
+        raise UnknownPermissionException(perm)
+    
     permissions = permission_map[model]
     properties = dict(group=group, obj=obj)
 
     group_perms, chaff = permissions.objects.get_or_create(**properties)
-
-    # XXX could raise FieldDoesNotExist
     setattr(group_perms, perm, True)
     group_perms.save()
 

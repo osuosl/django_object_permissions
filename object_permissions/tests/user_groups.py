@@ -7,7 +7,7 @@ from django.test.client import Client
 
 from object_permissions import *
 from object_permissions.models import UserGroup
-from object_permissions.registration import TestModel
+from object_permissions.registration import TestModel, UnknownPermissionException
 
 __all__ = ('TestUserGroups','TestUserGroupViews')
 
@@ -126,7 +126,7 @@ class TestUserGroups(TestCase):
         
         def grant_unknown():
             group1.grant('UnknownPerm', object0)
-        self.assertRaises(ObjectPermissionType.DoesNotExist, grant_unknown)
+        self.assertRaises(UnknownPermissionException, grant_unknown)
     
     def test_revoke_group_permissions(self):
         """
