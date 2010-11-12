@@ -159,6 +159,9 @@ def grant_group(group, perm, obj):
     """
 
     model = obj.__class__
+    if perm not in get_model_perms(model):
+        raise UnknownPermissionException(perm)
+    
     permissions = permission_map[model]
     properties = dict(group=group, obj=obj)
 
@@ -251,14 +254,14 @@ def revoke_group(group, perm, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
-
-    if getattr(group_perms, perm):
+    try:
+        group_perms = permissions.objects.get(group=group, obj=obj)
         setattr(group_perms, perm, False)
         group_perms.save()
-
         revoked.send(sender=group, perm=perm, object=obj)
-
+    except ObjectDoesNotExist:
+        # group didnt have permission to begin with
+        pass
 
 def revoke_all(user, obj):
     """
@@ -377,9 +380,16 @@ def group_has_perm(group, perm, obj):
      * The model is not registered for permissions
      * The permission does not exist on this model
     """
-
+    
     model = obj.__class__
-    permissions = permission_map[model]
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
+
+    if perm not in get_model_perms(model):
+        # not a valid permission
+        return False
 
     d = {
             perm: True,
@@ -437,10 +447,11 @@ def perms_on_any(user, model, perms, groups=True):
 
     permissions = permission_map[model]
     model_perms = get_model_perms(model)
-    perms = filter(lambda x: x in model_perms, perms)
-
+    
     # OR all user permission clauses together
-    perm_clause = reduce(or_, [Q(**{perm:True}) for perm in perms])
+    perm_clause = reduce(or_, (Q(**{perm: True}) \
+                               for perm in perms if perm in model_perms))
+    
     user_clause = Q(user=user)
 
     if groups:
@@ -465,14 +476,12 @@ def filter_on_perms(user, model, perms, groups=True):
     @return a queryset of matching objects
     """
     model_perms = get_model_perms(model)
-    perms = filter(lambda x: x in model_perms, perms)
     name = model.__name__
 
-    d = dict(("%s_operms__%s" % (name, perm), True) for perm in perms)
-    
     # OR all user permission clauses together
-    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm):True}) \
-                               for perm in perms))
+    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                               for perm in perms if perm in model_perms))
+
     user_clause = Q(**{"%s_operms__user" % name:user})
     
     if groups:
@@ -484,7 +493,7 @@ def filter_on_perms(user, model, perms, groups=True):
         return model.objects.filter(user_clause & perm_clause)
 
 
-def filter_on_group_perms(group, model, perms, **clauses):
+def filter_on_group_perms(group, model, perms):
     """
     Make a filtered QuerySet of objects for which the UserGroup has any
     permissions.
@@ -495,18 +504,16 @@ def filter_on_group_perms(group, model, perms, **clauses):
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
+    model_perms = get_model_perms(model)
+    name = model.__name__
+    
+    d = {"%s_operms__group" % name: group}
 
-    d = {
-            "%s_operms__group" % model.__name__: group,
-    }
+    # OR all user permission clauses together
+    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                               for perm in perms if perm in model_perms))
 
-    for perm in perms:
-        if perm in get_model_perms(model):
-            d["%s_operms__%s" % (model.__name__, perm)] = True
-
-    d.update(clauses)
-
-    return model.objects.filter(**d)
+    return model.objects.filter(perm_clause, **d)
 
 
 # register internal perms

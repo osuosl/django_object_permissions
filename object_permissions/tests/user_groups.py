@@ -7,7 +7,7 @@ from django.test.client import Client
 
 from object_permissions import *
 from object_permissions.models import UserGroup
-from object_permissions.registration import TestModel
+from object_permissions.registration import TestModel, UnknownPermissionException
 
 __all__ = ('TestUserGroups','TestUserGroupViews')
 
@@ -28,9 +28,9 @@ class TestUserGroups(TestCase):
         user1.set_password('secret')
         user1.save()
         
-        object0 = TestModel.objects.create()
+        object0 = TestModel.objects.create(name='test0')
         object0.save()
-        object1 = TestModel.objects.create()
+        object1 = TestModel.objects.create(name='test1')
         object1.save()
         
         dict_ = globals()
@@ -126,7 +126,7 @@ class TestUserGroups(TestCase):
         
         def grant_unknown():
             group1.grant('UnknownPerm', object0)
-        self.assertRaises(ObjectPermissionType.DoesNotExist, grant_unknown)
+        self.assertRaises(UnknownPermissionException, grant_unknown)
     
     def test_revoke_group_permissions(self):
         """
@@ -140,6 +140,9 @@ class TestUserGroups(TestCase):
         """
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
+        
+        # revoke perm when user has no perms
+        revoke(group0, 'Perm1', object0)
         
         for perm in perms:
             group0.grant(perm, object0)
@@ -373,7 +376,7 @@ class TestUserGroups(TestCase):
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
         
@@ -462,7 +465,7 @@ class TestUserGroups(TestCase):
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter( name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
