@@ -292,7 +292,16 @@ def revoke_all(user, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    permissions.objects.filter(user=user, obj=obj).delete()
+    try:
+        user_perms = permissions.objects.get(user=user, obj=obj)
+
+        for perm in get_model_perms(model):
+            if getattr(user_perms, perm):
+                revoked.send(sender=user, perm=perm, object=obj)
+
+        user_perms.delete()
+    except ObjectDoesNotExist:
+        pass
 
 
 def revoke_all_group(group, obj):
@@ -303,7 +312,16 @@ def revoke_all_group(group, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    permissions.objects.filter(group=group, obj=obj).delete()
+    try:
+        group_perms = permissions.objects.get(group=group, obj=obj)
+
+        for perm in get_model_perms(model):
+            if getattr(group_perms, perm):
+                revoked.send(sender=group, perm=perm, object=obj)
+
+        group_perms.delete()
+    except ObjectDoesNotExist:
+        pass
 
 
 def get_user_perms(user, obj):
