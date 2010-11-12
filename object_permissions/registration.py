@@ -274,6 +274,14 @@ def get_model_perms(model):
     Return a list of perms that a model has registered
     """
 
+    if isinstance(model, models.Model):
+        # Instance; get the class
+        model = model.__class__
+    elif not issubclass(model, models.Model):
+        # Not a Model subclass
+        raise RegistrationException(
+            "%s is neither a model nor instance of one" % model)
+
     if model not in permissions_for_model:
         raise RegistrationException(
             "Tried to get permissions for unregistered model %s" % model)
