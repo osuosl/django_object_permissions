@@ -237,12 +237,22 @@ def revoke(user, perm, obj):
 
     try:
         user_perms = permissions.objects.get(user=user, obj=obj)
-        setattr(user_perms, perm, False)
-        user_perms.save()
-        revoked.send(sender=user, perm=perm, object=obj)
+
+        if getattr(user_perms, perm):
+            revoked.send(sender=user, perm=perm, object=obj)
+
+            setattr(user_perms, perm, False)
+
+            # If any permissions remain, save the model. Otherwise, remove it
+            # from the table.
+            if any(getattr(user_perms, p)
+                    for p in get_model_perms(model)):
+                user_perms.save()
+            else:
+                user_perms.delete()
 
     except ObjectDoesNotExist:
-        # user didnt have permission to begin with
+        # User didnt have permission to begin with; do nothing.
         pass
 
 
@@ -256,11 +266,22 @@ def revoke_group(group, perm, obj):
 
     try:
         group_perms = permissions.objects.get(group=group, obj=obj)
-        setattr(group_perms, perm, False)
-        group_perms.save()
-        revoked.send(sender=group, perm=perm, object=obj)
+
+        if getattr(group_perms, perm):
+            revoked.send(sender=group, perm=perm, object=obj)
+
+            setattr(group_perms, perm, False)
+
+            # If any permissions remain, save the model. Otherwise, remove it
+            # from the table.
+            if any(getattr(group_perms, p)
+                    for p in get_model_perms(model)):
+                group_perms.save()
+            else:
+                group_perms.delete()
+
     except ObjectDoesNotExist:
-        # group didnt have permission to begin with
+        # Group didnt have permission to begin with; do nothing.
         pass
 
 def revoke_all(user, obj):
