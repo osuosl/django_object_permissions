@@ -11,6 +11,31 @@ from django.db.models import Q
 from models import UserGroup
 from object_permissions.signals import granted, revoked
 
+"""
+Registration functions.
+
+This is the meat and gravy of the entire app.
+
+In order to use permissions with a Model, that Model's permissions must be
+registered in advance. Registration can only be done once per Model, at model
+definition time, and must include all permissions for that Model.
+
+>>> register(["spam", "eggs", "toast"], Breakfast)
+
+Once registered, permissions may be set for any pairing of an instance of that
+Model and an instance of a User or UserGroup.
+
+Technical tl;dr: Registration can only happen once because Object Permissions
+dynamically creates new models to store the permissions for a specific model.
+Since the dynamic models need to be database-backed, they can't be altered
+once defined and they must be defined before validation. We'd like to offer
+our sincerest assurance that, even though dynamic models are dangerous, our
+highly trained staff has expertly wrestled these majestic, fascinating,
+terrifying beasts into cages, and now they are yours to tame and own. Buy one
+today!
+
+...Okay, that got weird. But you get the point. Only register() a model once.
+"""
 
 class RegistrationException(Exception):
     pass
