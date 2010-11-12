@@ -1,11 +1,10 @@
-from django.contrib.auth.models import User, Group
-from django.contrib.contenttypes.models import ContentType
-from django.db import IntegrityError
+
+from django.contrib.auth.models import User
 from django.test import TestCase
 
 from object_permissions import register, grant, revoke, get_user_perms, \
-    get_model_perms, revoke_all, get_users, set_user_perms
-from object_permissions.models import ObjectPermission, ObjectPermissionType
+    revoke_all, get_users, set_user_perms
+from object_permissions.registration import TestModel, UnknownPermissionException
 
 
 class TestModelPermissions(TestCase):
@@ -18,9 +17,9 @@ class TestModelPermissions(TestCase):
         self.user1 = User(username='tester2')
         self.user1.save()
         
-        self.object0 = Group.objects.create(name='test0')
+        self.object0 = TestModel.objects.create(name='test0')
         self.object0.save()
-        self.object1 = Group.objects.create(name='test1')
+        self.object1 = TestModel.objects.create(name='test1')
         self.object1.save()
         
         dict_ = globals()
@@ -29,61 +28,14 @@ class TestModelPermissions(TestCase):
         dict_['object0']=self.object0
         dict_['object1']=self.object1
         dict_['perms']=self.perms
-    
+
     def tearDown(self):
-        Group.objects.all().delete()
+        TestModel.objects.all().delete()
         User.objects.all().delete()
-        ObjectPermission.objects.all().delete()
-        ObjectPermissionType.objects.all().delete()
 
     def test_trivial(self):
-        ObjectPermissionType()
-        ObjectPermission()
+        pass
 
-    def test_models(self):
-        """
-        test model constraints:
-            * PermissionType must be unique
-            * Granted Permissions must be unique to user/object combinations
-        """
-        ct = ContentType.objects.get_for_model(object0)
-        pt = ObjectPermissionType(name='Perm1', content_type=ct)
-        pt.save()
-        ObjectPermission(user=user0, object_id=object0.id, permission=pt).save()
-        
-        try:
-            ObjectPermissionType(name='Perm1', content_type=ct).save()
-            self.fail('Integrity Error not raised for duplicate ObjectPermissionType')
-        except IntegrityError:
-            pass
-        
-        try:
-            ObjectPermission(user=user0, object_id=object0.id, permission=pt).save()
-            self.fail('Integrity Error not raised for duplicate ObjectPermission')
-        except IntegrityError:
-            pass
-
-    def test_register(self):
-        """
-        Tests registering a permission
-        
-        Verifies:
-            * registering permission creates perm
-            * registering a second time does nothing
-            * registering additional perms creates them
-        """
-        register(['Perm1'], Group)
-        ct = ContentType.objects.get_for_model(Group)
-        self.assertEquals([u'Perm1'], get_model_perms(Group))
-        
-        register(['Perm1'], Group)
-        self.assertEquals([u'Perm1'], get_model_perms(Group))
-        
-        register(['Perm2'], Group)
-        register(['Perm3'], Group)
-        register(['Perm4'], Group)
-        self.assertEqual(self.perms, get_model_perms(Group))
-    
     def test_grant_user_permissions(self):
         """
         Grant a user permissions
@@ -94,8 +46,6 @@ class TestModelPermissions(TestCase):
               combinations
             * granting unknown permission raises error
         """
-        register(self.perms, Group)
-        
         # grant single property
         grant(user0, 'Perm1', object0)
         self.assert_(user0.has_perm('Perm1', object0))
@@ -146,7 +96,7 @@ class TestModelPermissions(TestCase):
         
         def grant_unknown():
             grant(user1, 'UnknownPerm', object0)
-        self.assertRaises(ObjectPermissionType.DoesNotExist, grant_unknown)
+        self.assertRaises(UnknownPermissionException, grant_unknown)
     
     def test_revoke_user_permissions(self):
         """
@@ -158,8 +108,10 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        register(perms, Group)
-
+        
+        # revoke perm when user has no perms
+        revoke(user0, 'Perm1', object0)
+        
         for perm in perms:
             grant(user0, perm, object0)
             grant(user0, perm, object1)
@@ -217,8 +169,6 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
-        register(perms, Group)
-
         for perm in perms:
             grant(user0, perm, object0)
             grant(user0, perm, object1)
@@ -262,9 +212,7 @@ class TestModelPermissions(TestCase):
         perms2 = ['Perm1', 'Perm2']
         perms3 = ['Perm2', 'Perm3']
         perms4 = []
-        
-        register(perms, Group)
-        
+
         # grant single property
         set_user_perms(user0, perms1, object0)
         self.assertEqual(perms1, get_user_perms(user0, object0))
@@ -305,7 +253,6 @@ class TestModelPermissions(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        register(perms, Group)
         grant(user0, 'Perm1', object0)
         
         self.assertTrue(user0.has_perm('Perm1', object0))
@@ -317,7 +264,6 @@ class TestModelPermissions(TestCase):
         """
         Tests retrieving list of users with perms on an object
         """
-        register(self.perms, Group)
         grant(user0, 'Perm1', object0)
         grant(user0, 'Perm3', object1)
         grant(user1, 'Perm2', object1)
@@ -329,7 +275,6 @@ class TestModelPermissions(TestCase):
         self.assert_(len(get_users(object1))==2)
     
     def test_get_user_permissions(self):
-        register(self.perms, Group)
         
         # grant single property
         grant(user0, 'Perm1', object0)
@@ -370,11 +315,10 @@ class TestModelPermissions(TestCase):
         """
         Test filtering objects
         """
-        register(self.perms, Group)
         
-        object2 = Group.objects.create(name='test2')
+        object2 = TestModel.objects.create(name='test2')
         object2.save()
-        object3 = Group.objects.create(name='test3')
+        object3 = TestModel.objects.create(name='test3')
         object3.save()
         
         user0.grant('Perm1', object0)
@@ -383,35 +327,36 @@ class TestModelPermissions(TestCase):
         user1.grant('Perm4', object3)
         
         # retrieve single perm
-        self.assert_(object0 in user0.filter_on_perms(Group, ['Perm1']))
-        self.assert_(object1 in user0.filter_on_perms(Group, ['Perm2']))
-        self.assert_(object2 in user1.filter_on_perms(Group, ['Perm3']))
-        self.assert_(object3 in user1.filter_on_perms(Group, ['Perm4']))
+        self.assert_(object0 in user0.filter_on_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in user0.filter_on_perms(TestModel, ['Perm2']))
+        self.assert_(object2 in user1.filter_on_perms(TestModel, ['Perm3']))
+        self.assert_(object3 in user1.filter_on_perms(TestModel, ['Perm4']))
         
         # retrieve multiple perms
-        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'])
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
+        
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
-        query = user1.filter_on_perms(Group, ['Perm1','Perm3', 'Perm4'])
+        query = user1.filter_on_perms(TestModel, ['Perm1','Perm3', 'Perm4'])
         self.assert_(object2 in query)
         self.assert_(object3 in query)
         self.assertEqual(2, query.count())
         
         # retrieve no results
-        query = user0.filter_on_perms(Group, ['Perm3'])
+        query = user0.filter_on_perms(TestModel, ['Perm3'])
         self.assertEqual(0, query.count())
-        query = user1.filter_on_perms(Group, ['Perm1'])
+        query = user1.filter_on_perms(TestModel, ['Perm1'])
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
         
         # exclude groups
-        self.assert_(object0 in user0.filter_on_perms(Group, ['Perm1'], groups=False))
-        query = user0.filter_on_perms(Group, ['Perm1', 'Perm2', 'Perm3'], groups=False)
+        self.assert_(object0 in user0.filter_on_perms(TestModel, ['Perm1'], groups=False))
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'], groups=False)
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
@@ -420,11 +365,10 @@ class TestModelPermissions(TestCase):
         """
         Test checking if a user has perms on any instance of the model
         """
-        register(self.perms, Group)
-        
-        object2 = Group.objects.create(name='test2')
+
+        object2 = TestModel.objects.create(name='test2')
         object2.save()
-        object3 = Group.objects.create(name='test3')
+        object3 = TestModel.objects.create(name='test3')
         object3.save()
         
         user0.grant('Perm1', object0)
@@ -432,27 +376,27 @@ class TestModelPermissions(TestCase):
         user1.grant('Perm3', object2)
         
         # check single perm
-        self.assert_(user0.perms_on_any(Group, ['Perm1']))
-        self.assert_(user0.perms_on_any(Group, ['Perm2']))
-        self.assert_(user1.perms_on_any(Group, ['Perm3']))
-        self.assert_(user0.perms_on_any(Group, ['Perm1'], False))
-        self.assert_(user0.perms_on_any(Group, ['Perm2'], False))
-        self.assert_(user1.perms_on_any(Group, ['Perm3'], False))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm2']))
+        self.assert_(user1.perms_on_any(TestModel, ['Perm3']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1'], False))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm2'], False))
+        self.assert_(user1.perms_on_any(TestModel, ['Perm3'], False))
         
         # check multiple perms
-        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm4']))
-        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm2']))
-        self.assert_(user1.perms_on_any(Group, ['Perm3', 'Perm4']))
-        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm4'], False))
-        self.assert_(user0.perms_on_any(Group, ['Perm1', 'Perm2'], False))
-        self.assert_(user1.perms_on_any(Group, ['Perm3', 'Perm4'], False))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm4']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm2']))
+        self.assert_(user1.perms_on_any(TestModel, ['Perm3', 'Perm4']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm4'], False))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm2'], False))
+        self.assert_(user1.perms_on_any(TestModel, ['Perm3', 'Perm4'], False))
         
         # no results
-        self.assertFalse(user0.perms_on_any(Group, ['Perm3']))
-        self.assertFalse(user1.perms_on_any(Group, ['Perm4']))
-        self.assertFalse(user0.perms_on_any(Group, ['Perm3', 'Perm4']))
-        self.assertFalse(user1.perms_on_any(Group, ['Perm1', 'Perm4']))
-        self.assertFalse(user0.perms_on_any(Group, ['Perm3'], False))
-        self.assertFalse(user1.perms_on_any(Group, ['Perm4'], False))
-        self.assertFalse(user0.perms_on_any(Group, ['Perm3', 'Perm4'], False))
-        self.assertFalse(user1.perms_on_any(Group, ['Perm1', 'Perm4'], False))
+        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3']))
+        self.assertFalse(user1.perms_on_any(TestModel, ['Perm4']))
+        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3', 'Perm4']))
+        self.assertFalse(user1.perms_on_any(TestModel, ['Perm1', 'Perm4']))
+        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3'], False))
+        self.assertFalse(user1.perms_on_any(TestModel, ['Perm4'], False))
+        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3', 'Perm4'], False))
+        self.assertFalse(user1.perms_on_any(TestModel, ['Perm1', 'Perm4'], False))
