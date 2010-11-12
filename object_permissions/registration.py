@@ -103,8 +103,10 @@ def _register(perms, model):
 
 def _register_delayed(**kwargs):
     """
-    Register all permissions that were delayed waiting for database tables
-    to be created
+    Register all permissions that were delayed waiting for database tables to
+    be created.
+
+    Don't call this from outside code.
     """
     try:
         for args in _DELAYED:
@@ -130,14 +132,14 @@ if settings.DEBUG:
 
 def grant(user, perm, obj):
     """
-    Grants a permission to a User
+    Grant a permission to a User.
     """
 
     model = obj.__class__
-    
+
     if perm not in get_model_perms(model):
         raise UnknownPermissionException(perm)
-    
+
     permissions = permission_map[model]
     properties = dict(user=user, obj=obj)
 
@@ -153,7 +155,7 @@ def grant(user, perm, obj):
 
 def grant_group(group, perm, obj):
     """
-    Grants a permission to a UserGroup
+    Grant a permission to a UserGroup.
     """
 
     model = obj.__class__
@@ -172,7 +174,7 @@ def grant_group(group, perm, obj):
 
 def set_user_perms(user, perms, obj):
     """
-    Set perms to the list specified
+    Set User permissions to exactly the specified permissions.
     """
 
     model = obj.__class__
@@ -198,7 +200,7 @@ def set_user_perms(user, perms, obj):
 
 def set_group_perms(group, perms, obj):
     """
-    Set group's perms to the list specified
+    Set group permissions to exactly the specified permissions.
     """
 
     model = obj.__class__
@@ -224,7 +226,7 @@ def set_group_perms(group, perms, obj):
 
 def revoke(user, perm, obj):
     """
-    Revokes a permission from a User
+    Revoke a permission from a User.
     """
 
     model = obj.__class__
@@ -235,7 +237,7 @@ def revoke(user, perm, obj):
         setattr(user_perms, perm, False)
         user_perms.save()
         revoked.send(sender=user, perm=perm, object=obj)
-        
+
     except ObjectDoesNotExist:
         # user didnt have permission to begin with
         pass
@@ -243,7 +245,7 @@ def revoke(user, perm, obj):
 
 def revoke_group(group, perm, obj):
     """
-    Revokes a permission from a UserGroup
+    Revokes a permission from a UserGroup.
     """
 
     model = obj.__class__
@@ -260,7 +262,7 @@ def revoke_group(group, perm, obj):
 
 def revoke_all(user, obj):
     """
-    Revokes all permissions from a User
+    Revoke all permissions from a User.
     """
 
     model = obj.__class__
@@ -271,7 +273,7 @@ def revoke_all(user, obj):
 
 def revoke_all_group(group, obj):
     """
-    Revokes all permissions from a User
+    Revoke all permissions from a UserGroup.
     """
 
     model = obj.__class__
@@ -282,7 +284,7 @@ def revoke_all_group(group, obj):
 
 def get_user_perms(user, obj):
     """
-    Return a list of perms that a User has.
+    Return the permissions that the User has on the given object.
     """
 
     model = obj.__class__
@@ -299,7 +301,7 @@ def get_user_perms(user, obj):
 
 def get_group_perms(group, obj):
     """
-    Return a list of perms that a UserGroup has.
+    Return the permissions that the UserGroup has on the given object.
     """
 
     model = obj.__class__
@@ -316,7 +318,9 @@ def get_group_perms(group, obj):
 
 def get_model_perms(model):
     """
-    Return a list of perms that a model has registered
+    Return all available permissions for a model.
+
+    This function accepts both Models and model instances.
     """
 
     if isinstance(model, models.Model):
@@ -335,15 +339,23 @@ def get_model_perms(model):
 
 def user_has_perm(user, perm, obj, groups=False):
     """
-    check if a UserGroup has a permission on an object
+    Check if a User has a permission on a given object.
+
+    If groups is True, the permissions of all UserGroups containing the user
+    will also be considered.
+
+    Silently returns False in case of several errors:
+
+     * The model is not registered for permissions
+     * The permission does not exist on this model
     """
     model = obj.__class__
     if perm not in get_model_perms(model):
         # not a valid permission
         return False
-    
+
     permissions = permission_map[model]
-    
+
     d = {
         perm: True
     }
@@ -358,7 +370,12 @@ def user_has_perm(user, perm, obj, groups=False):
 
 def group_has_perm(group, perm, obj):
     """
-    check if a UserGroup has a permission on an object
+    Check if a UserGroup has a permission on a given object.
+
+    Silently returns False in case of several errors:
+
+     * The model is not registered for permissions
+     * The permission does not exist on this model
     """
 
     model = obj.__class__
@@ -373,8 +390,10 @@ def group_has_perm(group, perm, obj):
 
 def get_users(obj):
     """
-    Return a list of Users with permissions directly on a given object.  This
-    will not include users that have permissions via a UserGroup
+    Retrieve the list of Users that have permissions on the given object.
+
+    This function only examines User permissions, so it will not include Users
+    that inherit permissions through UserGroups.
     """
 
     model = obj.__class__
@@ -390,7 +409,7 @@ def get_users(obj):
 
 def get_groups(obj):
     """
-    Return a list of UserGroups with permissions on a given object
+    Retrieve the list of Users that have permissions on the given object.
     """
 
     model = obj.__class__
@@ -404,8 +423,11 @@ def get_groups(obj):
 
 def perms_on_any(user, model, perms, groups=True):
     """
-    Determines whether the user has any of the listed perms on any instances of
-    the Model.  This checks both user permissions and group permissions.
+    Determine whether the user has any of the listed permissions on any instances of
+    the Model.
+
+    This function checks whether either user permissions or group permissions
+    are set, inclusively, using logical OR.
 
     @param user: user who must have permissions
     @param model: model on which to filter
@@ -416,11 +438,11 @@ def perms_on_any(user, model, perms, groups=True):
     permissions = permission_map[model]
     model_perms = get_model_perms(model)
     perms = filter(lambda x: x in model_perms, perms)
-    
+
     # OR all user permission clauses together
     perm_clause = reduce(or_, [Q(**{perm:True}) for perm in perms])
     user_clause = Q(user=user)
-    
+
     if groups:
         # must match either a user or group clause + one of the perm clauses
         group_clause = Q(group__users=user)
@@ -433,14 +455,13 @@ def perms_on_any(user, model, perms, groups=True):
 
 def filter_on_perms(user, model, perms, groups=True):
     """
-    Filters objects that the User has permissions on.  This includes any objects
-    the user has permissions based on belonging to a UserGroup.
+    Make a filtered QuerySet of objects for which the User has any
+    permissions, including permissions inherited from UserGroups.
 
     @param user: user who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
     @param groups: include perms the user has from membership in UserGroups
-    @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
     model_perms = get_model_perms(model)
@@ -465,7 +486,8 @@ def filter_on_perms(user, model, perms, groups=True):
 
 def filter_on_group_perms(group, model, perms, **clauses):
     """
-    Filters objects that the UserGroup has permissions on.
+    Make a filtered QuerySet of objects for which the UserGroup has any
+    permissions.
 
     @param usergroup: UserGroup who must have permissions
     @param model: model on which to filter
