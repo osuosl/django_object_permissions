@@ -5,9 +5,11 @@ from django.test import TestCase
 from object_permissions import register
 from object_permissions.models import UserGroup
 from object_permissions.signals import granted, revoked
+from object_permissions.tests.util import install_model
 
 
 class TestSignals(TestCase):
+    perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
     
     def setUp(self):
         self.tearDown()
@@ -22,7 +24,10 @@ class TestSignals(TestCase):
         object = Group(name='testgroup')
         object.save()
         
-        register(['Perm1', 'Perm2', 'Perm3'], Group)
+        # XXX register test permissions and ensure that the group is created
+        model = register(self.perms, Group)
+        if model:
+            install_model(model)
         
         granted.connect(self.granted_receiver)
         revoked.connect(self.revoked_receiver)
@@ -36,7 +41,7 @@ class TestSignals(TestCase):
         User.objects.all().delete()
         UserGroup.objects.all().delete()
         Group.objects.all().delete()
-
+        
         granted.disconnect(self.granted_receiver)
         revoked.disconnect(self.revoked_receiver)
     

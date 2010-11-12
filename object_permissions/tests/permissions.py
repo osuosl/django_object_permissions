@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from object_permissions import register, grant, revoke, get_user_perms, \
     revoke_all, get_users, set_user_perms
+from object_permissions.tests.util import install_model
 
 
 class TestModelPermissions(TestCase):
@@ -27,8 +28,11 @@ class TestModelPermissions(TestCase):
         dict_['object0']=self.object0
         dict_['object1']=self.object1
         dict_['perms']=self.perms
-
-        register(self.perms, Group)
+        
+        # XXX register test permissions and ensure that the group is created
+        model = register(self.perms, Group)
+        if model:
+            install_model(model)
 
     def tearDown(self):
         Group.objects.all().delete()

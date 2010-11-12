@@ -7,7 +7,7 @@ from django.test.client import Client
 
 from object_permissions import *
 from object_permissions.models import UserGroup
-
+from object_permissions.tests.util import install_model
 
 __all__ = ('TestUserGroups','TestUserGroupViews')
 
@@ -40,8 +40,10 @@ class TestUserGroups(TestCase):
         dict_['object1']=object1
         dict_['perms']=self.perms
         
-        # XXX specify permission manually, it is not auto registering for some reason
-        register(['admin'], UserGroup)
+        # XXX register test permissions and ensure that the group is created
+        model = register(self.perms, Group)
+        if model:
+            install_model(model)
     
     def tearDown(self):
         User.objects.all().delete()
@@ -78,8 +80,6 @@ class TestUserGroups(TestCase):
         """
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
-        
-        register(self.perms, Group)
         
         # grant single property
         group0.grant('Perm1', object0)

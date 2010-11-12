@@ -45,7 +45,7 @@ def register(perms, model):
         perms = [perms]
 
     try:
-        _register(perms, model)
+        return _register(perms, model)
     except db.utils.DatabaseError:
         # there was an error, likely due to a missing table.  Delay this
         # registration.
@@ -85,9 +85,10 @@ def _register(perms, model):
     fields["Meta"] = Meta
 
     perm_model = type(name, (models.Model,), fields)
-
     permission_map[model] = perm_model
     permissions_for_model[model] = perms
+    return perm_model
+
 
 def _register_delayed(**kwargs):
     """
@@ -102,6 +103,7 @@ def _register_delayed(**kwargs):
         # still waiting for models in other apps to be created
         pass
 
+
 models.signals.post_syncdb.connect(_register_delayed)
 
 
@@ -113,6 +115,8 @@ def grant(user, perm, obj):
     model = obj.__class__
     permissions = permission_map[model]
     properties = dict(user=user, obj=obj)
+
+    
 
     user_perms, chaff = permissions.objects.get_or_create(**properties)
 
