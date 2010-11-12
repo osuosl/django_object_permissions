@@ -141,6 +141,9 @@ class TestUserGroups(TestCase):
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
         
+        # revoke perm when user has no perms
+        revoke(group0, 'Perm1', object0)
+        
         for perm in perms:
             group0.grant(perm, object0)
             group0.grant(perm, object1)

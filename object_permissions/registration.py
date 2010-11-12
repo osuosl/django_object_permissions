@@ -236,12 +236,14 @@ def revoke_group(group, perm, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
-
-    setattr(group_perms, perm, False)
-
-    revoked.send(sender=group, perm=perm, object=obj)
-
+    try:
+        group_perms = permissions.objects.get(group=group, obj=obj)
+        setattr(group_perms, perm, False)
+        group_perms.save()
+        revoked.send(sender=group, perm=perm, object=obj)
+    except ObjectDoesNotExist:
+        # group didnt have permission to begin with
+        pass
 
 def revoke_all(user, obj):
     """
