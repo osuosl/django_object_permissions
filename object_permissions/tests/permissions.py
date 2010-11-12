@@ -1,10 +1,10 @@
-from django.core.exceptions import ObjectDoesNotExist
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 
 from object_permissions import register, grant, revoke, get_user_perms, \
     revoke_all, get_users, set_user_perms
-from object_permissions.registration import TestModel
+from object_permissions.registration import TestModel, UnknownPermissionException
 
 
 class TestModelPermissions(TestCase):
@@ -93,10 +93,10 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user1.has_perm('Perm2', object0))
         self.assertFalse(user1.has_perm('Perm2', object1))
         self.assert_(user1.has_perm('Perm3', object0))
-
+        
         def grant_unknown():
             grant(user1, 'UnknownPerm', object0)
-        self.assertRaises(ObjectDoesNotExist, grant_unknown)
+        self.assertRaises(UnknownPermissionException, grant_unknown)
     
     def test_revoke_user_permissions(self):
         """
@@ -108,6 +108,10 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
+        
+        # revoke perm when user has no perms
+        revoke(user0, 'Perm1', object0)
+        
         for perm in perms:
             grant(user0, perm, object0)
             grant(user0, perm, object1)
@@ -330,6 +334,7 @@ class TestModelPermissions(TestCase):
         
         # retrieve multiple perms
         query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
+        
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
@@ -345,7 +350,7 @@ class TestModelPermissions(TestCase):
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
         

@@ -28,10 +28,8 @@ class ObjectPermBackend(object):
                 user_obj = self.anonymous
             else:
                 return False
-
+        
         if obj is None:
             return False
-
         
-
         return user_has_perm(user_obj, perm, obj, True)
