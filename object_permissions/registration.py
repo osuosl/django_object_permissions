@@ -399,12 +399,12 @@ def perms_on_any(user, model, perms, groups=True):
 
     permissions = permission_map[model]
     model_perms = get_model_perms(model)
-    perms = filter(lambda x: x in model_perms, perms)
     
     # OR all user permission clauses together
-    perm_clause = reduce(or_, [Q(**{perm:True}) for perm in perms])
-    user_clause = Q(user=user)
+    perm_clause = reduce(or_, (Q(**{perm: True}) \
+                               for perm in perms if perm in model_perms))
     
+    user_clause = Q(user=user)
     if groups:
         # must match either a user or group clause + one of the perm clauses
         group_clause = Q(group__users=user)
@@ -428,14 +428,12 @@ def filter_on_perms(user, model, perms, groups=True):
     @return a queryset of matching objects
     """
     model_perms = get_model_perms(model)
-    perms = filter(lambda x: x in model_perms, perms)
     name = model.__name__
 
-    d = dict(("%s_operms__%s" % (name, perm), True) for perm in perms)
-    
     # OR all user permission clauses together
-    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm):True}) \
-                               for perm in perms))
+    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                               for perm in perms if perm in model_perms))
+
     user_clause = Q(**{"%s_operms__user" % name:user})
     
     if groups:
