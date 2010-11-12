@@ -108,6 +108,10 @@ class TestModelPermissions(TestCase):
             * revoking property user does not have does not give an error
             * revoking unknown permission raises error
         """
+        
+        # revoke perm when user has no perms
+        revoke(user0, 'Perm1', object0)
+        
         for perm in perms:
             grant(user0, perm, object0)
             grant(user0, perm, object1)

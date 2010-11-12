@@ -2,6 +2,7 @@ from warnings import warn
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from django import db
 from django.db import models
 from django.db.models import Q
@@ -214,11 +215,15 @@ def revoke(user, perm, obj):
     model = obj.__class__
     permissions = permission_map[model]
 
-    user_perms, chaff = permissions.objects.get_or_create(user=user, obj=obj)
-
-    setattr(user_perms, perm, False)
-
-    revoked.send(sender=user, perm=perm, object=obj)
+    try:
+        user_perms = permissions.objects.get(user=user, obj=obj)
+        setattr(user_perms, perm, False)
+        user_perms.save()
+        revoked.send(sender=user, perm=perm, object=obj)
+        
+    except ObjectDoesNotExist:
+        # user didnt have permission to begin with
+        pass
 
 
 def revoke_group(group, perm, obj):
