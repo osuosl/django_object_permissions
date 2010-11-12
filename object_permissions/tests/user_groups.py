@@ -28,9 +28,9 @@ class TestUserGroups(TestCase):
         user1.set_password('secret')
         user1.save()
         
-        object0 = TestModel.objects.create()
+        object0 = TestModel.objects.create(name='test0')
         object0.save()
-        object1 = TestModel.objects.create()
+        object1 = TestModel.objects.create(name='test1')
         object1.save()
         
         dict_ = globals()
@@ -376,7 +376,7 @@ class TestUserGroups(TestCase):
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
         
@@ -465,7 +465,7 @@ class TestUserGroups(TestCase):
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'], name='test0')
+        query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter( name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     

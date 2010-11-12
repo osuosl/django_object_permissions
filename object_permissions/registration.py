@@ -455,7 +455,7 @@ def filter_on_perms(user, model, perms, groups=True):
         return model.objects.filter(user_clause & perm_clause)
 
 
-def filter_on_group_perms(group, model, perms, **clauses):
+def filter_on_group_perms(group, model, perms):
     """
     Filters objects that the UserGroup has permissions on.
 
@@ -465,18 +465,16 @@ def filter_on_group_perms(group, model, perms, **clauses):
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
+    model_perms = get_model_perms(model)
+    name = model.__name__
+    
+    d = {"%s_operms__group" % name: group}
 
-    d = {
-            "%s_operms__group" % model.__name__: group,
-    }
+    # OR all user permission clauses together
+    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                               for perm in perms if perm in model_perms))
 
-    for perm in perms:
-        if perm in get_model_perms(model):
-            d["%s_operms__%s" % (model.__name__, perm)] = True
-
-    d.update(clauses)
-
-    return model.objects.filter(**d)
+    return model.objects.filter(perm_clause, **d)
 
 
 # register internal perms
