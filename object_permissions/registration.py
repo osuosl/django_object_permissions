@@ -1,5 +1,6 @@
 from warnings import warn
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django import db
 from django.db import models
@@ -76,6 +77,7 @@ def _register(perms, model):
         "obj": models.ForeignKey(model,
             related_name="%s_operms" % model.__name__),
     }
+
     for perm in perms:
         fields[perm] = models.BooleanField(default=False)
 
@@ -105,6 +107,16 @@ def _register_delayed(**kwargs):
 
 
 models.signals.post_syncdb.connect(_register_delayed)
+
+
+if settings.DEBUG:
+    # XXX Create test tables only when debug mode.  This model will be used in
+    # various unittests.  This is used so that we do not alter any models used
+    # in production
+    from django.db import models
+    class TestModel(models.Model):
+        name = models.CharField(max_length=32)
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModel)
 
 
 def grant(user, perm, obj):
@@ -346,12 +358,10 @@ def get_groups(obj):
 
     model = obj.__class__
     permissions = permission_map[model]
-
     name = "%s_gperms__obj" % model.__name__
     d = {
-            name: obj,
+            name: obj
     }
-
     return UserGroup.objects.filter(**d).distinct()
 
 

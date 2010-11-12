@@ -1,11 +1,11 @@
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.test import TestCase
 
 
 from object_permissions import register
 from object_permissions.models import UserGroup
+from object_permissions.registration import TestModel
 from object_permissions.signals import granted, revoked
-from object_permissions.tests.util import install_model
 
 
 class TestSignals(TestCase):
@@ -21,13 +21,8 @@ class TestSignals(TestCase):
         user.save()
         group = UserGroup()
         group.save()
-        object = Group(name='testgroup')
+        object = TestModel(name='testgroup')
         object.save()
-        
-        # XXX register test permissions and ensure that the group is created
-        model = register(self.perms, Group)
-        if model:
-            install_model(model)
         
         granted.connect(self.granted_receiver)
         revoked.connect(self.revoked_receiver)
@@ -40,7 +35,7 @@ class TestSignals(TestCase):
     def tearDown(self):
         User.objects.all().delete()
         UserGroup.objects.all().delete()
-        Group.objects.all().delete()
+        TestModel.objects.all().delete()
         
         granted.disconnect(self.granted_receiver)
         revoked.disconnect(self.revoked_receiver)
