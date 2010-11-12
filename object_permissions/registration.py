@@ -1,3 +1,4 @@
+from operator import or_
 from warnings import warn
 
 from django.conf import settings
@@ -397,17 +398,21 @@ def perms_on_any(user, model, perms, groups=True):
     """
 
     permissions = permission_map[model]
-    d = dict((perm, True) for perm in perms
-            if perm in get_model_perms(model))
-
-    # permissions user has
-    if permissions.objects.filter(user=user, **d).exists():
-        return True
-    elif groups:
-        if permissions.objects.filter(group__users=user, **d).exists():
-            return True
-
-    return False
+    model_perms = get_model_perms(model)
+    perms = filter(lambda x: x in model_perms, perms)
+    
+    # OR all user permission clauses together
+    perm_clause = reduce(or_, [Q(**{perm:True}) for perm in perms])
+    user_clause = Q(user=user)
+    
+    if groups:
+        # must match either a user or group clause + one of the perm clauses
+        group_clause = Q(group__users=user)
+        return permissions.objects \
+            .filter((user_clause | group_clause) & perm_clause)
+    else:
+        # must match user clause + one of the perm clauses
+        return permissions.objects.filter(user_clause & perm_clause)
 
 
 def filter_on_perms(user, model, perms, groups=True, **clauses):
