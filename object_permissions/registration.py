@@ -427,21 +427,26 @@ def filter_on_perms(user, model, perms, groups=True, **clauses):
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
+    model_perms = get_model_perms(model)
+    perms = filter(lambda x: x in model_perms, perms)
+    name = model.__name__
 
-    d = {
-            "%s_operms__user" % model.__name__: user,
-    }
-
+    d = dict(("%s_operms__%s" % (name, perm), True) for perm in perms)
+    
+    # OR all user permission clauses together
+    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm):True}) \
+                               for perm in perms))
+    user_clause = Q(**{"%s_operms__user" % name:user})
+    
     if groups:
-        d["%s_operms__group__users" % model.__name__] = user
+        # must match either a user or group clause + one of the perm clauses
+        group_clause = Q(**{"%s_operms__group__users" % name:user})
+        query = model.objects.filter((user_clause | group_clause) & perm_clause)
+    else:
+        # must match user clause + one of the perm clauses
+        query = model.objects.filter(user_clause & perm_clause)
 
-    for perm in perms:
-        if perm in get_model_perms(model):
-            d["%s_operms__%s" % (model.__name__, perm)] = True
-
-    d.update(clauses)
-
-    return model.objects.filter(**d)
+    return query.filter(**clauses)
 
 
 def filter_on_group_perms(group, model, perms, **clauses):

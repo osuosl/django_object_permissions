@@ -334,6 +334,7 @@ class TestModelPermissions(TestCase):
         
         # retrieve multiple perms
         query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
+        
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
