@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 
+from object_permissions.registration import user_has_perm
+
+
 class ObjectPermBackend(object):
     supports_object_permissions = True
     supports_anonymous_user = True
@@ -29,4 +32,6 @@ class ObjectPermBackend(object):
         if obj is None:
             return False
 
-        return user_obj.has_perm(perm, obj)
+        
+
+        return user_has_perm(user_obj, perm, obj, True)

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django import db
 from django.db import models
+from django.db.models import Q
 
 from models import UserGroup
 from object_permissions.signals import granted, revoked
@@ -304,19 +305,27 @@ def get_model_perms(model):
     return permissions_for_model[model]
 
 
-def user_has_perm(user, perm, obj):
+def user_has_perm(user, perm, obj, groups=False):
     """
     check if a UserGroup has a permission on an object
     """
-
     model = obj.__class__
+    if perm not in get_model_perms(model):
+        # not a valid permission
+        return False
+    
     permissions = permission_map[model]
-
+    
     d = {
-            perm: True,
+        perm: True
     }
 
-    return permissions.objects.filter(user=user, obj=obj, **d).exists()
+    if groups:
+        return permissions.objects.filter(obj=obj, **d) \
+            .filter(Q(user=user) | Q(group__users=user)) \
+            .exists()
+    else:
+        return permissions.objects.filter(user=user, obj=obj, **d).exists()
 
 
 def group_has_perm(group, perm, obj):
@@ -451,7 +460,7 @@ register(['admin'], UserGroup)
 setattr(User, 'grant', grant)
 setattr(User, 'revoke', revoke)
 setattr(User, 'revoke_all', revoke_all)
-setattr(User, 'has_perm', user_has_perm)
+setattr(User, 'has_object_perm', user_has_perm)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'filter_on_perms', filter_on_perms)
