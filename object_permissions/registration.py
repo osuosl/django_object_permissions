@@ -345,9 +345,16 @@ def group_has_perm(group, perm, obj):
     """
     check if a UserGroup has a permission on an object
     """
-
+    
     model = obj.__class__
-    permissions = permission_map[model]
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
+
+    if perm not in get_model_perms(model):
+        # not a valid permission
+        return False
 
     d = {
             perm: True,
