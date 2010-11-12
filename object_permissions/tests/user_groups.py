@@ -485,7 +485,6 @@ class TestUserGroupViews(TestCase):
         self.user1.set_password('secret')
         self.user1.save()
         
-        
         self.object0 = TestModel.objects.create(name='test0')
         self.object0.save()
         self.object1 = TestModel.objects.create(name='test1')
@@ -835,7 +834,6 @@ class TestUserGroupViews(TestCase):
         group = self.test_save()
         c = Client()
         group.users.add(user)
-        register(['Perm1'], UserGroup)
         url = '/user_group/%d/user/remove/'
         args = group.id
         
@@ -853,7 +851,6 @@ class TestUserGroupViews(TestCase):
         
         # authorize and login
         grant(user, 'admin', group)
-        grant(user, 'Perm1', group)
         
         # invalid method
         response = c.get(url % args)
@@ -914,8 +911,6 @@ class TestUserGroupViews(TestCase):
         group.users.add(user)
         group1 = self.test_save('other_group')
         
-        register(['Perm1', 'Perm2'], UserGroup)
-        
         c = Client()
         url = '/user_group/%d/permissions/user/%s/'
         url_post = '/user_group/%d/permissions/'
@@ -959,21 +954,21 @@ class TestUserGroupViews(TestCase):
         self.assertEqual(404, response.status_code)
         
         # invalid user (POST)
-        data = {'permissions':['Perm1'], 'user':-1}
+        data = {'permissions':['admin'], 'user':-1}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
         # invalid group (POST)
-        data = {'permissions':['Perm1'], 'group':-1}
+        data = {'permissions':['admin'], 'group':-1}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
         # user and group (POST)
-        data = {'permissions':['Perm1'], 'user':user.id, 'group':group1.id}
+        data = {'permissions':['admin'], 'user':user.id, 'group':group1.id}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
@@ -987,14 +982,13 @@ class TestUserGroupViews(TestCase):
         self.assertNotEquals('1', response.content)
         
         # valid post user
-        data = {'permissions':['Perm1','Perm2'], 'user':user.id}
+        data = {'permissions':['admin'], 'user':user.id}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'permissions/user_row.html')
-        self.assert_(user.has_perm('Perm1', group))
-        self.assert_(user.has_perm('Perm2', group))
-        self.assertEqual(['Perm1','Perm2'], get_user_perms(user, group))
+        self.assert_(user.has_perm('admin', group))
+        self.assertEqual(['admin'], get_user_perms(user, group))
         
         # valid post no permissions user
         data = {'permissions':[], 'user':user.id}
@@ -1003,12 +997,12 @@ class TestUserGroupViews(TestCase):
         self.assertEqual([], get_user_perms(user, group))
         
         # valid post group
-        data = {'permissions':['Perm1','Perm2'], 'group':group1.id}
+        data = {'permissions':['admin'], 'group':group1.id}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'permissions/user_row.html')
-        self.assertEqual(['Perm1','Perm2'], group1.get_perms(group))
+        self.assertEqual(['admin'], group1.get_perms(group))
         
         # valid post no permissions group
         data = {'permissions':[], 'group':group1.id}
