@@ -129,15 +129,14 @@ def grant(user, perm, obj):
     permissions = permission_map[model]
     properties = dict(user=user, obj=obj)
 
-    
-
     user_perms, chaff = permissions.objects.get_or_create(**properties)
 
     # XXX could raise FieldDoesNotExist
-    setattr(user_perms, perm, True)
-    user_perms.save()
+    if not getattr(user_perms, perm):
+        setattr(user_perms, perm, True)
+        user_perms.save()
 
-    granted.send(sender=user, perm=perm, object=obj)
+        granted.send(sender=user, perm=perm, object=obj)
 
 
 def grant_group(group, perm, obj):
@@ -152,10 +151,11 @@ def grant_group(group, perm, obj):
     group_perms, chaff = permissions.objects.get_or_create(**properties)
 
     # XXX could raise FieldDoesNotExist
-    setattr(group_perms, perm, True)
-    group_perms.save()
+    if not getattr(group_perms, perm):
+        setattr(group_perms, perm, True)
+        group_perms.save()
 
-    granted.send(sender=group, perm=perm, object=obj)
+        granted.send(sender=group, perm=perm, object=obj)
 
 
 def set_user_perms(user, perms, obj):
@@ -172,6 +172,11 @@ def set_user_perms(user, perms, obj):
     user_perms, chaff = permissions.objects.get_or_create(user=user, obj=obj)
 
     for perm, enabled in all_perms.iteritems():
+        if enabled and not getattr(user_perms, perm):
+            granted.send(sender=user, perm=perm, object=obj)
+        elif not enabled and getattr(user_perms, perm):
+            revoked.send(sender=user, perm=perm, object=obj)
+
         setattr(user_perms, perm, enabled)
 
     user_perms.save()
@@ -193,6 +198,11 @@ def set_group_perms(group, perms, obj):
     group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
 
     for perm, enabled in all_perms.iteritems():
+        if enabled and not getattr(group_perms, perm):
+            granted.send(sender=group, perm=perm, object=obj)
+        elif not enabled and getattr(group_perms, perm):
+            revoked.send(sender=group, perm=perm, object=obj)
+
         setattr(group_perms, perm, enabled)
 
     group_perms.save()
@@ -210,9 +220,11 @@ def revoke(user, perm, obj):
 
     user_perms, chaff = permissions.objects.get_or_create(user=user, obj=obj)
 
-    setattr(user_perms, perm, False)
+    if getattr(user_perms, perm):
+        setattr(user_perms, perm, False)
+        user_perms.save()
 
-    revoked.send(sender=user, perm=perm, object=obj)
+        revoked.send(sender=user, perm=perm, object=obj)
 
 
 def revoke_group(group, perm, obj):
@@ -225,9 +237,11 @@ def revoke_group(group, perm, obj):
 
     group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
 
-    setattr(group_perms, perm, False)
+    if getattr(group_perms, perm):
+        setattr(group_perms, perm, False)
+        group_perms.save()
 
-    revoked.send(sender=group, perm=perm, object=obj)
+        revoked.send(sender=group, perm=perm, object=obj)
 
 
 def revoke_all(user, obj):
