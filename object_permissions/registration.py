@@ -409,10 +409,10 @@ def perms_on_any(user, model, perms, groups=True):
         # must match either a user or group clause + one of the perm clauses
         group_clause = Q(group__users=user)
         return permissions.objects \
-            .filter((user_clause | group_clause) & perm_clause)
+            .filter((user_clause | group_clause) & perm_clause).exists()
     else:
         # must match user clause + one of the perm clauses
-        return permissions.objects.filter(user_clause & perm_clause)
+        return permissions.objects.filter(user_clause & perm_clause).exists()
 
 
 def filter_on_perms(user, model, perms, groups=True):
