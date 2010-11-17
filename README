@@ -8,19 +8,36 @@ Model in your django project.  This app provides a authentication backend
 that works with Django >= 1.2.
 
 This specific implementation includes the ability to assign permissions to
-Users and UserGroups.  Later versions may include the ability to create
-PermissionGroups and ObjectPermissionGroups
+Users and UserGroups. Later versions may include the ability to create
+PermissionGroups and ObjectPermissionGroups.
 
-----------------------------------------
 Installation
 ----------------------------------------
 
-There are a couple ways to install Object Permissions.
+There are several ways to install Object Permissions.
 
-a) Use setup.py; e.g. "python setup.py install"
-b) Copy the object_permissions folder into your Django project
+Object Permissions ships a standard distutils setup.py. A classic invocation
+to install from setup.py might be::
 
-----------------------------------------
+ $ python setup.py install
+
+You may need to add sudo in order to install to the system Python.
+
+::
+
+ $ sudo python setup.py install
+
+We also have Object Permissions on PyPI, so it can be installed using pip.
+(easy_install also works, but we do not recommend easy_install. Just use pip.)
+
+::
+
+ $ pip install django-object-permissions
+
+If you are installing Object Permissions directly into a Django app, and want
+to distribute Object Permissions with your app, simply copy the
+object_permissions folder into your Django project.
+
 Configuring Your Django Project
 ----------------------------------------
 
@@ -28,14 +45,13 @@ Configuring Your Django Project
 2) Run ./manage.py syncdb
 3) Add object_permissions.urls to urls if you wish to add views for editing user_groups
 
-----------------------------------------
 Using Object Permissions
 ----------------------------------------
 
 First, register some permissions onto a Model in your models.py. This can only
 be done once per model; see registration.py for more information.
 
->>> from object_permissions import *
+>>> from object_permissions import register
 >>> register(['permission'], Model)
 
 Now, that permission can be granted, revoked, or checked for any instance of
