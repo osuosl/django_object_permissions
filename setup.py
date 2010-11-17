@@ -14,8 +14,8 @@ setup(name='django-object-permissions',
       packages=['object_permissions'],
       include_package_data=True,
       classifiers=[
+          "License :: OSI Approved :: MIT License",
           'Framework :: Django',
-          'License :: OSI Approved :: MIT Software License',
           'Topic :: Security',
           ],
       )
