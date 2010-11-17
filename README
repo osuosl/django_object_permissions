@@ -62,3 +62,10 @@ that Model.
 >>> user.has_perm('permission', object)
 >>> group.grant('permission', object)
 >>> group.revoke('permission', object)
+
+Authors
+-------
+
+Object Permissions was originally implemented by Peter Krenesky at the Oregon
+State University Open Source Lab (OSUOSL). This release is maintained by
+Corbin Simpson.
