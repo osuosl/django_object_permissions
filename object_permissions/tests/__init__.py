@@ -1,4 +1,4 @@
 from backend import *
 from permissions import *
-from user_groups import *
+from groups import *
 from signals import *

@@ -2,13 +2,12 @@ from operator import or_
 from warnings import warn
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.core.exceptions import ObjectDoesNotExist
 from django import db
 from django.db import models
 from django.db.models import Q
 
-from models import UserGroup
 from object_permissions.signals import granted, revoked
 
 """
@@ -23,7 +22,7 @@ definition time, and must include all permissions for that Model.
 >>> register(["spam", "eggs", "toast"], Breakfast)
 
 Once registered, permissions may be set for any pairing of an instance of that
-Model and an instance of a User or UserGroup.
+Model and an instance of a User or Group.
 
 Technical tl;dr: Registration can only happen once because Object Permissions
 dynamically creates new models to store the permissions for a specific model.
@@ -106,7 +105,7 @@ def _register(perms, model):
         # XXX user xor group null?
         "user": models.ForeignKey(User, null=True,
             related_name="%s_uperms" % model.__name__),
-        "group": models.ForeignKey(UserGroup, null=True,
+        "group": models.ForeignKey(Group, null=True,
             related_name="%s_gperms" % model.__name__),
         "obj": models.ForeignKey(model,
             related_name="%s_operms" % model.__name__),
@@ -180,7 +179,7 @@ def grant(user, perm, obj):
 
 def grant_group(group, perm, obj):
     """
-    Grant a permission to a UserGroup.
+    Grant a permission to a Group.
     """
 
     model = obj.__class__
@@ -283,7 +282,7 @@ def revoke(user, perm, obj):
 
 def revoke_group(group, perm, obj):
     """
-    Revokes a permission from a UserGroup.
+    Revokes a permission from a Group.
     """
 
     model = obj.__class__
@@ -331,7 +330,7 @@ def revoke_all(user, obj):
 
 def revoke_all_group(group, obj):
     """
-    Revoke all permissions from a UserGroup.
+    Revoke all permissions from a Group.
     """
 
     model = obj.__class__
@@ -368,7 +367,7 @@ def get_user_perms(user, obj):
 
 def get_group_perms(group, obj):
     """
-    Return the permissions that the UserGroup has on the given object.
+    Return the permissions that the Group has on the given object.
     """
 
     model = obj.__class__
@@ -408,7 +407,7 @@ def user_has_perm(user, perm, obj, groups=False):
     """
     Check if a User has a permission on a given object.
 
-    If groups is True, the permissions of all UserGroups containing the user
+    If groups is True, the permissions of all Groups containing the user
     will also be considered.
 
     Silently returns False in case of several errors:
@@ -429,7 +428,7 @@ def user_has_perm(user, perm, obj, groups=False):
 
     if groups:
         return permissions.objects.filter(obj=obj, **d) \
-            .filter(Q(user=user) | Q(group__users=user)) \
+            .filter(Q(user=user) | Q(group__user=user)) \
             .exists()
     else:
         return permissions.objects.filter(user=user, obj=obj, **d).exists()
@@ -437,7 +436,7 @@ def user_has_perm(user, perm, obj, groups=False):
 
 def group_has_perm(group, perm, obj):
     """
-    Check if a UserGroup has a permission on a given object.
+    Check if a Group has a permission on a given object.
 
     Silently returns False in case of several errors:
 
@@ -467,7 +466,7 @@ def get_users(obj):
     Retrieve the list of Users that have permissions on the given object.
 
     This function only examines User permissions, so it will not include Users
-    that inherit permissions through UserGroups.
+    that inherit permissions through Groups.
     """
 
     model = obj.__class__
@@ -492,7 +491,7 @@ def get_groups(obj):
     d = {
             name: obj
     }
-    return UserGroup.objects.filter(**d).distinct()
+    return Group.objects.filter(**d).distinct()
 
 
 def perms_on_any(user, model, perms, groups=True):
@@ -520,7 +519,7 @@ def perms_on_any(user, model, perms, groups=True):
 
     if groups:
         # must match either a user or group clause + one of the perm clauses
-        group_clause = Q(group__users=user)
+        group_clause = Q(group__user=user)
         return permissions.objects \
             .filter((user_clause | group_clause) & perm_clause).exists()
     else:
@@ -531,12 +530,12 @@ def perms_on_any(user, model, perms, groups=True):
 def filter_on_perms(user, model, perms, groups=True):
     """
     Make a filtered QuerySet of objects for which the User has any
-    permissions, including permissions inherited from UserGroups.
+    permissions, including permissions inherited from Groups.
 
     @param user: user who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
-    @param groups: include perms the user has from membership in UserGroups
+    @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
     model_perms = get_model_perms(model)
@@ -550,7 +549,7 @@ def filter_on_perms(user, model, perms, groups=True):
     
     if groups:
         # must match either a user or group clause + one of the perm clauses
-        group_clause = Q(**{"%s_operms__group__users" % name:user})
+        group_clause = Q(**{"%s_operms__group__user" % name:user})
         return model.objects.filter((user_clause | group_clause) & perm_clause)
     else:
         # must match user clause + one of the perm clauses
@@ -559,10 +558,10 @@ def filter_on_perms(user, model, perms, groups=True):
 
 def filter_on_group_perms(group, model, perms):
     """
-    Make a filtered QuerySet of objects for which the UserGroup has any
+    Make a filtered QuerySet of objects for which the Group has any
     permissions.
 
-    @param usergroup: UserGroup who must have permissions
+    @param usergroup: Group who must have permissions
     @param model: model on which to filter
     @param perms: list of perms to match
     @param clauses: additional clauses to be added to the queryset
@@ -580,10 +579,6 @@ def filter_on_group_perms(group, model, perms):
     return model.objects.filter(perm_clause, **d)
 
 
-# register internal perms
-register(['admin'], UserGroup)
-
-
 # make some methods available as bound methods
 setattr(User, 'grant', grant)
 setattr(User, 'revoke', revoke)
@@ -594,10 +589,10 @@ setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'filter_on_perms', filter_on_perms)
 setattr(User, 'perms_on_any', perms_on_any)
 
-setattr(UserGroup, 'grant', grant_group)
-setattr(UserGroup, 'revoke', revoke_group)
-setattr(UserGroup, 'revoke_all', revoke_all_group)
-setattr(UserGroup, 'has_perm', group_has_perm)
-setattr(UserGroup, 'get_perms', get_group_perms)
-setattr(UserGroup, 'set_perms', set_group_perms)
-setattr(UserGroup, 'filter_on_perms', filter_on_group_perms)
+setattr(Group, 'grant', grant_group)
+setattr(Group, 'revoke', revoke_group)
+setattr(Group, 'revoke_all', revoke_all_group)
+setattr(Group, 'has_perm', group_has_perm)
+setattr(Group, 'get_perms', get_group_perms)
+setattr(Group, 'set_perms', set_group_perms)
+setattr(Group, 'filter_on_perms', filter_on_group_perms)

@@ -9,7 +9,7 @@ from django.template import RequestContext
 
 from object_permissions import get_user_perms, get_group_perms, \
     get_model_perms, grant, revoke, get_users, get_groups
-from object_permissions.models import UserGroup
+from object_permissions.models import Group
 
 
 class ObjectPermissionForm(forms.Form):
@@ -19,7 +19,7 @@ class ObjectPermissionForm(forms.Form):
     permissions = forms.MultipleChoiceField(required=False, \
                                             widget=forms.CheckboxSelectMultiple)
     user = forms.ModelChoiceField(queryset=User.objects.all(), required=False)
-    group = forms.ModelChoiceField(queryset=UserGroup.objects.all(), \
+    group = forms.ModelChoiceField(queryset=Group.objects.all(), \
                                    required=False)
     
     def __init__(self, object, *args, **kwargs):
@@ -69,7 +69,7 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
     has permissions.
     
     This is different from objects that grant inherent permissions through a
-    different membership relationship (e.g. Users in a UserGroup inherit perms)
+    different membership relationship (e.g. Users in a Group inherit perms)
     """
     
     def clean(self):
@@ -158,7 +158,7 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
         data = {'permissions':get_user_perms(form_user, object_), \
                 'user':user_id}
     elif group_id:
-        group = get_object_or_404(UserGroup, id=group_id)
+        group = get_object_or_404(Group, id=group_id)
         data = {'permissions':get_group_perms(group, object_), \
                 'group':group_id}
     else:

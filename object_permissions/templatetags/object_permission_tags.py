@@ -1,6 +1,6 @@
 from django.template import Library
 
-from object_permissions.models import UserGroup
+from object_permissions.models import Group
 from object_permissions.registration import get_user_perms
 
 register = Library()
@@ -19,6 +19,6 @@ def permissions(user, object):
 @register.filter
 def group_admin(user):
     """
-    Returns True or False based on if the user is an admin for any UserGroups
+    Returns True or False based on if the user is an admin for any Groups
     """
-    return user.is_superuser or user.perms_on_any(UserGroup, ['admin'])
+    return user.is_superuser or user.perms_on_any(Group, ['admin'])

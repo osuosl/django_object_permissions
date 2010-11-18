@@ -12,9 +12,9 @@ class TestModelPermissions(TestCase):
 
     def setUp(self):
         self.tearDown()
-        self.user0 = User(username='tester')
+        self.user0 = User(id=2, username='tester')
         self.user0.save()
-        self.user1 = User(username='tester2')
+        self.user1 = User(id=3, username='tester2')
         self.user1.save()
         
         self.object0 = TestModel.objects.create(name='test0')

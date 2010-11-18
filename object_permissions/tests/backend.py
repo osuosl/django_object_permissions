@@ -1,9 +1,8 @@
 from django.conf import settings
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth.models import User, AnonymousUser, Group
 from django.test import TestCase
 
 from object_permissions.backend import ObjectPermBackend
-from object_permissions.models import UserGroup
 from object_permissions import register
 
 
@@ -14,7 +13,7 @@ class TestBackend(TestCase):
         settings.ANONYMOUS_USER_ID = 0
         user = User(id=1, username="tester")
         user.save()
-        object_ = UserGroup(name='testing')
+        object_ = Group(name='testing')
         object_.save()
         user.grant('admin', object_)
         g = globals()

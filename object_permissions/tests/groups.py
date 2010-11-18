@@ -1,18 +1,17 @@
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib.contenttypes.models import ContentType
 from django.db import IntegrityError
 from django.test import TestCase
 from django.test.client import Client
 
 from object_permissions import *
-from object_permissions.models import UserGroup
 from object_permissions.registration import TestModel, UnknownPermissionException
 
-__all__ = ('TestUserGroups','TestUserGroupViews')
+__all__ = ('TestGroups','TestGroupViews')
 
 
-class TestUserGroups(TestCase):
+class TestGroups(TestCase):
     perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
     
     def setUp(self):
@@ -43,29 +42,29 @@ class TestUserGroups(TestCase):
     def tearDown(self):
         User.objects.all().delete()
         TestModel.objects.all().delete()
-        UserGroup.objects.all().delete()
+        Group.objects.all().delete()
 
     def test_trivial(self):
-        """ Test instantiating a UserGroup """
-        group = UserGroup()
+        """ Test instantiating a Group """
+        group = Group()
 
     def test_save(self, name='test', user=None):
-        """ Test saving an UserGroup """
-        group = UserGroup(name=name)
+        """ Test saving an Group """
+        group = Group(name=name)
         group.save()
         
         if user:
-            group.users.add(user)
+            group.user_set.add(user)
         
         return group
     
     def test_permissions(self):
         """ Verify all model perms are created """
-        self.assertEqual(['admin'], get_model_perms(UserGroup))
+        self.assertEqual(['admin'], get_model_perms(Group))
     
     def test_grant_group_permissions(self):
         """
-        Test granting permissions to a UserGroup
+        Test granting permissions to a Group
        
         Verifies:
             * granted properties are available via backend (has_perm)
@@ -130,12 +129,12 @@ class TestUserGroups(TestCase):
     
     def test_revoke_group_permissions(self):
         """
-        Test revoking permissions from UserGroups
+        Test revoking permissions from Groups
         
         Verifies:
             * revoked properties are removed
-            * revoked properties are only removed from the correct UserGroup/obj combinations
-            * revoking property UserGroup does not have does not give an error
+            * revoked properties are only removed from the correct Group/obj combinations
+            * revoking property Group does not have does not give an error
             * revoking unknown permission raises error
         """
         group0 = self.test_save('TestGroup0', user0)
@@ -295,7 +294,7 @@ class TestUserGroups(TestCase):
     
     def test_group_has_perm(self):
         """
-        Test UserGroup.has_perm
+        Test Group.has_perm
         
         Verifies:
             * None object always returns false
@@ -312,7 +311,7 @@ class TestUserGroups(TestCase):
     
     def test_get_groups(self):
         """
-        Tests retrieving list of UserGroups with perms on an object
+        Tests retrieving list of Groups with perms on an object
         """
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
@@ -469,7 +468,7 @@ class TestUserGroups(TestCase):
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
-class TestUserGroupViews(TestCase):
+class TestGroupViews(TestCase):
     perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
     
     def setUp(self):
@@ -493,17 +492,17 @@ class TestUserGroupViews(TestCase):
     def tearDown(self):
         User.objects.all().delete()
         TestModel.objects.all().delete()
-        UserGroup.objects.all().delete()
+        Group.objects.all().delete()
 
     def test_save(self, name='test'):
-        """ Test saving an UserGroup """
-        group = UserGroup(name=name)
+        """ Test saving an Group """
+        group = Group(name=name)
         group.save()
         return group
     
     def test_view_list(self):
         """
-        Test viewing list of UserGroups
+        Test viewing list of Groups
         """
         user = self.user
         group = self.test_save()
@@ -511,7 +510,7 @@ class TestUserGroupViews(TestCase):
         group1 = self.test_save(name='group2')
         group2 = self.test_save(name='group3')
         c = Client()
-        url = '/user_groups/'
+        url = '/groups/'
         
         # anonymous user
         response = c.get(url, follow=True)
@@ -529,7 +528,7 @@ class TestUserGroupViews(TestCase):
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/list.html')
+        self.assertTemplateUsed(response, 'group/list.html')
         groups = response.context['groups']
         self.assert_(group in groups)
         self.assert_(group1 in groups)
@@ -543,7 +542,7 @@ class TestUserGroupViews(TestCase):
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/list.html')
+        self.assertTemplateUsed(response, 'group/list.html')
         groups = response.context['groups']
         self.assert_(group in groups)
         self.assert_(group0 in groups)
@@ -553,16 +552,16 @@ class TestUserGroupViews(TestCase):
     
     def test_view_detail(self):
         """
-        Test Viewing the detail for a UserGroup
+        Test Viewing the detail for a Group
         
         Verifies:
-            * 200 returned for valid user_group
-            * 404 returned for invalid user_group
+            * 200 returned for valid group
+            * 404 returned for invalid group
         """
         user = self.user
         group = self.test_save()
         c = Client()
-        url = '/user_group/%s/'
+        url = '/group/%s/'
         args = group.id
         
         # anonymous user
@@ -584,19 +583,19 @@ class TestUserGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/detail.html')
+        self.assertTemplateUsed(response, 'group/detail.html')
         
         # authorized (superuser)
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/detail.html')
+        self.assertTemplateUsed(response, 'group/detail.html')
 
     def test_view_edit(self):
         user = self.user
         group = self.test_save()
         c = Client()
-        url = '/user_group/%s/'
+        url = '/group/%s/'
         
         # anonymous user
         response = c.post(url % group.id, follow=True)
@@ -618,14 +617,14 @@ class TestUserGroupViews(TestCase):
         #response = c.post(url % group.id)
         #self.assertEqual(200, response.status_code)
         #self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        #self.assertTemplateUsed(response, 'user_group/edit.html')
+        #self.assertTemplateUsed(response, 'group/edit.html')
         
         # get form - authorized (permission)
         grant(user, 'admin', group)
         response = c.post(url % group.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/edit.html')
+        self.assertTemplateUsed(response, 'group/edit.html')
         
         # get form - authorized (superuser)
         user.revoke('admin', group)
@@ -634,7 +633,7 @@ class TestUserGroupViews(TestCase):
         response = c.post(url % group.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/edit.html')
+        self.assertTemplateUsed(response, 'group/edit.html')
         
         # missing name
         data = {'id':group.id}
@@ -647,18 +646,18 @@ class TestUserGroupViews(TestCase):
         response = c.post(url % group.id, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/group_row.html')
-        group = UserGroup.objects.get(id=group.id)
+        self.assertTemplateUsed(response, 'group/group_row.html')
+        group = Group.objects.get(id=group.id)
         self.assertEqual('EDITED_NAME', group.name)
     
     def test_view_create(self):
         """
-        Test creating a new UserGroup
+        Test creating a new Group
         """
         user = self.user
         group = self.test_save()
         c = Client()
-        url = '/user_group/'
+        url = '/group/'
         
         # anonymous user
         response = c.post(url, follow=True)
@@ -676,7 +675,7 @@ class TestUserGroupViews(TestCase):
         #response = c.post(url % group.id)
         #self.assertEqual(200, response.status_code)
         #self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        #self.assertTemplateUsed(response, 'user_group/edit.html')
+        #self.assertTemplateUsed(response, 'group/edit.html')
         
         # get form - authorized (superuser)
         user.revoke('admin', group)
@@ -685,22 +684,22 @@ class TestUserGroupViews(TestCase):
         response = c.post(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/edit.html')
+        self.assertTemplateUsed(response, 'group/edit.html')
         
         # missing name
         data = {'id':group.id}
         response = c.post(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/edit.html')
+        self.assertTemplateUsed(response, 'group/edit.html')
         
         # successful edit
         data = {'name':'ADD_NEW_GROUP'}
         response = c.post(url, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/group_row.html')
-        self.assert_(UserGroup.objects.filter(name='ADD_NEW_GROUP').exists())
+        self.assertTemplateUsed(response, 'group/group_row.html')
+        self.assert_(Group.objects.filter(name='ADD_NEW_GROUP').exists())
     
     def test_view_delete(self):
         """
@@ -714,7 +713,7 @@ class TestUserGroupViews(TestCase):
         group0 = self.test_save()
         group1 = self.test_save(name='test2')
         c = Client()
-        url = '/user_group/%s/'
+        url = '/group/%s/'
         
         # anonymous user
         response = c.delete(url % group0.id, follow=True)
@@ -735,7 +734,7 @@ class TestUserGroupViews(TestCase):
         response = c.delete(url % group0.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
-        self.assertFalse(UserGroup.objects.filter(id=group0.id).exists())
+        self.assertFalse(Group.objects.filter(id=group0.id).exists())
         self.assertEqual('1', response.content)
         
         # get form - authorized (superuser)
@@ -744,7 +743,7 @@ class TestUserGroupViews(TestCase):
         response = c.delete(url % group1.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
-        self.assertFalse(UserGroup.objects.filter(id=group1.id).exists())
+        self.assertFalse(Group.objects.filter(id=group1.id).exists())
         self.assertEqual('1', response.content)
     
     def test_view_add_user(self):
@@ -762,7 +761,7 @@ class TestUserGroupViews(TestCase):
         user = self.user
         group = self.test_save()
         c = Client()
-        url = '/user_group/%d/user/add/'
+        url = '/group/%d/user/add/'
         args = group.id
         
         # anonymous user
@@ -782,7 +781,7 @@ class TestUserGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/add_user.html')
+        self.assertTemplateUsed(response, 'group/add_user.html')
         
         # authorized post (superuser)
         revoke(user, 'admin', group)
@@ -791,7 +790,7 @@ class TestUserGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'user_group/add_user.html')
+        self.assertTemplateUsed(response, 'group/add_user.html')
         
         # missing user id
         response = c.post(url % args)
@@ -809,13 +808,13 @@ class TestUserGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'permissions/user_row.html')
-        self.assert_(group.users.filter(id=user.id).exists())
+        self.assert_(group.user_set.filter(id=user.id).exists())
         
         # same user again
         response = c.post(url % args, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
-        self.assertEquals(group.users.filter(id=user.id).count(), 1)
+        self.assertEquals(group.user_set.filter(id=user.id).count(), 1)
     
     def test_view_remove_user(self):
         """
@@ -833,8 +832,8 @@ class TestUserGroupViews(TestCase):
         user = self.user
         group = self.test_save()
         c = Client()
-        group.users.add(user)
-        url = '/user_group/%d/user/remove/'
+        group.user_set.add(user)
+        url = '/group/%d/user/remove/'
         args = group.id
         
         # anonymous user
@@ -862,25 +861,25 @@ class TestUserGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertEqual('1', response.content)
-        self.assertFalse(group.users.filter(id=user.id).exists())
+        self.assertFalse(group.user_set.filter(id=user.id).exists())
         self.assertEqual([], user.get_perms(group))
         
         # valid request (superuser)
         revoke(user, 'admin', group)
         user.is_superuser = True
         user.save()
-        group.users.add(user)
+        group.user_set.add(user)
         response = c.post(url % args, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertEqual('1', response.content)
-        self.assertFalse(group.users.filter(id=user.id).exists())
+        self.assertFalse(group.user_set.filter(id=user.id).exists())
         
         # remove user again
         response = c.post(url % args, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
-        self.assertFalse(group.users.filter(id=user.id).exists())
+        self.assertFalse(group.user_set.filter(id=user.id).exists())
         self.assertNotEqual('1', response.content)
         
         # remove invalid user
@@ -908,12 +907,12 @@ class TestUserGroupViews(TestCase):
         """
         user = self.user
         group = self.test_save()
-        group.users.add(user)
+        group.user_set.add(user)
         group1 = self.test_save('other_group')
         
         c = Client()
-        url = '/user_group/%d/permissions/user/%s/'
-        url_post = '/user_group/%d/permissions/'
+        url = '/group/%d/permissions/user/%s/'
+        url_post = '/group/%d/permissions/'
         args = (group.id, user.id)
         args_post = group.id
         

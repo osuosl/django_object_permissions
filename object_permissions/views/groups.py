@@ -2,7 +2,7 @@ import json
 
 from django import forms
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseNotFound, \
     HttpResponseForbidden, HttpResponseNotAllowed
@@ -10,44 +10,43 @@ from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 
 from object_permissions import get_model_perms, grant, revoke, get_user_perms
-from object_permissions.models import UserGroup
 from object_permissions.views.permissions import ObjectPermissionForm
 
 
-class UserGroupForm(forms.ModelForm):
+class GroupForm(forms.ModelForm):
     """
-    Form for editing UserGroups
+    Form for editing Groups
     """
     class Meta:
-        model = UserGroup
+        model = Group
 
 
 class UserForm(forms.Form):
     """
     Base form for dealing with users
     """
-    user_group = None
+    group = None
     user = forms.ModelChoiceField(queryset=User.objects.all())
     
-    def __init__(self, user_group=None, *args, **kwargs):
-        self.user_group=user_group
+    def __init__(self, group=None, *args, **kwargs):
+        self.group=group
         super(UserForm, self).__init__(*args, **kwargs)
 
 
 class AddUserForm(UserForm):
     def clean_user(self):
-        """ Validate that user is not in user_group already """
+        """ Validate that user is not in group already """
         user = self.cleaned_data['user']
-        if self.user_group.users.filter(id=user.id).exists():
+        if self.group.user_set.filter(id=user.id).exists():
             raise forms.ValidationError("User is already a member of this group")
         return user
 
 
 class RemoveUserForm(UserForm):
     def clean_user(self):
-        """ Validate that user is in user_group """
+        """ Validate that user is in group """
         user = self.cleaned_data['user']
-        if not self.user_group.users.filter(id=user.id).exists():
+        if not self.group.user_set.filter(id=user.id).exists():
             raise forms.ValidationError("User is not a member of this group")
         return user
 
@@ -59,13 +58,13 @@ def list(request):
     """
     user = request.user
     if request.user.is_superuser:
-        groups = UserGroup.objects.all()
+        groups = Group.objects.all()
     else:
-        groups = user.filter_on_perms(UserGroup, ['admin'])
+        groups = user.filter_on_perms(Group, ['admin'])
         if not groups:
             return HttpResponseForbidden()
 
-    return render_to_response("user_group/list.html", \
+    return render_to_response("group/list.html", \
                               {'groups':groups}, \
                               context_instance=RequestContext(request)) 
 
@@ -73,11 +72,11 @@ def list(request):
 @login_required
 def detail(request, id=None):
     """
-    Display user_group details
+    Display group details
     
-    @param id: id of UserGroup
+    @param id: id of Group
     """
-    group = get_object_or_404(UserGroup, id=id) if id else None
+    group = get_object_or_404(Group, id=id) if id else None
     user = request.user
     
     if not (user.is_superuser or user.has_perm('admin', group)):
@@ -85,9 +84,9 @@ def detail(request, id=None):
     
     method = request.method
     if method == 'GET':
-        return render_to_response("user_group/detail.html",
+        return render_to_response("group/detail.html",
                             {'object':group,
-                             'users':group.users.all(),
+                             'users':group.user_set.all(),
                              'url':reverse('usergroup-permissions', args=[id])
                              }, \
                               context_instance=RequestContext(request))
@@ -95,10 +94,10 @@ def detail(request, id=None):
     elif method == 'POST':
         if request.POST:
             # form data, this was a submission
-            form = UserGroupForm(request.POST, instance=group)
+            form = GroupForm(request.POST, instance=group)
             if form.is_valid():
                 group = form.save()
-                return render_to_response("user_group/group_row.html", \
+                return render_to_response("group/group_row.html", \
                         {'group':group}, \
                         context_instance=RequestContext(request))
             
@@ -106,9 +105,9 @@ def detail(request, id=None):
             return HttpResponse(content, mimetype='application/json')
         
         else:
-            form = UserGroupForm(instance=group)
+            form = GroupForm(instance=group)
         
-        return render_to_response("user_group/edit.html", \
+        return render_to_response("group/edit.html", \
                         {'group':group, 'form':form}, \
                         context_instance=RequestContext(request))
     
@@ -122,58 +121,58 @@ def detail(request, id=None):
 @login_required
 def add_user(request, id):
     """
-    ajax call to add a user to a UserGroup
+    ajax call to add a user to a Group
     
-    @param id: id of UserGroup
+    @param id: id of Group
     """
     user = request.user
-    user_group = get_object_or_404(UserGroup, id=id)
+    group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', user_group)):
+    if not (user.is_superuser or user.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
-        form = AddUserForm(user_group, request.POST)
+        form = AddUserForm(group, request.POST)
         if form.is_valid():
             user = form.cleaned_data['user']
-            user_group.users.add(user)
+            group.user_set.add(user)
             
             # return html for new user row
             url = reverse('usergroup-permissions', args=[id])
             return render_to_response("permissions/user_row.html", \
-                        {'user':user, 'object':user_group, 'url':url})
+                        {'user':user, 'object':group, 'url':url})
         
         # error in form return ajax response
         content = json.dumps(form.errors)
         return HttpResponse(content, mimetype='application/json')
 
     form = AddUserForm()
-    return render_to_response("user_group/add_user.html",\
-                              {'form':form, 'group':user_group}, \
+    return render_to_response("group/add_user.html",\
+                              {'form':form, 'group':group}, \
                               context_instance=RequestContext(request))
 
 
 @login_required
 def remove_user(request, id):
     """
-    Ajax call to remove a user from an UserGroup
+    Ajax call to remove a user from an Group
     
-    @param id: id of UserGroup
+    @param id: id of Group
     """
     user = request.user
-    user_group = get_object_or_404(UserGroup, id=id)
+    group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', user_group)):
+    if not (user.is_superuser or user.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method != 'POST':
         return HttpResponseNotAllowed('GET')
 
-    form = RemoveUserForm(user_group, request.POST)
+    form = RemoveUserForm(group, request.POST)
     if form.is_valid():
         user = form.cleaned_data['user']
-        user_group.users.remove(user)
-        user.revoke_all(user_group)
+        group.user_set.remove(user)
+        user.revoke_all(group)
         
         # return success
         return HttpResponse('1', mimetype='application/json')
@@ -188,10 +187,10 @@ def user_permissions(request, id, user_id=None):
     """
     Ajax call to update a user's permissions
     
-    @param id: id of UserGroup
+    @param id: id of Group
     """
     user = request.user
-    group = get_object_or_404(UserGroup, id=id)
+    group = get_object_or_404(Group, id=id)
     
     if not (user.is_superuser or user.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
