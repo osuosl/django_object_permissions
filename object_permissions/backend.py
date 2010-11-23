@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, IntegrityError
 from django.contrib.auth.models import User
 
 from object_permissions.registration import permission_map, user_has_perm
@@ -11,8 +11,17 @@ class ObjectPermBackend(object):
     def __init__(self, *args, **kwargs):
         if hasattr(settings, 'ANONYMOUS_USER_ID'):
             id = settings.ANONYMOUS_USER_ID
-            self.anonymous, new = User.objects.get_or_create(id=id, \
-                                                        username='anonymous')
+            try:
+                self.anonymous, new = User.objects.get_or_create(id=id,
+                        username='anonymous')
+            except IntegrityError:
+                # Couldn't get the UID we were told to get, but we were still
+                # told to get *an* anonymous user, so we'll make one. Note
+                # that this could totally cause a second IntegrityError, which
+                # we'll allow to propagate. That's fine; worse things have
+                # happened, and it will hopefully LART the user sufficiently.
+                self.anonymous, new = User.objects.get_or_create(
+                        username='anonymous')
             if new:
                 self.anonymous.save()
         else:
