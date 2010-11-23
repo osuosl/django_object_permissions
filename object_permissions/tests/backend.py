@@ -3,7 +3,6 @@ from django.contrib.auth.models import User, AnonymousUser, Group
 from django.test import TestCase
 
 from object_permissions.backend import ObjectPermBackend
-from object_permissions import register
 
 
 class TestBackend(TestCase):
@@ -46,3 +45,26 @@ class TestBackend(TestCase):
         backend = ObjectPermBackend()
         self.assertFalse(anonymous.has_perm('admin', object_))
         self.assert_(backend.has_perm(user, 'admin', object_))
+
+    def test_has_perm(self):
+        """
+        Verify that has_perm() works as desired.
+        """
+
+        backend = ObjectPermBackend()
+        self.assertTrue(user.has_perm("admin", object_))
+        self.assertTrue(backend.has_perm(user, "admin", object_))
+
+    def test_get_all_permissions(self):
+        """
+        Verify that get_all_permissions() works as desired.
+
+        This test is quirked due to Django #14764.
+        """
+
+        backend = ObjectPermBackend()
+        permissions = ["admin"]
+        # Quirky; see Django #14764.
+        self.assertEqual(permissions, list(user.get_all_permissions(object_)))
+        self.assertEqual(permissions, backend.get_all_permissions(user,
+            object_))
