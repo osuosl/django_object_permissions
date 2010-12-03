@@ -60,6 +60,20 @@ permissions_for_model = {}
 A mapping of Models to lists of permissions defined for that model.
 """
 
+forbidden = set([
+    "full_clean",
+    "clean_fields",
+    "clean",
+    "validate_unique",
+    "save",
+    "pk",
+    "delete",
+    "get_absolute_url",
+])
+"""
+Names reserved by Django for Model instances.
+"""
+
 _DELAYED = []
 def register(perms, model):
     """
@@ -77,6 +91,10 @@ def register(perms, model):
     if isinstance(perms, (str, unicode)):
         warn("Using a single permission is deprecated!")
         perms = [perms]
+
+    for perm in perms:
+        if perm in forbidden:
+            raise RegistrationException("Permission %s is a reserved name!")
 
     try:
         return _register(perms, model)
