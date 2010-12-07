@@ -2,6 +2,18 @@
 Changelog
 ==================
 
+v1.0
+----
+
+ * Remove UserGroup in favor of Django's django.contrib.auth.models.Group
+ * Improvements to the backend
+
+   * Implement get_all_permissions()
+   * Implement get_group_permissions()
+   * Add fallback support to the anonymous user
+
+ * More tests
+
 v0.9
 ----
 

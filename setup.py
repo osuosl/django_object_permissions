@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+
 from setuptools import setup
 
 long_desc = open('README').read()
 
 setup(name='django-object-permissions',
-      version="0.9",
+      version="1.0",
       description='A method for adding object-level or row-level permissions',
       long_description=long_desc,
       author='Peter Krenesky',
