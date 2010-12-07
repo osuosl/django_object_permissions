@@ -52,6 +52,7 @@ __all__ = (
     'revoke_all', 'revoke_all_group',
     'set_user_perms', 'set_group_perms',
     'get_users', 'get_groups',
+    "user_has_any_perms", "group_has_any_perms",
     'get_model_perms',
     'filter_on_perms',
 )
@@ -486,7 +487,7 @@ def group_has_perm(group, perm, obj):
      * The model is not registered for permissions
      * The permission does not exist on this model
     """
-    
+
     model = obj.__class__
     try:
         permissions = permission_map[model]
@@ -502,6 +503,34 @@ def group_has_perm(group, perm, obj):
     }
 
     return permissions.objects.filter(group=group, obj=obj, **d).exists()
+
+
+def user_has_any_perms(user, obj):
+    """
+    Check whether the User has *any* permission on the given object.
+    """
+
+    model = obj.__class__
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
+
+    return permissions.objects.filter(user=user, obj=obj).exists()
+
+
+def group_has_any_perms(group, obj):
+    """
+    Check whether the Group has *any* permission on the given object.
+    """
+
+    model = obj.__class__
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
+
+    return permissions.objects.filter(group=group, obj=obj).exists()
 
 
 def get_users(obj):

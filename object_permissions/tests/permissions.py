@@ -2,8 +2,8 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from object_permissions import register, grant, revoke, get_user_perms, \
-    revoke_all, get_users, set_user_perms
+from object_permissions import grant, revoke, get_user_perms, revoke_all, \
+    get_users, set_user_perms, user_has_any_perms
 from object_permissions.registration import TestModel, UnknownPermissionException
 
 
@@ -402,3 +402,12 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user1.perms_on_any(TestModel, ['Perm4'], False))
         self.assertFalse(user0.perms_on_any(TestModel, ['Perm3', 'Perm4'], False))
         self.assertFalse(user1.perms_on_any(TestModel, ['Perm1', 'Perm4'], False))
+
+    def test_has_any_perm(self):
+        """
+        Test the user_has_any_perm() function.
+        """
+
+        self.assertFalse(user_has_any_perms(self.user0, self.object0))
+        self.user0.grant("Perm1", self.object0)
+        self.assertTrue(user_has_any_perms(self.user0, self.object0))
