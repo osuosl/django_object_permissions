@@ -165,9 +165,11 @@ def grant(user, perm, obj):
         raise UnknownPermissionException(perm)
 
     permissions = permission_map[model]
-    properties = dict(user=user, obj=obj)
 
-    user_perms, chaff = permissions.objects.get_or_create(**properties)
+    try:
+        user_perms = permissions.objects.get(user=user, obj=obj)
+    except permissions.DoesNotExist:
+        user_perms = permissions(user=user, obj=obj)
 
     # XXX could raise FieldDoesNotExist
     if not getattr(user_perms, perm):
@@ -187,9 +189,11 @@ def grant_group(group, perm, obj):
         raise UnknownPermissionException(perm)
     
     permissions = permission_map[model]
-    properties = dict(group=group, obj=obj)
 
-    group_perms, chaff = permissions.objects.get_or_create(**properties)
+    try:
+        group_perms = permissions.objects.get(group=group, obj=obj)
+    except permissions.DoesNotExist:
+        group_perms = permissions(group=group, obj=obj)
 
     # XXX could raise FieldDoesNotExist
     if not getattr(group_perms, perm):
@@ -243,7 +247,10 @@ def set_group_perms(group, perms, obj):
         for perm in perms:
             all_perms[perm] = True
     
-        group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
+        try:
+            group_perms = permissions.objects.get(group=group, obj=obj)
+        except permissions.DoesNotExist:
+            group_perms = permissions(group=group, obj=obj)
     
         for perm, enabled in all_perms.iteritems():
             if enabled and not getattr(group_perms, perm):
