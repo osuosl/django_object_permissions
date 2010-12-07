@@ -202,25 +202,32 @@ def grant_group(group, perm, obj):
 def set_user_perms(user, perms, obj):
     """
     Set User permissions to exactly the specified permissions.
-    """
-
-    model = obj.__class__
-    permissions = permission_map[model]
-    all_perms = dict((p, False) for p in get_model_perms(model))
-    for perm in perms:
-        all_perms[perm] = True
-
-    user_perms, chaff = permissions.objects.get_or_create(user=user, obj=obj)
-
-    for perm, enabled in all_perms.iteritems():
-        if enabled and not getattr(user_perms, perm):
-            granted.send(sender=user, perm=perm, object=obj)
-        elif not enabled and getattr(user_perms, perm):
-            revoked.send(sender=user, perm=perm, object=obj)
-
-        setattr(user_perms, perm, enabled)
-
-    user_perms.save()
+    """    
+    if perms:
+        model = obj.__class__
+        permissions = permission_map[model]
+        
+        all_perms = dict((p, False) for p in get_model_perms(model))
+        for perm in perms:
+            all_perms[perm] = True
+        
+        try:
+            user_perms = permissions.objects.get(user=user, obj=obj)
+        except permissions.DoesNotExist:
+            user_perms = permissions(user=user, obj=obj)
+        
+        for perm, enabled in all_perms.iteritems():
+            if enabled and not getattr(user_perms, perm):
+                granted.send(sender=user, perm=perm, object=obj)
+            elif not enabled and getattr(user_perms, perm):
+                revoked.send(sender=user, perm=perm, object=obj)
+            setattr(user_perms, perm, enabled)
+        
+        user_perms.save()
+    
+    else:
+        # removing all perms.
+        revoke_all(user, obj)
 
     return perms
 
@@ -229,24 +236,28 @@ def set_group_perms(group, perms, obj):
     """
     Set group permissions to exactly the specified permissions.
     """
+    if perms:
+        model = obj.__class__
+        permissions = permission_map[model]
+        all_perms = dict((p, False) for p in get_model_perms(model))
+        for perm in perms:
+            all_perms[perm] = True
+    
+        group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
+    
+        for perm, enabled in all_perms.iteritems():
+            if enabled and not getattr(group_perms, perm):
+                granted.send(sender=group, perm=perm, object=obj)
+            elif not enabled and getattr(group_perms, perm):
+                revoked.send(sender=group, perm=perm, object=obj)
+    
+            setattr(group_perms, perm, enabled)
+    
+        group_perms.save()
 
-    model = obj.__class__
-    permissions = permission_map[model]
-    all_perms = dict((p, False) for p in get_model_perms(model))
-    for perm in perms:
-        all_perms[perm] = True
-
-    group_perms, chaff = permissions.objects.get_or_create(group=group, obj=obj)
-
-    for perm, enabled in all_perms.iteritems():
-        if enabled and not getattr(group_perms, perm):
-            granted.send(sender=group, perm=perm, object=obj)
-        elif not enabled and getattr(group_perms, perm):
-            revoked.send(sender=group, perm=perm, object=obj)
-
-        setattr(group_perms, perm, enabled)
-
-    group_perms.save()
+    else:
+        # removing all perms.
+        revoke_all_group(group, obj)
 
     return perms
 

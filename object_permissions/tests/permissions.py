@@ -229,8 +229,10 @@ class TestModelPermissions(TestCase):
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         
+        # remove perms
         set_user_perms(user0, perms4, object0)
         self.assertEqual(perms4, get_user_perms(user0, object0))
+        self.assertFalse(user0.TestModel_uperms.filter(obj=object0).exists())
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         

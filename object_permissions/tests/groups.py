@@ -260,8 +260,10 @@ class TestGroups(TestCase):
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
+        # remove perms
         set_group_perms(group0, perms4, object0)
         self.assertEqual(perms4, get_group_perms(group0, object0))
+        self.assertFalse(group0.TestModel_gperms.filter(obj=object0).exists())
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
