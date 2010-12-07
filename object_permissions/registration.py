@@ -44,10 +44,17 @@ class UnknownPermissionException(Exception):
     pass
 
 
-__all__ = ('register', 'grant', 'revoke', 'grant_group', 'revoke_group', \
-               'get_user_perms', 'get_group_perms', 'get_model_perms', \
-               'revoke_all', 'revoke_all_group', 'get_users', 'set_user_perms', \
-               'set_group_perms', 'get_groups', 'filter_on_perms')
+__all__ = (
+    'register',
+    'grant', 'grant_group',
+    'revoke', 'revoke_group',
+    'get_user_perms', 'get_group_perms',
+    'revoke_all', 'revoke_all_group',
+    'set_user_perms', 'set_group_perms',
+    'get_users', 'get_groups',
+    'get_model_perms',
+    'filter_on_perms',
+)
 
 permission_map = {}
 """
