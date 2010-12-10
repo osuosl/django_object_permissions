@@ -2,6 +2,20 @@
 Changelog
 ==================
 
+v1.1
+----
+
+ * Bugfixes
+
+   * Prevent Model methods from being shadowed
+   * #1941: Ensure rows with no set permissions are removed in set_perms()
+   * #1953: Fix incorrect usage of get_or_create()
+
+ * Features
+
+   * Add user_has_any_perms() and group_has_any_perms() for detecting
+   * whether a User or Group has *any* permissions on the given object
+
 v1.0
 ----
 
