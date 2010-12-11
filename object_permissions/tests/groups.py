@@ -1,11 +1,11 @@
 from django.conf import settings
 from django.contrib.auth.models import User, Group
+from django.contrib.contenttypes.models import ContentType
+from django.db import IntegrityError
 from django.test import TestCase
 from django.test.client import Client
 
-from object_permissions import get_model_perms, grant_group, revoke, \
-    revoke_all_group, get_group_perms, set_group_perms, get_groups, grant, \
-    get_user_perms
+from object_permissions import *
 from object_permissions.registration import TestModel, UnknownPermissionException
 
 __all__ = ('TestGroups','TestGroupViews')
@@ -20,17 +20,24 @@ class TestGroups(TestCase):
         User(id=1, username='anonymous').save()
         settings.ANONYMOUS_USER_ID=1
         
-        self.user0 = User(id=2, username='tester0')
-        self.user0.set_password('secret')
-        self.user0.save()
-        self.user1 = User(id=3, username='tester1')
-        self.user1.set_password('secret')
-        self.user1.save()
-
-        self.object0 = TestModel.objects.create(name='test0')
-        self.object0.save()
-        self.object1 = TestModel.objects.create(name='test1')
-        self.object1.save()
+        user0 = User(id=2, username='tester0')
+        user0.set_password('secret')
+        user0.save()
+        user1 = User(id=3, username='tester1')
+        user1.set_password('secret')
+        user1.save()
+        
+        object0 = TestModel.objects.create(name='test0')
+        object0.save()
+        object1 = TestModel.objects.create(name='test1')
+        object1.save()
+        
+        dict_ = globals()
+        dict_['user0']=user0
+        dict_['user1']=user1
+        dict_['object0']=object0
+        dict_['object1']=object1
+        dict_['perms']=self.perms
     
     def tearDown(self):
         User.objects.all().delete()
@@ -65,59 +72,59 @@ class TestGroups(TestCase):
               combinations
             * granting unknown permission raises error
         """
-        group0 = self.test_save('TestGroup0', self.user0)
-        group1 = self.test_save('TestGroup1', self.user1)
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         # grant single property
-        group0.grant('Perm1', self.object0)
-        self.assert_(self.user0.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm1', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object1))
+        group0.grant('Perm1', object0)
+        self.assert_(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', object1))
+        self.assertFalse(user1.has_perm('Perm1', object0))
+        self.assertFalse(user1.has_perm('Perm1', object1))
         
         # grant property again
-        group0.grant('Perm1', self.object0)
-        self.assert_(self.user0.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm1', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object1))
+        group0.grant('Perm1', object0)
+        self.assert_(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', object1))
+        self.assertFalse(user1.has_perm('Perm1', object0))
+        self.assertFalse(user1.has_perm('Perm1', object1))
         
         # grant second property
-        group0.grant('Perm2', self.object0)
-        self.assert_(self.user0.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm1', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object1))
-        self.assert_(self.user0.has_perm('Perm2', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm2', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm2', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm2', self.object1))
+        group0.grant('Perm2', object0)
+        self.assert_(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', object1))
+        self.assertFalse(user1.has_perm('Perm1', object0))
+        self.assertFalse(user1.has_perm('Perm1', object1))
+        self.assert_(user0.has_perm('Perm2', object0))
+        self.assertFalse(user0.has_perm('Perm2', object1))
+        self.assertFalse(user1.has_perm('Perm2', object0))
+        self.assertFalse(user1.has_perm('Perm2', object1))
         
         # grant property to another object
-        group0.grant('Perm2', self.object1)
-        self.assert_(self.user0.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm1', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object1))
-        self.assert_(self.user0.has_perm('Perm2', self.object0))
-        self.assert_(self.user0.has_perm('Perm2', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm2', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm2', self.object1))
+        group0.grant('Perm2', object1)
+        self.assert_(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', object1))
+        self.assertFalse(user1.has_perm('Perm1', object0))
+        self.assertFalse(user1.has_perm('Perm1', object1))
+        self.assert_(user0.has_perm('Perm2', object0))
+        self.assert_(user0.has_perm('Perm2', object1))
+        self.assertFalse(user1.has_perm('Perm2', object0))
+        self.assertFalse(user1.has_perm('Perm2', object1))
         
         # grant perms to other user
-        group1.grant('Perm3', self.object0)
-        self.assert_(self.user0.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm1', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm1', self.object1))
-        self.assert_(self.user0.has_perm('Perm2', self.object0))
-        self.assert_(self.user0.has_perm('Perm2', self.object1))
-        self.assertFalse(self.user1.has_perm('Perm2', self.object0))
-        self.assertFalse(self.user1.has_perm('Perm2', self.object1))
-        self.assert_(self.user1.has_perm('Perm3', self.object0))
+        group1.grant('Perm3', object0)
+        self.assert_(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', object1))
+        self.assertFalse(user1.has_perm('Perm1', object0))
+        self.assertFalse(user1.has_perm('Perm1', object1))
+        self.assert_(user0.has_perm('Perm2', object0))
+        self.assert_(user0.has_perm('Perm2', object1))
+        self.assertFalse(user1.has_perm('Perm2', object0))
+        self.assertFalse(user1.has_perm('Perm2', object1))
+        self.assert_(user1.has_perm('Perm3', object0))
         
         def grant_unknown():
-            group1.grant('UnknownPerm', self.object0)
+            group1.grant('UnknownPerm', object0)
         self.assertRaises(UnknownPermissionException, grant_unknown)
     
     def test_revoke_group_permissions(self):
@@ -130,59 +137,59 @@ class TestGroups(TestCase):
             * revoking property Group does not have does not give an error
             * revoking unknown permission raises error
         """
-        group0 = self.test_save('TestGroup0', self.user0)
-        group1 = self.test_save('TestGroup1', self.user1)
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         # revoke perm when user has no perms
-        revoke(group0, 'Perm1', self.object0)
+        revoke(group0, 'Perm1', object0)
         
-        for perm in self.perms:
-            group0.grant(perm, self.object0)
-            group0.grant(perm, self.object1)
-            group1.grant(perm, self.object0)
-            group1.grant(perm, self.object1)
+        for perm in perms:
+            group0.grant(perm, object0)
+            group0.grant(perm, object1)
+            group1.grant(perm, object0)
+            group1.grant(perm, object1)
         
         # revoke single perm
-        group0.revoke('Perm1', self.object0)
-        self.assertEqual([u'Perm2', u'Perm3', u'Perm4'], group0.get_perms(self.object0))
-        self.assertEqual(self.perms, group0.get_perms(self.object1))
-        self.assertEqual(self.perms, group1.get_perms(self.object0))
-        self.assertEqual(self.perms, group1.get_perms(self.object1))
+        group0.revoke('Perm1', object0)
+        self.assertEqual([u'Perm2', u'Perm3', u'Perm4'], group0.get_perms(object0))
+        self.assertEqual(perms, group0.get_perms(object1))
+        self.assertEqual(perms, group1.get_perms(object0))
+        self.assertEqual(perms, group1.get_perms(object1))
         
         # revoke a second perm
-        group0.revoke('Perm3', self.object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(self.object0))
-        self.assertEqual(self.perms, group0.get_perms(self.object1))
-        self.assertEqual(self.perms, group1.get_perms(self.object0))
-        self.assertEqual(self.perms, group1.get_perms(self.object1))
+        group0.revoke('Perm3', object0)
+        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
+        self.assertEqual(perms, group0.get_perms(object1))
+        self.assertEqual(perms, group1.get_perms(object0))
+        self.assertEqual(perms, group1.get_perms(object1))
         
         # revoke from another object
-        group0.revoke('Perm3', self.object1)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(self.object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(self.object1))
-        self.assertEqual(self.perms, group1.get_perms(self.object0))
-        self.assertEqual(self.perms, group1.get_perms(self.object1))
+        group0.revoke('Perm3', object1)
+        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
+        self.assertEqual(perms, group1.get_perms(object0))
+        self.assertEqual(perms, group1.get_perms(object1))
         
         # revoke from another user
-        group1.revoke('Perm4', self.object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(self.object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(self.object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(self.object0))
-        self.assertEqual(self.perms, group1.get_perms(self.object1))
+        group1.revoke('Perm4', object0)
+        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
+        self.assertEqual(perms, group1.get_perms(object1))
         
         # revoke perm user does not have
-        group0.revoke('Perm1', self.object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(self.object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(self.object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(self.object0))
-        self.assertEqual(self.perms, group1.get_perms(self.object1))
+        group0.revoke('Perm1', object0)
+        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
+        self.assertEqual(perms, group1.get_perms(object1))
         
         # revoke perm that does not exist
-        group0.revoke('DoesNotExist', self.object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(self.object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(self.object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(self.object0))
-        self.assertEqual(self.perms, group1.get_perms(self.object1))
+        group0.revoke('DoesNotExist', object0)
+        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
+        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
+        self.assertEqual(perms, group1.get_perms(object1))
     
     def test_revoke_all_group(self):
         """
@@ -195,37 +202,37 @@ class TestGroups(TestCase):
         """
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
-
-        for perm in self.perms:
-            grant_group(group0, perm, self.object0)
-            grant_group(group0, perm, self.object1)
-            grant_group(group1, perm, self.object0)
-            grant_group(group1, perm, self.object1)
-
-        revoke_all_group(group0, self.object0)
-        self.assertEqual([], get_group_perms(group0, self.object0))
-        self.assertEqual(self.perms, get_group_perms(group0, self.object1))
-        self.assertEqual(self.perms, get_group_perms(group1, self.object0))
-        self.assertEqual(self.perms, get_group_perms(group1, self.object1))
-
-        revoke_all_group(group0, self.object1)
-        self.assertEqual([], get_group_perms(group0, self.object0))
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual(self.perms, get_group_perms(group1, self.object0))
-        self.assertEqual(self.perms, get_group_perms(group1, self.object1))
-
-        revoke_all_group(group1, self.object0)
-        self.assertEqual([], get_group_perms(group0, self.object0))
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
-        self.assertEqual(self.perms, get_group_perms(group1, self.object1))
-
-        revoke_all_group(group1, self.object1)
-        self.assertEqual([], get_group_perms(group0, self.object0))
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
-        self.assertEqual([], get_group_perms(group1, self.object1))
-
+        
+        for perm in perms:
+            grant_group(group0, perm, object0)
+            grant_group(group0, perm, object1)
+            grant_group(group1, perm, object0)
+            grant_group(group1, perm, object1)
+        
+        revoke_all_group(group0, object0)
+        self.assertEqual([], get_group_perms(group0, object0))
+        self.assertEqual(perms, get_group_perms(group0, object1))
+        self.assertEqual(perms, get_group_perms(group1, object0))
+        self.assertEqual(perms, get_group_perms(group1, object1))
+        
+        revoke_all_group(group0, object1)
+        self.assertEqual([], get_group_perms(group0, object0))
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual(perms, get_group_perms(group1, object0))
+        self.assertEqual(perms, get_group_perms(group1, object1))
+        
+        revoke_all_group(group1, object0)
+        self.assertEqual([], get_group_perms(group0, object0))
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
+        self.assertEqual(perms, get_group_perms(group1, object1))
+        
+        revoke_all_group(group1, object1)
+        self.assertEqual([], get_group_perms(group0, object0))
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
+        self.assertEqual([], get_group_perms(group1, object1))
+    
     def test_set_perms(self):
         """
         Test setting perms to an exact set
@@ -238,38 +245,38 @@ class TestGroups(TestCase):
         perms4 = []
         
         # grant single property
-        set_group_perms(group0, perms1, self.object0)
-        self.assertEqual(perms1, get_group_perms(group0, self.object0))
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
+        set_group_perms(group0, perms1, object0)
+        self.assertEqual(perms1, get_group_perms(group0, object0))
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
         
-        set_group_perms(group0, perms2, self.object0)
-        self.assertEqual(perms2, get_group_perms(group0, self.object0))
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
+        set_group_perms(group0, perms2, object0)
+        self.assertEqual(perms2, get_group_perms(group0, object0))
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
         
-        set_group_perms(group0, perms3, self.object0)
-        self.assertEqual(perms3, get_group_perms(group0, self.object0))
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
+        set_group_perms(group0, perms3, object0)
+        self.assertEqual(perms3, get_group_perms(group0, object0))
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
         
         # remove perms
-        set_group_perms(group0, perms4, self.object0)
-        self.assertEqual(perms4, get_group_perms(group0, self.object0))
-        self.assertFalse(group0.TestModel_gperms.filter(obj=self.object0).exists())
-        self.assertEqual([], get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
-
-        set_group_perms(group0, perms2, self.object1)
-        self.assertEqual(perms4, get_group_perms(group0, self.object0))
-        self.assertEqual(perms2, get_group_perms(group0, self.object1))
-        self.assertEqual([], get_group_perms(group1, self.object0))
-
-        set_group_perms(group1, perms1, self.object0)
-        self.assertEqual(perms4, get_group_perms(group0, self.object0))
-        self.assertEqual(perms2, get_group_perms(group0, self.object1))
-        self.assertEqual(perms1, get_group_perms(group1, self.object0))
-
+        set_group_perms(group0, perms4, object0)
+        self.assertEqual(perms4, get_group_perms(group0, object0))
+        self.assertFalse(group0.TestModel_gperms.filter(obj=object0).exists())
+        self.assertEqual([], get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
+        
+        set_group_perms(group0, perms2, object1)
+        self.assertEqual(perms4, get_group_perms(group0, object0))
+        self.assertEqual(perms2, get_group_perms(group0, object1))
+        self.assertEqual([], get_group_perms(group1, object0))
+        
+        set_group_perms(group1, perms1, object0)
+        self.assertEqual(perms4, get_group_perms(group0, object0))
+        self.assertEqual(perms2, get_group_perms(group0, object1))
+        self.assertEqual(perms1, get_group_perms(group1, object0))
+    
     def test_has_perm(self):
         """
         Additional tests for has_perms
@@ -279,13 +286,13 @@ class TestGroups(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        group = self.test_save('TestGroup0', self.user0)
-        group.grant('Perm1', self.object0)
+        group = self.test_save('TestGroup0', user0)
+        group.grant('Perm1', object0)
         
-        self.assertTrue(self.user0.has_perm('Perm1', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm1', None))
-        self.assertFalse(self.user0.has_perm('DoesNotExist', self.object0))
-        self.assertFalse(self.user0.has_perm('Perm2', self.object0))
+        self.assertTrue(user0.has_perm('Perm1', object0))
+        self.assertFalse(user0.has_perm('Perm1', None))
+        self.assertFalse(user0.has_perm('DoesNotExist', object0))
+        self.assertFalse(user0.has_perm('Perm2', object0))
     
     def test_group_has_perm(self):
         """
@@ -296,13 +303,13 @@ class TestGroups(TestCase):
             * Nonexistent perm returns false
             * Perm user does not possess returns false
         """
-        group = self.test_save('TestGroup0', self.user0)
-        group.grant('Perm1', self.object0)
+        group = self.test_save('TestGroup0', user0)
+        group.grant('Perm1', object0)
         
-        self.assertTrue(group.has_perm('Perm1', self.object0))
+        self.assertTrue(group.has_perm('Perm1', object0))
         self.assertFalse(group.has_perm('Perm1', None))
-        self.assertFalse(group.has_perm('DoesNotExist', self.object0))
-        self.assertFalse(group.has_perm('Perm2', self.object0))
+        self.assertFalse(group.has_perm('DoesNotExist', object0))
+        self.assertFalse(group.has_perm('Perm2', object0))
     
     def test_get_groups(self):
         """
@@ -311,22 +318,22 @@ class TestGroups(TestCase):
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
         
-        group0.grant('Perm1', self.object0)
-        group0.grant('Perm3', self.object1)
-        group1.grant('Perm2', self.object1)
+        group0.grant('Perm1', object0)
+        group0.grant('Perm3', object1)
+        group1.grant('Perm2', object1)
         
-        self.assert_(group0 in get_groups(self.object0))
-        self.assertFalse(group1 in get_groups(self.object0))
-        self.assert_(group0 in get_groups(self.object1))
-        self.assert_(group1 in get_groups(self.object1))
-        self.assert_(len(get_groups(self.object1))==2)
+        self.assert_(group0 in get_groups(object0))
+        self.assertFalse(group1 in get_groups(object0))
+        self.assert_(group0 in get_groups(object1))
+        self.assert_(group1 in get_groups(object1))
+        self.assert_(len(get_groups(object1))==2)
     
     def test_filter(self):
         """
         Test filtering objects
         """
-        group0 = self.test_save('TestGroup0', self.user0)
-        group1 = self.test_save('TestGroup1', self.user1)
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         object2 = TestModel.objects.create(name='test2')
         object2.save()
@@ -335,47 +342,47 @@ class TestGroups(TestCase):
         object4 = TestModel.objects.create(name='test4')
         object4.save()
         
-        group0.grant('Perm1', self.object0)
-        group0.grant('Perm2', self.object1)
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
         group1.grant('Perm3', object2)
         group1.grant('Perm4', object3)
-        self.user0.grant('Perm4', object4)
+        user0.grant('Perm4', object4)
         
         # retrieve single perm
-        self.assert_(self.object0 in self.user0.filter_on_perms(TestModel, ['Perm1']))
-        self.assert_(self.object1 in self.user0.filter_on_perms(TestModel, ['Perm2']))
-        self.assert_(object2 in self.user1.filter_on_perms(TestModel, ['Perm3']))
-        self.assert_(object3 in self.user1.filter_on_perms(TestModel, ['Perm4']))
+        self.assert_(object0 in user0.filter_on_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in user0.filter_on_perms(TestModel, ['Perm2']))
+        self.assert_(object2 in user1.filter_on_perms(TestModel, ['Perm3']))
+        self.assert_(object3 in user1.filter_on_perms(TestModel, ['Perm4']))
         
         # retrieve multiple perms
-        query = self.user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
-        self.assert_(self.object0 in query)
-        self.assert_(self.object1 in query)
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
+        self.assert_(object0 in query)
+        self.assert_(object1 in query)
         self.assertEqual(2, query.count())
-        query = self.user1.filter_on_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
+        query = user1.filter_on_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
         self.assert_(object2 in query)
         self.assert_(object3 in query)
         self.assertEqual(2, query.count())
         
         # mix of group and users
-        query = self.user0.filter_on_perms(TestModel, ['Perm1', 'Perm4'])
-        self.assert_(self.object0 in query)
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm4'])
+        self.assert_(object0 in query)
         self.assert_(object4 in query)
         self.assertEqual(2, query.count())
         
         # retrieve no results
-        query = self.user0.filter_on_perms(TestModel, ['Perm3'])
+        query = user0.filter_on_perms(TestModel, ['Perm3'])
         self.assertEqual(0, query.count())
-        query = self.user1.filter_on_perms(TestModel, ['Perm1'])
+        query = user1.filter_on_perms(TestModel, ['Perm1'])
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = self.user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
-        self.assert_(self.object0 in query)
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
+        self.assert_(object0 in query)
         self.assertEqual(1, query.count())
         
         # exclude groups
-        query = self.user0.filter_on_perms(TestModel, ['Perm1', 'Perm4'], groups=False)
+        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm4'], groups=False)
         self.assert_(object4 in query)
         self.assertEqual(1, query.count())
     
@@ -383,8 +390,8 @@ class TestGroups(TestCase):
         """
         Test checking if a user has perms on any instance of the model
         """
-        group0 = self.test_save('TestGroup0', self.user0)
-        group1 = self.test_save('TestGroup1', self.user1)
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         object2 = TestModel.objects.create()
         object2.save()
@@ -393,36 +400,36 @@ class TestGroups(TestCase):
         object4 = TestModel.objects.create()
         object4.save()
         
-        group0.grant('Perm1', self.object0)
-        group0.grant('Perm2', self.object1)
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
         group1.grant('Perm3', object2)
-        self.user0.grant('Perm4', object4)
+        user0.grant('Perm4', object4)
         
         # check single perm
-        self.assert_(self.user0.perms_on_any(TestModel, ['Perm1']))
-        self.assert_(self.user0.perms_on_any(TestModel, ['Perm2']))
-        self.assert_(self.user1.perms_on_any(TestModel, ['Perm3']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm2']))
+        self.assert_(user1.perms_on_any(TestModel, ['Perm3']))
         
         # check multiple perms
-        self.assert_(self.user0.perms_on_any(TestModel, ['Perm1', 'Perm4']))
-        self.assert_(self.user0.perms_on_any(TestModel, ['Perm1', 'Perm2']))
-        self.assert_(self.user1.perms_on_any(TestModel, ['Perm3', 'Perm4']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm4']))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm2']))
+        self.assert_(user1.perms_on_any(TestModel, ['Perm3', 'Perm4']))
         
         # no results
-        self.assertFalse(self.user0.perms_on_any(TestModel, ['Perm3']))
-        self.assertFalse(self.user1.perms_on_any(TestModel, ['Perm4']))
+        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3']))
+        self.assertFalse(user1.perms_on_any(TestModel, ['Perm4']))
         
         # excluding group perms
-        self.assert_(self.user0.perms_on_any(TestModel, ['Perm4'], False))
-        self.assert_(self.user0.perms_on_any(TestModel, ['Perm2', 'Perm4'], False))
-        self.assertFalse(self.user0.perms_on_any(TestModel, ['Perm2'], False))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm4'], False))
+        self.assert_(user0.perms_on_any(TestModel, ['Perm2', 'Perm4'], False))
+        self.assertFalse(user0.perms_on_any(TestModel, ['Perm2'], False))
     
     def test_filter_group(self):
         """
         Test filtering objects based only on the groups perms
         """
-        group0 = self.test_save('TestGroup0', self.user0)
-        group1 = self.test_save('TestGroup1', self.user1)
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
         
         object2 = TestModel.objects.create(name='test2')
         object2.save()
@@ -431,21 +438,21 @@ class TestGroups(TestCase):
         object4 = TestModel.objects.create(name='test4')
         object4.save()
         
-        group0.grant('Perm1', self.object0)
-        group0.grant('Perm2', self.object1)
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
         group1.grant('Perm3', object2)
         group1.grant('Perm4', object3)
         
         # retrieve single perm
-        self.assert_(self.object0 in group0.filter_on_perms(TestModel, ['Perm1']))
-        self.assert_(self.object1 in group0.filter_on_perms(TestModel, ['Perm2']))
+        self.assert_(object0 in group0.filter_on_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in group0.filter_on_perms(TestModel, ['Perm2']))
         self.assert_(object2 in group1.filter_on_perms(TestModel, ['Perm3']))
         self.assert_(object3 in group1.filter_on_perms(TestModel, ['Perm4']))
         
         # retrieve multiple perms
         query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
-        self.assert_(self.object0 in query)
-        self.assert_(self.object1 in query)
+        self.assert_(object0 in query)
+        self.assert_(object1 in query)
         self.assertEqual(2, query.count())
         query = group1.filter_on_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
         self.assert_(object2 in query)
@@ -460,7 +467,7 @@ class TestGroups(TestCase):
         
         # extra kwargs
         query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter( name='test0')
-        self.assert_(self.object0 in query)
+        self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
 class TestGroupViews(TestCase):
