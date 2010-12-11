@@ -1,5 +1,5 @@
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.test import TestCase
 
 from object_permissions import grant, revoke, get_user_perms, revoke_all, \
@@ -22,16 +22,22 @@ class TestModelPermissions(TestCase):
         self.object1 = TestModel.objects.create(name='test1')
         self.object1.save()
         
+        self.group = Group(name='testers')
+        self.group.save()
+        self.group.user_set.add(self.user0)
+        
         dict_ = globals()
         dict_['user0']=self.user0
         dict_['user1']=self.user1
         dict_['object0']=self.object0
         dict_['object1']=self.object1
         dict_['perms']=self.perms
+        dict_['group']=self.group
 
     def tearDown(self):
         TestModel.objects.all().delete()
         User.objects.all().delete()
+        Group.objects.all().delete()
 
     def test_trivial(self):
         pass
@@ -407,7 +413,27 @@ class TestModelPermissions(TestCase):
         """
         Test the user_has_any_perm() function.
         """
-
-        self.assertFalse(user_has_any_perms(self.user0, self.object0))
-        self.user0.grant("Perm1", self.object0)
-        self.assertTrue(user_has_any_perms(self.user0, self.object0))
+        # no perms
+        self.assertFalse(user_has_any_perms(user0, object0))
+        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm2']))
+        self.assertFalse(user_has_any_perms(user0, object0, groups=True))
+        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm2'], groups=True))
+        
+        # single perm
+        user0.grant("Perm1", object0)
+        user1.grant("Perm2", object0)
+        self.assertTrue(user_has_any_perms(user0, object0))
+        self.assertTrue(user_has_any_perms(user1, object0))
+        self.assertTrue(user_has_any_perms(user0, object0, ['Perm1', 'Perm2']))
+        self.assertTrue(user_has_any_perms(user1, object0, ['Perm1', 'Perm2']))
+        user0.revoke_all(object0)
+        user1.revoke_all(object0)
+        
+        # perm on group, but not checking
+        group.grant("Perm3", object0)
+        self.assertFalse(user_has_any_perms(user0, object0))
+        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm3']))
+        
+        # perm on group, checking groups
+        self.assertTrue(user_has_any_perms(user0, object0, groups=True))
+        self.assertTrue(user_has_any_perms(user0, object0, ['Perm1', 'Perm3'], groups=True))

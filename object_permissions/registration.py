@@ -505,31 +505,46 @@ def group_has_perm(group, perm, obj):
     return permissions.objects.filter(group=group, obj=obj, **d).exists()
 
 
-def user_has_any_perms(user, obj):
+def user_has_any_perms(user, obj, perms=None, groups=False):
     """
     Check whether the User has *any* permission on the given object.
     """
-
     model = obj.__class__
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
 
-    return permissions.objects.filter(user=user, obj=obj).exists()
+    if perms:
+        # create Q clauses out of perms and OR them all together
+        q = reduce(or_, (Q(**{perm:True}) for perm in perms))
+        base = permissions.objects.filter(q)
+    else:
+        base = permissions.objects
+
+    if groups:
+        return base.filter(obj=obj) \
+            .filter(Q(user=user) | Q(group__user=user)) \
+            .exists()
+
+    return base.filter(user=user, obj=obj).exists()
 
 
-def group_has_any_perms(group, obj):
+def group_has_any_perms(group, obj, perms=None):
     """
     Check whether the Group has *any* permission on the given object.
     """
-
     model = obj.__class__
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
 
+    if perms:
+        # create Q clauses out of perms and OR them all together
+        q = reduce(or_, (Q(**{perm:True}) for perm in perms))
+        return permissions.objects.filter(q, group=group, obj=obj).exists()
+    
     return permissions.objects.filter(group=group, obj=obj).exists()
 
 

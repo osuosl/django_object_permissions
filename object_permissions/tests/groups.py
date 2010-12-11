@@ -311,6 +311,27 @@ class TestGroups(TestCase):
         self.assertFalse(group.has_perm('DoesNotExist', object0))
         self.assertFalse(group.has_perm('Perm2', object0))
     
+    def test_group_has_any_perm(self):
+        """
+        Test group_has_any_perms.  Group having any of the listed perms
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user0)
+        
+        # no perms
+        self.assertFalse(group_has_any_perms(group0, object0))
+        self.assertFalse(group_has_any_perms(group0, object0, ['Perm1', 'Perm2']))
+        
+        # single perm
+        group0.grant("Perm1", object0)
+        group1.grant("Perm2", object0)
+        self.assertTrue(group_has_any_perms(group0, object0))
+        self.assertTrue(group_has_any_perms(group1, object0))
+        self.assertTrue(group_has_any_perms(group0, object0, ['Perm1', 'Perm2']))
+        self.assertTrue(group_has_any_perms(group1, object0, ['Perm1', 'Perm2']))
+        group0.revoke_all(object0)
+        group1.revoke_all(object0)
+    
     def test_get_groups(self):
         """
         Tests retrieving list of Groups with perms on an object
