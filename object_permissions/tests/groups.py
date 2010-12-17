@@ -349,6 +349,73 @@ class TestGroups(TestCase):
         self.assert_(group1 in get_groups(object1))
         self.assert_(len(get_groups(object1))==2)
     
+    def test_get_groups_any(self):
+        """
+        Tests retrieving list of groups with perms on an object
+        """
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
+        
+        group0.set_perms(['Perm1', 'Perm2'], object0)
+        group0.set_perms(['Perm1', 'Perm3'], object1)
+        group1.set_perms(['Perm2'], object1)
+        
+        # no perms
+        self.assertFalse(user1 in get_groups_any(object0, ['Perm1']))
+        
+        # explicit any perms
+        self.assert_(group0 in get_groups_any(object0))
+        self.assert_(group0 in get_groups_any(object1))
+        self.assertFalse(group1 in get_groups_any(object0))
+        self.assert_(group1 in get_groups_any(object1))
+        
+        # has perms, but not the right one
+        self.assertFalse(group0 in get_groups_any(object0, ['Perm3']))
+        
+        # has one perm, but not all
+        self.assert_(group0 in get_groups_any(object0, ['Perm1','Perm3']))
+        self.assert_(group0 in get_groups_any(object1, ['Perm1','Perm2']))
+        
+        # has single perm
+        self.assert_(group0 in get_groups_any(object0, ['Perm1']))
+        self.assert_(group0 in get_groups_any(object0, ['Perm2']))
+        self.assert_(group1 in get_groups_any(object1, ['Perm2']))
+        
+        # has multiple perms
+        self.assert_(group0 in get_groups_any(object0, ['Perm1','Perm2']))
+        self.assert_(group0 in get_groups_any(object1, ['Perm1','Perm3']))    
+    
+    def test_get_groups_all(self):
+        """
+        Tests retrieving list of groups with perms on an object
+        """
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
+        
+        group0.set_perms(['Perm1', 'Perm2'], object0)
+        group0.set_perms(['Perm1', 'Perm3'], object1)
+        group1.set_perms(['Perm2'], object1)
+        
+        # no perms
+        self.assertFalse(group1 in get_groups_all(object0, ['Perm1']))
+        
+        # has perms, but not the right one
+        self.assertFalse(group0 in get_groups_all(object0, ['Perm3']))
+        
+        # has one perm, but not all
+        self.assertFalse(group0 in get_groups_all(object0, ['Perm1','Perm3']))
+        self.assertFalse(group0 in get_groups_all(object1, ['Perm1','Perm2']))
+        
+        # has single perm
+        self.assert_(group0 in get_groups_all(object0, ['Perm1']))
+        self.assert_(group0 in get_groups_all(object0, ['Perm2']))
+        self.assert_(group1 in get_groups_all(object1, ['Perm2']))
+        
+        # has multiple perms
+        self.assert_(group0 in get_groups_all(object0, ['Perm1','Perm2']))
+        self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
+
+    
     def test_filter(self):
         """
         Test filtering objects

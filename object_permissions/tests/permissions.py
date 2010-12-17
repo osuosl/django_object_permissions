@@ -2,8 +2,7 @@
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 
-from object_permissions import grant, revoke, get_user_perms, revoke_all, \
-    get_users, set_user_perms, user_has_any_perms
+from object_permissions import *
 from object_permissions.registration import TestModel, UnknownPermissionException
 
 
@@ -282,6 +281,180 @@ class TestModelPermissions(TestCase):
         self.assert_(user1 in get_users(object1))
         self.assert_(len(get_users(object1))==2)
     
+    def test_get_users_any(self):
+        """
+        Tests retrieving list of users with perms on an object
+        """
+        user0.set_perms(['Perm1', 'Perm2'], object0)
+        user0.set_perms(['Perm1', 'Perm3'], object1)
+        user1.set_perms(['Perm2'], object1)
+        
+        # no perms
+        self.assertFalse(user1 in get_users_any(object0, ['Perm1']))
+        
+        # explicit any perms
+        self.assert_(user0 in get_users_any(object0))
+        self.assert_(user0 in get_users_any(object1))
+        self.assertFalse(user1 in get_users_any(object0))
+        self.assert_(user1 in get_users_any(object1))
+        
+        # has perms, but not the right one
+        self.assertFalse(user0 in get_users_any(object0, ['Perm3']))
+        
+        # has one perm, but not all
+        self.assert_(user0 in get_users_any(object0, ['Perm1','Perm3']))
+        self.assert_(user0 in get_users_any(object1, ['Perm1','Perm2']))
+        
+        # has single perm
+        self.assert_(user0 in get_users_any(object0, ['Perm1']))
+        self.assert_(user0 in get_users_any(object0, ['Perm2']))
+        self.assert_(user1 in get_users_any(object1, ['Perm2']))
+        
+        # has multiple perms
+        self.assert_(user0 in get_users_any(object0, ['Perm1','Perm2']))
+        self.assert_(user0 in get_users_any(object1, ['Perm1','Perm3']))
+        
+        # retry all tests via groups
+        # reset perms for group test
+        user0.revoke_all(object1)
+        group.set_perms(['Perm1', 'Perm3'], object1)
+        
+        # ---------------------------------------------------------------------
+        # retry tests including groups, should be same set of results since
+        # user0 now has same permissions except object1 perms are through a
+        # group
+        # ---------------------------------------------------------------------
+        # no perms
+        self.assertFalse(user1 in get_users_any(object0, ['Perm1']))
+        
+        # explicit any perms
+        self.assert_(user0 in get_users_any(object0))
+        self.assert_(user0 in get_users_any(object1))
+        self.assertFalse(user1 in get_users_any(object0))
+        self.assert_(user1 in get_users_any(object1))
+        
+        # has perms, but not the right one
+        self.assertFalse(user0 in get_users_any(object0, ['Perm3']))
+        
+        # has one perm, but not all
+        self.assert_(user0 in get_users_any(object0, ['Perm1','Perm3']))
+        self.assert_(user0 in get_users_any(object1, ['Perm1','Perm2']))
+        
+        # has single perm
+        self.assert_(user0 in get_users_any(object0, ['Perm1']))
+        self.assert_(user0 in get_users_any(object0, ['Perm2']))
+        self.assert_(user1 in get_users_any(object1, ['Perm2']))
+        
+        # has multiple perms
+        self.assert_(user0 in get_users_any(object0, ['Perm1','Perm2']))
+        self.assert_(user0 in get_users_any(object1, ['Perm1','Perm3']))
+        
+        # ----------------------------
+        # retry tests excluding groups
+        # ----------------------------
+        # no perms
+        self.assertFalse(user1 in get_users_any(object0, ['Perm1'], groups=False))
+        
+        # explicit any perms
+        self.assert_(user0 in get_users_any(object0, groups=False))
+        self.assertFalse(user0 in get_users_any(object1, groups=False))
+        self.assertFalse(user1 in get_users_any(object0, groups=False))
+        self.assert_(user1 in get_users_any(object1, groups=False))
+        
+        # has perms, but not the right one
+        self.assertFalse(user0 in get_users_any(object0, ['Perm3'], groups=False))
+        
+        # has one perm, but not all
+        self.assert_(user0 in get_users_any(object0, ['Perm1','Perm3'], groups=False))
+        self.assertFalse(user0 in get_users_any(object1, ['Perm1','Perm2'], groups=False))
+        
+        # has single perm
+        self.assert_(user0 in get_users_any(object0, ['Perm1'], groups=False))
+        self.assert_(user0 in get_users_any(object0, ['Perm2'], groups=False))
+        self.assert_(user1 in get_users_any(object1, ['Perm2'], groups=False))
+        
+        # has multiple perms
+        self.assert_(user0 in get_users_any(object0, ['Perm1','Perm2'], groups=False))
+        self.assertFalse(user0 in get_users_any(object1, ['Perm1','Perm3'], groups=False))
+    
+    def test_get_users_all(self):
+        """
+        Tests retrieving list of users with perms on an object
+        """
+        user0.set_perms(['Perm1', 'Perm2'], object0)
+        user0.set_perms(['Perm1', 'Perm3'], object1)
+        user1.set_perms(['Perm2'], object1)
+        
+        # no perms
+        self.assertFalse(user1 in get_users_all(object0, ['Perm1']))
+        
+        # has perms, but not the right one
+        self.assertFalse(user0 in get_users_all(object0, ['Perm3']))
+        
+        # has one perm, but not all
+        self.assertFalse(user0 in get_users_all(object0, ['Perm1','Perm3']))
+        self.assertFalse(user0 in get_users_all(object1, ['Perm1','Perm2']))
+        
+        # has single perm
+        self.assert_(user0 in get_users_all(object0, ['Perm1']))
+        self.assert_(user0 in get_users_all(object0, ['Perm2']))
+        self.assert_(user1 in get_users_all(object1, ['Perm2']))
+        
+        # has multiple perms
+        self.assert_(user0 in get_users_all(object0, ['Perm1','Perm2']))
+        self.assert_(user0 in get_users_all(object1, ['Perm1','Perm3']))
+        
+        # retry all tests via groups
+        # reset perms for group test
+        user0.revoke_all(object1)
+        group.set_perms(['Perm1', 'Perm3'], object1)
+        
+        # ---------------------------------------------------------------------
+        # retry tests including groups, should be same set of results since
+        # user0 now has same permissions except object1 perms are through a
+        # group
+        # ---------------------------------------------------------------------
+        # no perms
+        self.assertFalse(user1 in get_users_all(object0, ['Perm1']))
+        
+        # has perms, but not the right one
+        self.assertFalse(user0 in get_users_all(object0, ['Perm3']))
+        
+        # has one perm, but not all
+        self.assertFalse(user0 in get_users_all(object0, ['Perm1','Perm3']))
+        self.assertFalse(user0 in get_users_all(object1, ['Perm1','Perm2']))
+        
+        # has single perm
+        self.assert_(user0 in get_users_all(object0, ['Perm1']))
+        self.assert_(user0 in get_users_all(object0, ['Perm2']))
+        self.assert_(user1 in get_users_all(object1, ['Perm2']))
+        
+        # has multiple perms
+        self.assert_(user0 in get_users_all(object0, ['Perm1','Perm2']))
+        self.assert_(user0 in get_users_all(object1, ['Perm1','Perm3']))
+        
+        # ----------------------------
+        # retry tests excluding groups
+        # ----------------------------
+        # no perms
+        self.assertFalse(user1 in get_users_all(object0, ['Perm1'], groups=False))
+        
+        # has perms, but not the right one
+        self.assertFalse(user0 in get_users_all(object0, ['Perm3'], groups=False))
+        
+        # has one perm, but not all
+        self.assertFalse(user0 in get_users_all(object0, ['Perm1','Perm3'], groups=False))
+        self.assertFalse(user0 in get_users_all(object1, ['Perm1','Perm2'], groups=False))
+        
+        # has single perm
+        self.assert_(user0 in get_users_all(object0, ['Perm1'], groups=False))
+        self.assert_(user0 in get_users_all(object0, ['Perm2'], groups=False))
+        self.assert_(user1 in get_users_all(object1, ['Perm2'], groups=False))
+        
+        # has multiple perms
+        self.assert_(user0 in get_users_all(object0, ['Perm1','Perm2'], groups=False))
+        self.assertFalse(user0 in get_users_all(object1, ['Perm1','Perm3'], groups=False))
+    
     def test_get_user_permissions(self):
         
         # grant single property
@@ -437,3 +610,4 @@ class TestModelPermissions(TestCase):
         # perm on group, checking groups
         self.assertTrue(user_has_any_perms(user0, object0, groups=True))
         self.assertTrue(user_has_any_perms(user0, object0, ['Perm1', 'Perm3'], groups=True))
+        
