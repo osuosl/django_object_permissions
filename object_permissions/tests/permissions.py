@@ -542,7 +542,7 @@ class TestModelPermissions(TestCase):
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
     
-    def test_any(self):
+    def test_has_any_on_model(self):
         """
         Test checking if a user has perms on any instance of the model
         """
@@ -557,30 +557,74 @@ class TestModelPermissions(TestCase):
         user1.grant('Perm3', object2)
         
         # check single perm
-        self.assert_(user0.perms_on_any(TestModel, ['Perm1']))
-        self.assert_(user0.perms_on_any(TestModel, ['Perm2']))
-        self.assert_(user1.perms_on_any(TestModel, ['Perm3']))
-        self.assert_(user0.perms_on_any(TestModel, ['Perm1'], False))
-        self.assert_(user0.perms_on_any(TestModel, ['Perm2'], False))
-        self.assert_(user1.perms_on_any(TestModel, ['Perm3'], False))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1']))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm2']))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3']))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1'], False))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm2'], False))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3'], False))
         
         # check multiple perms
-        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm4']))
-        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm2']))
-        self.assert_(user1.perms_on_any(TestModel, ['Perm3', 'Perm4']))
-        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm4'], False))
-        self.assert_(user0.perms_on_any(TestModel, ['Perm1', 'Perm2'], False))
-        self.assert_(user1.perms_on_any(TestModel, ['Perm3', 'Perm4'], False))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm4']))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm2']))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3', 'Perm4']))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm4'], False))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm2'], False))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3', 'Perm4'], False))
         
         # no results
-        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3']))
-        self.assertFalse(user1.perms_on_any(TestModel, ['Perm4']))
-        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3', 'Perm4']))
-        self.assertFalse(user1.perms_on_any(TestModel, ['Perm1', 'Perm4']))
-        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3'], False))
-        self.assertFalse(user1.perms_on_any(TestModel, ['Perm4'], False))
-        self.assertFalse(user0.perms_on_any(TestModel, ['Perm3', 'Perm4'], False))
-        self.assertFalse(user1.perms_on_any(TestModel, ['Perm1', 'Perm4'], False))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3']))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm4']))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3', 'Perm4']))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm1', 'Perm4']))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3'], False))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm4'], False))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3', 'Perm4'], False))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm1', 'Perm4'], False))
+        
+        # ---------------------------------------------------------------------
+        # retry tests including groups, should be same set of results since
+        # user0 now has same permissions except object1 perms are through a
+        # group
+        # ---------------------------------------------------------------------
+        user0.revoke_all(object1)
+        group.grant("Perm2", object1)
+        
+        # check single perm
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1']))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm2']))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3']))
+        
+        # check multiple perms
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm4']))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm2']))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3', 'Perm4']))
+        
+        # no results
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3']))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm4']))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3', 'Perm4']))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm1', 'Perm4']))
+        
+        # ----------------------------
+        # retry tests excluding groups
+        # ----------------------------
+        # check single perm
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1'], False))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm2'], False))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3'], False))
+        
+        # check multiple perms
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm4'], False))
+        self.assert_(user0.has_any_perms(TestModel, ['Perm1', 'Perm2'], False))
+        self.assert_(user1.has_any_perms(TestModel, ['Perm3', 'Perm4'], False))
+        
+        # no results
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3'], False))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm4'], False))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm2', 'Perm4'], False))
+        self.assertFalse(user0.has_any_perms(TestModel, ['Perm3', 'Perm4'], False))
+        self.assertFalse(user1.has_any_perms(TestModel, ['Perm1', 'Perm4'], False))
 
     def test_has_any_perm(self):
         """
@@ -590,7 +634,7 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user_has_any_perms(user0, object0))
         self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm2']))
         self.assertFalse(user_has_any_perms(user0, object0, groups=True))
-        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm2'], groups=True))
+        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm2']))
         
         # single perm
         user0.grant("Perm1", object0)
@@ -602,12 +646,103 @@ class TestModelPermissions(TestCase):
         user0.revoke_all(object0)
         user1.revoke_all(object0)
         
+        
         # perm on group, but not checking
         group.grant("Perm3", object0)
-        self.assertFalse(user_has_any_perms(user0, object0))
-        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm3']))
+        self.assertFalse(user_has_any_perms(user0, object0, groups=False))
+        self.assertFalse(user_has_any_perms(user0, object0, ['Perm1', 'Perm3'], groups=False))
         
         # perm on group, checking groups
         self.assertTrue(user_has_any_perms(user0, object0, groups=True))
-        self.assertTrue(user_has_any_perms(user0, object0, ['Perm1', 'Perm3'], groups=True))
+        self.assertTrue(user_has_any_perms(user0, object0, ['Perm1', 'Perm3']))
+
+    def test_has_all_on_model(self):
+        """
+        Test checking if a user has perms on any instance of the model
+        """
+
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        object3 = TestModel.objects.create(name='test3')
+        object3.save()
         
+        user0.grant('Perm1', object0)
+        user0.grant('Perm2', object0)
+        user0.grant('Perm2', object1)
+        user1.grant('Perm3', object2)
+        
+        # check single perm
+        self.assert_(user0.has_all_perms(TestModel, ['Perm1']))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm2']))
+        self.assert_(user1.has_all_perms(TestModel, ['Perm3']))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm1'], False))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm2'], False))
+        self.assert_(user1.has_all_perms(TestModel, ['Perm3'], False))
+        
+        # check multiple perms
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm1', 'Perm4']))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm1', 'Perm2']))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm3', 'Perm4']))
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm1', 'Perm4'], False))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm1', 'Perm2'], False))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm3', 'Perm4'], False))
+        
+        # no results
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm3']))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm4']))
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm3', 'Perm4']))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm1', 'Perm4']))
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm3'], False))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm4'], False))
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm3', 'Perm4'], False))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm1', 'Perm4'], False))
+        
+        # ---------------------------------------------------------------------
+        # retry tests including groups, should be same set of results since
+        # user0 now has same permissions except object1 perms are through a
+        # group
+        # ---------------------------------------------------------------------
+        user0.revoke_all(object1)
+        group.grant("Perm2", object1)
+        
+        # check single perm
+        self.assert_(user0.has_all_perms(TestModel, ['Perm1']))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm2']))
+        self.assert_(user1.has_all_perms(TestModel, ['Perm3']))
+        
+        # check multiple perms
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm1', 'Perm4']))
+        self.assert_(user0.has_all_perms(TestModel, ['Perm1', 'Perm2']))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm3', 'Perm4']))
+        
+        # no results
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm3']))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm4']))
+        self.assertFalse(user0.has_all_perms(TestModel, ['Perm3', 'Perm4']))
+        self.assertFalse(user1.has_all_perms(TestModel, ['Perm1', 'Perm4']))
+
+
+    def test_has_all_perm(self):
+        """
+        Test the user_has_any_perm() function.
+        """
+        # no perms
+        self.assertFalse(user_has_all_perms(user0, object0, ['Perm1', 'Perm2']))
+        self.assertFalse(user_has_all_perms(user0, object0, ['Perm1', 'Perm2']))
+        
+        # single perm
+        user0.grant("Perm1", object0)
+        user1.grant("Perm2", object0)
+        self.assertFalse(user_has_all_perms(user0, object0, ['Perm1', 'Perm2']))
+        self.assertFalse(user_has_all_perms(user1, object0, ['Perm1', 'Perm2']))
+        self.assert_(user_has_all_perms(user0, object0, ['Perm1']))
+        self.assert_(user_has_all_perms(user1, object0, ['Perm2']))
+        user0.revoke_all(object0)
+        user1.revoke_all(object0)
+        
+        # perm on group, but not checking
+        group.grant("Perm3", object0)
+        self.assertFalse(user_has_all_perms(user0, object0, ['Perm3'], groups=False))
+        
+        # perm on group, checking groups
+        self.assert_(user_has_all_perms(user0, object0, ['Perm3']))

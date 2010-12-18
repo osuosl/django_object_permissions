@@ -6,6 +6,7 @@ from django.contrib.auth.models import User, Group
 from django.core.exceptions import ObjectDoesNotExist
 from django import db
 from django.db import models
+from django.db.models import Model
 from django.db.models import Q
 
 from object_permissions.signals import granted, revoked
@@ -54,6 +55,7 @@ __all__ = (
     'get_users', 'get_users_all', 'get_users_any',
     'get_groups', 'get_groups_all', 'get_groups_any',
     "user_has_any_perms", "group_has_any_perms",
+    "user_has_all_perms", "group_has_all_perms",
     'get_model_perms',
     'filter_on_perms',
 )
@@ -448,7 +450,7 @@ def get_model_perms(model):
     return permissions_for_model[model]
 
 
-def user_has_perm(user, perm, obj, groups=False):
+def user_has_perm(user, perm, obj, groups=True):
     """
     Check if a User has a permission on a given object.
 
@@ -506,16 +508,18 @@ def group_has_perm(group, perm, obj):
     return permissions.objects.filter(group=group, obj=obj, **d).exists()
 
 
-def user_has_any_perms(user, obj, perms=None, groups=False):
+def user_has_any_perms(user, obj, perms=None, groups=True):
     """
     Check whether the User has *any* permission on the given object.
     """
-    model = obj.__class__
+    instance = isinstance(obj, (Model,))
+    model = obj.__class__ if instance else obj
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
 
+    # create perm clause, or implicit any
     if perms:
         # create Q clauses out of perms and OR them all together
         q = reduce(or_, (Q(**{perm:True}) for perm in perms))
@@ -524,30 +528,93 @@ def user_has_any_perms(user, obj, perms=None, groups=False):
         base = permissions.objects
 
     if groups:
-        return base.filter(obj=obj) \
-            .filter(Q(user=user) | Q(group__user=user)) \
-            .exists()
+        base = base.filter(Q(user=user) | Q(group__user=user))
+    else:
+        base = base.filter(user=user)
 
-    return base.filter(user=user, obj=obj).exists()
+    # select model or instance level query
+    return base.filter(obj=obj).exists() if instance else base.exists()
 
 
 def group_has_any_perms(group, obj, perms=None):
     """
     Check whether the Group has *any* permission on the given object.
     """
-    model = obj.__class__
+    instance = isinstance(obj, (Model,))
+    model = obj.__class__ if instance else obj
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
 
+    # create perm clause, or implicit any
     if perms:
         # create Q clauses out of perms and OR them all together
         q = reduce(or_, (Q(**{perm:True}) for perm in perms))
-        return permissions.objects.filter(q, group=group, obj=obj).exists()
+        base = permissions.objects.filter(q, group=group)
+    else:
+        base = permissions.objects.filter(group=group)
     
-    return permissions.objects.filter(group=group, obj=obj).exists()
+    # select model or instance level query
+    return base.filter(obj=obj).exists() if instance else base.exists()
 
+
+def user_has_all_perms(user, obj, perms, groups=True):
+    """
+    Check whether the User has *all* permission on the given object.
+    """
+    instance = isinstance(obj, (Model,))
+    model = obj.__class__ if instance else obj
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
+
+    # create base query requiring all permissions
+    perm_clauses = {}
+    for perm in perms:
+        perm_clauses[perm] = True
+    base = permissions.objects.filter(**perm_clauses)
+
+    # select users or users+groups
+    if groups:
+        base = base.filter(Q(user=user) | Q(group__user=user))
+    else:
+        base = base.filter(user=user)
+        
+    # select model or instance level query
+    return base.filter(obj=obj).exists() if instance else base.exists()
+
+
+def group_has_all_perms(group, obj, perms):
+    """
+    Check whether the Group has *all* permission on the given object.
+    
+    @param group - group for which to check permissions
+    @param obj - Model or Instance for which to check permissions on.
+    @param perms - list of permissions that must be matched
+    
+    @return True if group has all permissions on an instance.  If a model class
+    is given this returns True if the group has permissions on any instance of
+    the model.
+    """
+    
+    instance = isinstance(obj, (Model,))
+    model = obj.__class__ if instance else obj
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
+
+    # create base query requiring all permissions
+    perm_clauses = {}
+    for perm in perms:
+        perm_clauses[perm] = True
+    base = permissions.objects.filter(group=group, **perm_clauses)
+
+    # select model or instance level query
+    return base.filter(obj=obj).exists() if instance else base.exists()
+    
 
 def get_users_any(obj, perms=None, groups=True):
     """
@@ -642,8 +709,8 @@ def get_users(obj, groups=True):
     """
     Retrieve the list of Users that have permissions on the given object.
     """
-
-    return get_users_any(obj, groups=groups)
+    
+    return get_users_any(obj)
 
 
 def get_groups_any(obj, perms=None):
@@ -716,25 +783,11 @@ def perms_on_any(user, model, perms, groups=True):
     @param model: model on which to filter
     @param perms: list of perms to match
     @return true if has perms on any instance of model
+    
+    @deprecated - replaced by user_has_any_perms()
     """
-
-    permissions = permission_map[model]
-    model_perms = get_model_perms(model)
-    
-    # OR all user permission clauses together
-    perm_clause = reduce(or_, (Q(**{perm: True}) \
-                               for perm in perms if perm in model_perms))
-    
-    user_clause = Q(user=user)
-
-    if groups:
-        # must match either a user or group clause + one of the perm clauses
-        group_clause = Q(group__user=user)
-        return permissions.objects \
-            .filter((user_clause | group_clause) & perm_clause).exists()
-    else:
-        # must match user clause + one of the perm clauses
-        return permissions.objects.filter(user_clause & perm_clause).exists()
+    warn('user.perms_on_any() deprecated in lieu of user.has_any_perms()')
+    return user_has_any_perms(user, model, perms, groups)
 
 
 def filter_on_perms(user, model, perms, groups=True):
@@ -795,8 +848,11 @@ setattr(User, 'revoke', revoke)
 setattr(User, 'revoke_all', revoke_all)
 setattr(User, 'has_object_perm', user_has_perm)
 setattr(User, 'has_any_perms', user_has_any_perms)
+setattr(User, 'has_all_perms', user_has_all_perms)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
+
+# deprecated
 setattr(User, 'filter_on_perms', filter_on_perms)
 setattr(User, 'perms_on_any', perms_on_any)
 
@@ -805,6 +861,9 @@ setattr(Group, 'revoke', revoke_group)
 setattr(Group, 'revoke_all', revoke_all_group)
 setattr(Group, 'has_perm', group_has_perm)
 setattr(Group, 'has_any_perms', group_has_any_perms)
+setattr(Group, 'has_all_perms', group_has_all_perms)
 setattr(Group, 'get_perms', get_group_perms)
 setattr(Group, 'set_perms', set_group_perms)
+
+# deprecated
 setattr(Group, 'filter_on_perms', filter_on_group_perms)
