@@ -437,40 +437,40 @@ class TestGroups(TestCase):
         user0.grant('Perm4', object4)
         
         # retrieve single perm
-        self.assert_(object0 in user0.filter_on_perms(TestModel, ['Perm1']))
-        self.assert_(object1 in user0.filter_on_perms(TestModel, ['Perm2']))
-        self.assert_(object2 in user1.filter_on_perms(TestModel, ['Perm3']))
-        self.assert_(object3 in user1.filter_on_perms(TestModel, ['Perm4']))
+        self.assert_(object0 in user0.get_objects_any_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in user0.get_objects_any_perms(TestModel, ['Perm2']))
+        self.assert_(object2 in user1.get_objects_any_perms(TestModel, ['Perm3']))
+        self.assert_(object3 in user1.get_objects_any_perms(TestModel, ['Perm4']))
         
         # retrieve multiple perms
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
+        query = user0.get_objects_any_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
-        query = user1.filter_on_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
+        query = user1.get_objects_any_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
         self.assert_(object2 in query)
         self.assert_(object3 in query)
         self.assertEqual(2, query.count())
         
         # mix of group and users
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm4'])
+        query = user0.get_objects_any_perms(TestModel, ['Perm1', 'Perm4'])
         self.assert_(object0 in query)
         self.assert_(object4 in query)
         self.assertEqual(2, query.count())
         
         # retrieve no results
-        query = user0.filter_on_perms(TestModel, ['Perm3'])
+        query = user0.get_objects_any_perms(TestModel, ['Perm3'])
         self.assertEqual(0, query.count())
-        query = user1.filter_on_perms(TestModel, ['Perm1'])
+        query = user1.get_objects_any_perms(TestModel, ['Perm1'])
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
+        query = user0.get_objects_any_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter(name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
         
         # exclude groups
-        query = user0.filter_on_perms(TestModel, ['Perm1', 'Perm4'], groups=False)
+        query = user0.get_objects_any_perms(TestModel, ['Perm1', 'Perm4'], groups=False)
         self.assert_(object4 in query)
         self.assertEqual(1, query.count())
     
@@ -637,29 +637,29 @@ class TestGroups(TestCase):
         group1.grant('Perm4', object3)
         
         # retrieve single perm
-        self.assert_(object0 in group0.filter_on_perms(TestModel, ['Perm1']))
-        self.assert_(object1 in group0.filter_on_perms(TestModel, ['Perm2']))
-        self.assert_(object2 in group1.filter_on_perms(TestModel, ['Perm3']))
-        self.assert_(object3 in group1.filter_on_perms(TestModel, ['Perm4']))
+        self.assert_(object0 in group0.get_objects_any_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in group0.get_objects_any_perms(TestModel, ['Perm2']))
+        self.assert_(object2 in group1.get_objects_any_perms(TestModel, ['Perm3']))
+        self.assert_(object3 in group1.get_objects_any_perms(TestModel, ['Perm4']))
         
         # retrieve multiple perms
-        query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
+        query = group0.get_objects_any_perms(TestModel, ['Perm1', 'Perm2', 'Perm3'])
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
-        query = group1.filter_on_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
+        query = group1.get_objects_any_perms(TestModel, ['Perm1', 'Perm3', 'Perm4'])
         self.assert_(object2 in query)
         self.assert_(object3 in query)
         self.assertEqual(2, query.count())
         
         # retrieve no results
-        query = group0.filter_on_perms(TestModel, ['Perm3'])
+        query = group0.get_objects_any_perms(TestModel, ['Perm3'])
         self.assertEqual(0, query.count())
-        query = group1.filter_on_perms(TestModel, ['Perm1'])
+        query = group1.get_objects_any_perms(TestModel, ['Perm1'])
         self.assertEqual(0, query.count())
         
         # extra kwargs
-        query = group0.filter_on_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter( name='test0')
+        query = group0.get_objects_any_perms(TestModel, ['Perm1', 'Perm2', 'Perm3']).filter( name='test0')
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     

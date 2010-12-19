@@ -60,7 +60,7 @@ def list(request):
     if request.user.is_superuser:
         groups = Group.objects.all()
     else:
-        groups = user.filter_on_perms(Group, ['admin'])
+        groups = user.get_objects_any_perms(Group, ['admin'])
         if not groups:
             return HttpResponseForbidden()
 

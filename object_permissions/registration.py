@@ -786,14 +786,20 @@ def perms_on_any(user, model, perms, groups=True):
     
     @deprecated - replaced by user_has_any_perms()
     """
-    warn('user.perms_on_any() deprecated in lieu of user.has_any_perms()')
+    warn('user.perms_on_any() deprecated in lieu of user.has_any_perms()', stacklevel=2)
     return user_has_any_perms(user, model, perms, groups)
 
 
 def filter_on_perms(user, model, perms, groups=True):
+    warn('user.filter_on_perms() deprecated in lieu of user.get_objects_any_perms()')
+    return user_get_objects_any_perms(user, model, perms, groups)
+
+
+def user_get_objects_any_perms(user, model, perms, groups=True):
     """
-    Make a filtered QuerySet of objects for which the User has any
-    permissions, including permissions inherited from Groups.
+    Make a filtered QuerySet of objects for which the User has any of the 
+    requested permissions, optionally including permissions inherited from
+    Groups.
 
     @param user: user who must have permissions
     @param model: model on which to filter
@@ -819,6 +825,79 @@ def filter_on_perms(user, model, perms, groups=True):
         return model.objects.filter(user_clause & perm_clause)
 
 
+def group_get_objects_any_perms(group, model, perms):
+    """
+    Make a filtered QuerySet of objects for which the Group has any of the 
+    requested permissions.
+
+    @param group: group who must have permissions
+    @param model: model on which to filter
+    @param perms: list of perms to match
+    @param groups: include perms the user has from membership in Groups
+    @return a queryset of matching objects
+    """
+    model_perms = get_model_perms(model)
+    name = model.__name__
+
+    # OR all user permission clauses together
+    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                               for perm in perms if perm in model_perms))
+    group_clause = Q(**{"%s_operms__group" % name:group})
+    return model.objects.filter(group_clause & perm_clause)
+
+
+def user_get_objects_all_perms(user, model, perms, groups=True):
+    """
+    Make a filtered QuerySet of objects for which the User has all requested
+    permissions, optionally including permissions inherited from Groups.
+
+    @param user: user who must have permissions
+    @param model: model on which to filter
+    @param perms: list of perms to match
+    @param groups: include perms the user has from membership in Groups
+    @return a queryset of matching objects
+    """
+    model_perms = get_model_perms(model)
+    name = model.__name__
+
+    # create kwargs including all perms that must be matched
+    perm_clause = {}
+    for perm in perms:
+        perm_clause[perm] = True
+
+    user_clause = Q(**{"%s_operms__user" % name:user})
+    
+    if groups:
+        # must match either a user or group clause + one of the perm clauses
+        group_clause = Q(**{"%s_operms__group__user" % name:user})
+        return model.objects.filter((user_clause | group_clause), **perm_clause)
+    else:
+        # must match user clause + all of the perm clauses
+        return model.objects.filter(user_clause, **perm_clause)
+
+
+def group_get_objects_all_perms(group, model, perms):
+    """
+    Make a filtered QuerySet of objects for which the User has all requested
+    permissions, optionally including permissions inherited from Groups.
+
+    @param group: group who must have permissions
+    @param model: model on which to filter
+    @param perms: list of perms to match
+    @param groups: include perms the user has from membership in Groups
+    @return a queryset of matching objects
+    """
+    model_perms = get_model_perms(model)
+    name = model.__name__
+
+    # create kwargs including all perms that must be matched
+    perm_clause = {}
+    for perm in perms:
+        perm_clause[perm] = True
+    group_clause = Q(**{"%s_operms__group__user" % name:user})
+    return model.objects.filter(group_clause, **perm_clause)
+
+
 def filter_on_group_perms(group, model, perms):
     """
     Make a filtered QuerySet of objects for which the Group has any
@@ -830,16 +909,8 @@ def filter_on_group_perms(group, model, perms):
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
-    model_perms = get_model_perms(model)
-    name = model.__name__
-    
-    d = {"%s_operms__group" % name: group}
-
-    # OR all user permission clauses together
-    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
-                               for perm in perms if perm in model_perms))
-
-    return model.objects.filter(perm_clause, **d)
+    warn('group.filter_on_perms() deprecated in lieu of group.get_objects_any_perms()')
+    return group_get_objects_any_perms(group, model, perms)
 
 
 # make some methods available as bound methods
@@ -851,6 +922,8 @@ setattr(User, 'has_any_perms', user_has_any_perms)
 setattr(User, 'has_all_perms', user_has_all_perms)
 setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
+setattr(User, 'get_objects_any_perms', user_get_objects_any_perms)
+setattr(User, 'get_objects_all_perms', user_get_objects_all_perms)
 
 # deprecated
 setattr(User, 'filter_on_perms', filter_on_perms)
@@ -864,6 +937,8 @@ setattr(Group, 'has_any_perms', group_has_any_perms)
 setattr(Group, 'has_all_perms', group_has_all_perms)
 setattr(Group, 'get_perms', get_group_perms)
 setattr(Group, 'set_perms', set_group_perms)
+setattr(Group, 'get_objects_any_perms', group_get_objects_any_perms)
+setattr(Group, 'get_objects_all_perms', group_get_objects_all_perms)
 
 # deprecated
 setattr(Group, 'filter_on_perms', filter_on_group_perms)
