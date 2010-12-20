@@ -416,7 +416,7 @@ class TestGroups(TestCase):
         self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
 
     
-    def test_filter(self):
+    def test_user_get_objects_any_perms(self):
         """
         Test filtering objects
         """
@@ -617,7 +617,7 @@ class TestGroups(TestCase):
         # no results
         self.assertFalse(group1.has_all_perms(TestModel, ['Perm4']))
     
-    def test_filter_group(self):
+    def test_group_get_objects_any_perms(self):
         """
         Test filtering objects based only on the groups perms
         """

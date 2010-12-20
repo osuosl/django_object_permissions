@@ -791,7 +791,7 @@ def perms_on_any(user, model, perms, groups=True):
 
 
 def filter_on_perms(user, model, perms, groups=True):
-    warn('user.filter_on_perms() deprecated in lieu of user.get_objects_any_perms()')
+    warn('user.filter_on_perms() deprecated in lieu of user.get_objects_any_perms()', stacklevel=2)
     return user_get_objects_any_perms(user, model, perms, groups)
 
 
@@ -909,7 +909,7 @@ def filter_on_group_perms(group, model, perms):
     @param clauses: additional clauses to be added to the queryset
     @return a queryset of matching objects
     """
-    warn('group.filter_on_perms() deprecated in lieu of group.get_objects_any_perms()')
+    warn('group.filter_on_perms() deprecated in lieu of group.get_objects_any_perms()', stacklevel=2)
     return group_get_objects_any_perms(group, model, perms)
 
 
