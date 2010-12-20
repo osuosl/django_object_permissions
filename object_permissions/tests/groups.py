@@ -716,6 +716,37 @@ class TestGroups(TestCase):
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
+    def test_group_get_all_objects_any_perms(self):
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
+        
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        object3 = TestModel.objects.create(name='test3')
+        object3.save()
+        object4 = TestModel.objects.create(name='test4')
+        object4.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm2', object1)
+        group0.grant('Perm4', object1)
+        
+        perm_dict = group0.get_all_objects_any_perms()
+        self.assert_(isinstance(perm_dict, (dict,)))
+        self.assert_(TestModel in perm_dict, perm_dict.keys())
+        self.assert_(object0 in perm_dict[TestModel])
+        self.assert_(object1 in perm_dict[TestModel])
+        self.assertFalse(object2 in perm_dict[TestModel])
+        self.assertFalse(object3 in perm_dict[TestModel])
+        self.assertFalse(object4 in perm_dict[TestModel])
+        
+        # no perms
+        perm_dict = group1.get_all_objects_any_perms()
+        self.assert_(isinstance(perm_dict, (dict,)))
+        self.assert_(TestModel in perm_dict, perm_dict.keys())
+        self.assertEqual(0, perm_dict[TestModel].count())
+
+
 class TestGroupViews(TestCase):
     perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
     

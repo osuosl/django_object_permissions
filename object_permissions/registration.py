@@ -912,6 +912,43 @@ def group_get_objects_all_perms(group, model, perms):
     return model.objects.filter(group_clause, **perm_clause)
 
 
+def user_get_all_objects_any_perms(user, groups=True):
+    """
+    Get all objects from all registered models that the user has any permission
+    for.
+    
+    This method does not accept a list of permissions since in most cases
+    permissions will not exist across all models.  If a permission didn't exist
+    on any model then it would cause an error to be thrown.
+    
+    @param user - user to check perms for
+    @param groups - include permissions through groups
+    @return a dictionary mapping class to a queryset of objects
+    """
+    perms = {}
+    for cls in permission_map:
+        perms[cls] = user_get_objects_any_perms(user, cls, groups=groups)
+    return perms
+
+
+def group_get_all_objects_any_perms(group):
+    """
+    Get all objects from all registered models that the group has any permission
+    for.
+    
+    This method does not accept a list of permissions since in most cases
+    permissions will not exist across all models.  If a permission didn't exist
+    on any model then it would cause an error to be thrown.
+    
+    @param group - group to check perms for
+    @return a dictionary mapping class to a queryset of objects
+    """
+    perms = {}
+    for cls in permission_map:
+        perms[cls] = group_get_objects_any_perms(group, cls)
+    return perms
+
+
 def filter_on_group_perms(group, model, perms):
     """
     Make a filtered QuerySet of objects for which the Group has any
@@ -938,6 +975,7 @@ setattr(User, 'get_perms', get_user_perms)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'get_objects_any_perms', user_get_objects_any_perms)
 setattr(User, 'get_objects_all_perms', user_get_objects_all_perms)
+setattr(User, 'get_all_objects_any_perms', user_get_all_objects_any_perms)
 
 # deprecated
 setattr(User, 'filter_on_perms', filter_on_perms)
@@ -953,6 +991,7 @@ setattr(Group, 'get_perms', get_group_perms)
 setattr(Group, 'set_perms', set_group_perms)
 setattr(Group, 'get_objects_any_perms', group_get_objects_any_perms)
 setattr(Group, 'get_objects_all_perms', group_get_objects_all_perms)
+setattr(Group, 'get_all_objects_any_perms', group_get_all_objects_any_perms)
 
 # deprecated
 setattr(Group, 'filter_on_perms', filter_on_group_perms)
