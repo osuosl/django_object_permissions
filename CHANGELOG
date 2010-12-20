@@ -2,6 +2,38 @@
 Changelog
 ==================
 
+v1.2
+----
+
+ * More methods
+
+   * user_has_all_perms(), group_has_all_perms()
+   * User.has_any_perms() and Group.has_any_perms()
+   * Deprecate perms_on_any() in favor of user_has_any_perms()
+   * Deprecate filter_on_perms() in favor of get_objects_any_perms()
+
+ * Improvements
+
+   * groups=True is now the default for all methods that accept a groups
+   * keyword argument
+
+ * Bugfixes
+
+   * #2085
+   * #2091
+   * #2097
+   * #2103
+   * #2109
+   * #2115
+   * #2223
+   * #2235
+   * #2241
+   * #2247
+   * #2253
+   * #2265
+   * #2271
+   * #2283
+
 v1.1
 ----
 
