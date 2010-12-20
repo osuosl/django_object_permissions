@@ -137,7 +137,7 @@ def _register(perms, model):
         "group": models.ForeignKey(Group, null=True,
             related_name="%s_gperms" % model.__name__),
         "obj": models.ForeignKey(model,
-            related_name="%s_operms" % model.__name__),
+            related_name="operms"),
     }
 
     for perm in perms:
@@ -807,27 +807,23 @@ def user_get_objects_any_perms(user, model, perms=None, groups=True):
     @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
-    name = model.__name__
 
     if perms:
         # permissions specified, OR all user permission clauses together
         model_perms = get_model_perms(model)
-        perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+        perm_clause = reduce(or_, (Q(**{"operms__%s" % perm: True}) \
                                    for perm in perms if perm in model_perms))
         base = model.objects.filter(perm_clause)
     else:
         # implicit any, no filtering based on specific perms
         base = model.objects
 
-    user_clause = Q(**{"%s_operms__user" % name:user})
-    
     if groups:
         # must match either a user or group clause
-        group_clause = Q(**{"%s_operms__group__user" % name:user})
-        return base.filter(user_clause | group_clause)
+        return base.filter(Q(operms__user=user) | Q(operms__group__user=user))
     else:
         # must match user clause
-        return base.filter(user_clause)
+        return base.filter(operms__user=user)
 
 
 def group_get_objects_any_perms(group, model, perms=None):
@@ -841,12 +837,11 @@ def group_get_objects_any_perms(group, model, perms=None):
     @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
-    name = model.__name__
 
     if perms:
         # permissions specified, OR all user permission clauses together
         model_perms = get_model_perms(model)
-        perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+        perm_clause = reduce(or_, (Q(**{"operms__%s" % perm: True}) \
                                    for perm in perms if perm in model_perms))
         base = model.objects.filter(perm_clause)
     
@@ -854,8 +849,7 @@ def group_get_objects_any_perms(group, model, perms=None):
         # implicit any, no filtering based on specific perms
         base = model.objects
     
-    group_clause = Q(**{"%s_operms__group" % name:group})
-    return base.filter(group_clause)
+    return base.filter(operms__group=group)
 
 
 def user_get_objects_all_perms(user, model, perms, groups=True):
@@ -869,24 +863,20 @@ def user_get_objects_all_perms(user, model, perms, groups=True):
     @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
-    model_perms = get_model_perms(model)
-    name = model.__name__
-
+    
     # create kwargs including all perms that must be matched
-    perm_base = '%s_operms__%%s' % name
     perm_clause = {}
     for perm in perms:
-        perm_clause[perm_base % perm] = True
+        perm_clause['operms__%s' % perm] = True
 
-    user_clause = Q(**{"%s_operms__user" % name:user})
-    
     if groups:
         # must match either a user or group clause + one of the perm clauses
-        group_clause = Q(**{"%s_operms__group__user" % name:user})
-        return model.objects.filter((user_clause | group_clause), **perm_clause)
+        user_clause = Q(operms__group__user=user) | Q(operms__user=user)
+        return model.objects.filter(user_clause, **perm_clause)
+    
     else:
         # must match user clause + all of the perm clauses
-        return model.objects.filter(user_clause, **perm_clause)
+        return model.objects.filter(operms__user=user, **perm_clause)
 
 
 def group_get_objects_all_perms(group, model, perms):
@@ -900,16 +890,13 @@ def group_get_objects_all_perms(group, model, perms):
     @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
-    model_perms = get_model_perms(model)
-    name = model.__name__
 
     # create kwargs including all perms that must be matched
     perm_clause = {}
-    perm_base = '%s_operms__%%s' % name
     for perm in perms:
-        perm_clause[perm_base % perm] = True
-    group_clause = Q(**{"%s_operms__group" % name:group})
-    return model.objects.filter(group_clause, **perm_clause)
+        perm_clause['operms__%s' % perm] = True
+    
+    return model.objects.filter(operms__group=group, **perm_clause)
 
 
 def user_get_all_objects_any_perms(user, groups=True):
