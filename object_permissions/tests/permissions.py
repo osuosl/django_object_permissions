@@ -492,9 +492,9 @@ class TestModelPermissions(TestCase):
         self.assertEqual([u'Perm3'], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
     
-    def test_filter(self):
+    def test_get_objects_any_perms(self):
         """
-        Test filtering objects
+        Test retrieving objects with any matching perms
         """
         
         object2 = TestModel.objects.create(name='test2')
@@ -541,6 +541,56 @@ class TestModelPermissions(TestCase):
         self.assert_(object0 in query)
         self.assert_(object1 in query)
         self.assertEqual(2, query.count())
+    
+    def test_get_objects_all_perms(self):
+        """
+        Test retrieving objects that have all matching perms
+        """
+        
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        object3 = TestModel.objects.create(name='test3')
+        object3.save()
+        
+        user0.grant('Perm1', object0)
+        user0.grant('Perm2', object0)
+        user0.grant('Perm4', object1)
+        user1.grant('Perm3', object2)
+        user1.grant('Perm4', object2)
+        
+        # retrieve single perm
+        self.assert_(object0 in user0.get_objects_all_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in user0.get_objects_all_perms(TestModel, ['Perm4']))
+        self.assert_(object2 in user1.get_objects_all_perms(TestModel, ['Perm3']))
+        self.assert_(object2 in user1.get_objects_all_perms(TestModel, ['Perm4']))
+        
+        # retrieve multiple perms
+        query = user0.get_objects_all_perms(TestModel, ['Perm1', 'Perm2'])
+        
+        self.assert_(object0 in query)
+        self.assertFalse(object1 in query)
+        self.assertEqual(1, query.count())
+        query = user1.get_objects_all_perms(TestModel, ['Perm3', 'Perm4'])
+        self.assert_(object2 in query)
+        self.assertFalse(object3 in query)
+        self.assertEqual(1, query.count())
+        
+        # retrieve no results
+        self.assertFalse(user0.get_objects_all_perms(TestModel, ['Perm3']).exists())
+        self.assertFalse(user0.get_objects_all_perms(TestModel, ['Perm1','Perm4']).exists())
+        self.assertFalse(user1.get_objects_all_perms(TestModel, ['Perm1']).exists())
+        
+        # extra kwargs
+        query = user0.get_objects_all_perms(TestModel, ['Perm1', 'Perm2']).filter(name='test0')
+        self.assert_(object0 in query)
+        self.assertEqual(1, query.count())
+        
+        # exclude groups
+        self.assert_(object0 in user0.get_objects_all_perms(TestModel, ['Perm1'], groups=False))
+        query = user0.get_objects_all_perms(TestModel, ['Perm1', 'Perm2'], groups=False)
+        self.assert_(object0 in query)
+        self.assertFalse(object1 in query)
+        self.assertEqual(1, query.count())
     
     def test_has_any_on_model(self):
         """

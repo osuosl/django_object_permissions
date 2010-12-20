@@ -861,9 +861,10 @@ def user_get_objects_all_perms(user, model, perms, groups=True):
     name = model.__name__
 
     # create kwargs including all perms that must be matched
+    perm_base = '%s_operms__%%s' % name
     perm_clause = {}
     for perm in perms:
-        perm_clause[perm] = True
+        perm_clause[perm_base % perm] = True
 
     user_clause = Q(**{"%s_operms__user" % name:user})
     
@@ -892,9 +893,10 @@ def group_get_objects_all_perms(group, model, perms):
 
     # create kwargs including all perms that must be matched
     perm_clause = {}
+    perm_base = '%s_operms__%%s' % name
     for perm in perms:
-        perm_clause[perm] = True
-    group_clause = Q(**{"%s_operms__group__user" % name:user})
+        perm_clause[perm_base % perm] = True
+    group_clause = Q(**{"%s_operms__group" % name:group})
     return model.objects.filter(group_clause, **perm_clause)
 
 
