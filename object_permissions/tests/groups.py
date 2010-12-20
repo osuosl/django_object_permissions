@@ -636,6 +636,13 @@ class TestGroups(TestCase):
         group1.grant('Perm3', object2)
         group1.grant('Perm4', object3)
         
+        # implicit any
+        self.assert_(object0 in group0.get_objects_any_perms(TestModel, ['Perm1']))
+        self.assert_(object1 in group0.get_objects_any_perms(TestModel, ['Perm2']))
+        self.assertFalse(object2 in group0.get_objects_any_perms(TestModel, ['Perm2']))
+        self.assert_(object2 in group1.get_objects_any_perms(TestModel, ['Perm3']))
+        self.assert_(object3 in group1.get_objects_any_perms(TestModel, ['Perm4']))
+        
         # retrieve single perm
         self.assert_(object0 in group0.get_objects_any_perms(TestModel, ['Perm1']))
         self.assert_(object1 in group0.get_objects_any_perms(TestModel, ['Perm2']))

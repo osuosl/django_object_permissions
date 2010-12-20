@@ -795,7 +795,7 @@ def filter_on_perms(user, model, perms, groups=True):
     return user_get_objects_any_perms(user, model, perms, groups)
 
 
-def user_get_objects_any_perms(user, model, perms, groups=True):
+def user_get_objects_any_perms(user, model, perms=None, groups=True):
     """
     Make a filtered QuerySet of objects for which the User has any of the 
     requested permissions, optionally including permissions inherited from
@@ -807,25 +807,30 @@ def user_get_objects_any_perms(user, model, perms, groups=True):
     @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
-    model_perms = get_model_perms(model)
     name = model.__name__
 
-    # OR all user permission clauses together
-    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
-                               for perm in perms if perm in model_perms))
+    if perms:
+        # permissions specified, OR all user permission clauses together
+        model_perms = get_model_perms(model)
+        perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                                   for perm in perms if perm in model_perms))
+        base = model.objects.filter(perm_clause)
+    else:
+        # implicit any, no filtering based on specific perms
+        base = model.objects
 
     user_clause = Q(**{"%s_operms__user" % name:user})
     
     if groups:
-        # must match either a user or group clause + one of the perm clauses
+        # must match either a user or group clause
         group_clause = Q(**{"%s_operms__group__user" % name:user})
-        return model.objects.filter((user_clause | group_clause) & perm_clause)
+        return base.filter(user_clause | group_clause)
     else:
-        # must match user clause + one of the perm clauses
-        return model.objects.filter(user_clause & perm_clause)
+        # must match user clause
+        return base.filter(user_clause)
 
 
-def group_get_objects_any_perms(group, model, perms):
+def group_get_objects_any_perms(group, model, perms=None):
     """
     Make a filtered QuerySet of objects for which the Group has any of the 
     requested permissions.
@@ -836,14 +841,21 @@ def group_get_objects_any_perms(group, model, perms):
     @param groups: include perms the user has from membership in Groups
     @return a queryset of matching objects
     """
-    model_perms = get_model_perms(model)
     name = model.__name__
 
-    # OR all user permission clauses together
-    perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
-                               for perm in perms if perm in model_perms))
+    if perms:
+        # permissions specified, OR all user permission clauses together
+        model_perms = get_model_perms(model)
+        perm_clause = reduce(or_, (Q(**{"%s_operms__%s" % (name, perm): True}) \
+                                   for perm in perms if perm in model_perms))
+        base = model.objects.filter(perm_clause)
+    
+    else:
+        # implicit any, no filtering based on specific perms
+        base = model.objects
+    
     group_clause = Q(**{"%s_operms__group" % name:group})
-    return model.objects.filter(group_clause & perm_clause)
+    return base.filter(group_clause)
 
 
 def user_get_objects_all_perms(user, model, perms, groups=True):
