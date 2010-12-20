@@ -139,19 +139,20 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
                 form_user = form.cleaned_data['user']
                 group = form.cleaned_data['group']
                 if form_user:
-                    return render_to_response(user_template, \
+                    response = render_to_response(user_template, \
                                 {'object':object_, 'user':form_user, 'url':url})
                 else:
-                    return render_to_response(group_template, \
+                    response = render_to_response(group_template, \
                                 {'object':object_, 'group':group, 'url':url})
                 
             else:
                 # no permissions, send ajax response to remove user
-                return HttpResponse('1', mimetype='application/json')
+                response = HttpResponse('1', mimetype='application/json')
+            return response, True
         
         # error in form return ajax response
         content = json.dumps(form.errors)
-        return HttpResponse(content, mimetype='application/json')
+        return HttpResponse(content, mimetype='application/json'), False
 
     if user_id:
         form_user = get_object_or_404(User, id=user_id)
@@ -167,4 +168,4 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
     return render_to_response('permissions/form.html', \
                 {'form':form, 'object':object_, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
-               context_instance=RequestContext(request))
+               context_instance=RequestContext(request)), False

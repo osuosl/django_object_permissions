@@ -89,9 +89,13 @@
 {% block content %}
     <h1>User Groups</h1>
 
-    <div id="add_group" class="add">Add Group</div>
+    <a id="add_group" href="javascript:none()" class="button add">Add Group</a>
     <table id="groups">
-        <tr><th>Name</th><th class="actions"></th></tr>
+        <tr>
+            <th>Name</th>
+            <th></th>
+            <th></th>
+        </tr>
         {% for group in groups %}
             {% include "group/group_row.html" %}
         {% endfor %}
