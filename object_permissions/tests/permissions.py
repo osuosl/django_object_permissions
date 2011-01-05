@@ -3,7 +3,8 @@ from django.contrib.auth.models import User, Group
 from django.test import TestCase
 
 from object_permissions import *
-from object_permissions.registration import TestModel, UnknownPermissionException
+from object_permissions.registration import TestModel, TestModelChild, \
+    TestModelChildChild, UnknownPermissionException
 
 
 class TestModelPermissions(TestCase):
@@ -35,6 +36,8 @@ class TestModelPermissions(TestCase):
 
     def tearDown(self):
         TestModel.objects.all().delete()
+        TestModelChild.objects.all().delete()
+        TestModelChildChild.objects.all().delete()
         User.objects.all().delete()
         Group.objects.all().delete()
 

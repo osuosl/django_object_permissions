@@ -174,14 +174,19 @@ models.signals.post_syncdb.connect(_register_delayed)
 
 
 if settings.DEBUG:
-    # XXX Create test tables only when debug mode.  This model will be used in
+    # XXX Create test tables only when debug mode.  These models will be used in
     # various unittests.  This is used so that we do not alter any models used
     # in production
     from django.db import models
     class TestModel(models.Model):
         name = models.CharField(max_length=32)
+    class TestModelChild(models.Model):
+        parent = models.ForeignKey(TestModel, null=True)
+    class TestModelChildChild(models.Model):
+        parent = models.ForeignKey(TestModelChild, null=True)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModel)
-
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
 
 def grant(user, perm, obj):
     """
