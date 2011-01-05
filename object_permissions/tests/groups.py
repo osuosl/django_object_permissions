@@ -420,7 +420,6 @@ class TestGroups(TestCase):
         self.assert_(group0 in get_groups_all(object0, ['Perm1','Perm2']))
         self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
 
-    
     def test_user_get_objects_any_perms(self):
         """
         Test filtering objects
@@ -628,6 +627,67 @@ class TestGroups(TestCase):
         self.assert_(user0.has_all_perms(TestModel, ['Perm4'], False))
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm2', 'Perm4'], False))
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm2'], False))
+    
+    def test_user_get_objects_all_perms_related(self):
+        """
+        Test retrieving objects with all matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object0)
+        child2 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        child2.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child0)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm1', object1)
+        group0.grant('Perm2', object1)
+        
+        group0.grant('Perm1', child0)
+        group0.grant('Perm1', child1)
+        group0.grant('Perm2', child1)
+        group0.grant('Perm1', childchild)
+        
+        user0.grant('Perm1', object0)  # perms on both
+        user0.grant('Perm1', child0)   # perms on both
+        
+        # related field with single perms
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(child0 in query)
+        self.assert_(child1 in query)
+        self.assertFalse(child2 in query)
+        
+        # related field with single perms - has parent but not child
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(0, len(query))
+        
+        # related field with single perms - has child but not parent
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm4'])
+        self.assertEqual(0, len(query))
+        
+        # related field with multiple perms
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm1','Perm2'])
+        self.assertEqual(1, len(query))
+        self.assertFalse(child0 in query)
+        self.assert_(child1 in query)
+        self.assertFalse(child2 in query)
+        
+        # multiple relations
+        query = user0.get_objects_all_perms(TestModelChildChild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(childchild in query)
+        
+        # exclude groups
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], groups=False, parent=['Perm1'])
+        self.assert_(child0 in query)
+        self.assertEqual(1, len(query))
     
     def test_group_has_any_perms_on_model(self):
         """
