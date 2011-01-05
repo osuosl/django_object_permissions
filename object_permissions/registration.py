@@ -884,7 +884,7 @@ def group_get_objects_any_perms(group, model, perms=None):
     return base.filter(operms__group=group)
 
 
-def user_get_objects_all_perms(user, model, perms, groups=True):
+def user_get_objects_all_perms(user, model, perms, groups=True, **related):
     """
     Make a filtered QuerySet of objects for which the User has all requested
     permissions, optionally including permissions inherited from Groups.
@@ -900,15 +900,41 @@ def user_get_objects_all_perms(user, model, perms, groups=True):
     perm_clause = {}
     for perm in perms:
         perm_clause['operms__%s' % perm] = True
-
+    
     if groups:
         # must match either a user or group clause + one of the perm clauses
         user_clause = Q(operms__group__user=user) | Q(operms__user=user)
-        return model.objects.filter(user_clause, **perm_clause)
+        q = user_clause & Q(**perm_clause)
     
     else:
         # must match user clause + all of the perm clauses
-        return model.objects.filter(operms__user=user, **perm_clause)
+        q = Q(operms__user=user, **perm_clause)
+
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        
+        for field in related:
+            # build user clause that follows relationship through operms to user
+            clause = Q(**{'%s__operms__user'%field:user})
+            perms = related[field]
+            
+            # optionally include groups
+            if groups:
+                clause |= Q(**{'%s__operms__group__user'%field:user})
+            
+            # create kwargs including all perms that must be matched
+            perm_clause = {}
+            for perm in perms:
+                perm_clause['operms__%s' % perm] = True
+            clause &= Q(**perm_clause)
+            
+            #add finished query
+            q &= clause
+
+    # return objects query filtered by the intricate Q statement
+    return model.objects.filter(q).distinct()
 
 
 def group_get_objects_all_perms(group, model, perms):
