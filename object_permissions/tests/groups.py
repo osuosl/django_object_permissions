@@ -479,6 +479,79 @@ class TestGroups(TestCase):
         self.assert_(object4 in query)
         self.assertEqual(1, query.count())
     
+    def test_user_get_objects_any_perms_related(self):
+        """
+        Test retrieving objects with any matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child2 = TestModelChild.objects.create(parent=object2)
+        child3 = TestModelChild.objects.create(parent=object2)
+        child0.save()
+        child1.save()
+        child2.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child0)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)  # perms on both
+        group0.grant('Perm2', child0)   # perms on both
+        group0.grant('Perm3', object1)  # perm on parent only (child 1)
+        group0.grant('Perm4', child2)   # perm on child only
+        group0.grant('Perm1', childchild)
+        
+        user0.grant('Perm1', object0)  # perms on both
+        user0.grant('Perm2', child0)   # perms on both
+        
+        # related field with implicit perms
+        query = user0.get_objects_any_perms(TestModelChild, parent=None)
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent, and directly')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query))
+        
+        # related field with single perms
+        query = user0.get_objects_any_perms(TestModelChild, parent=['Perm3'])
+        
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query), query.values('id'))
+        
+        # related field with multiple perms
+        query = user0.get_objects_any_perms(TestModelChild, parent=['Perm1','Perm3'])
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query))
+        
+        # mix of direct and related perms
+        query = user0.get_objects_any_perms(TestModelChild, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assertFalse(child1 in query, 'user should not have perms on parent')
+        self.assert_(child2 in query, 'user should have perms directly')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        
+        # multiple relations
+        query = user0.get_objects_any_perms(TestModelChildChild, parent=['Perm2'], parent__parent=['Perm1'])
+        self.assert_(childchild in query)
+        self.assertEqual(1, len(query))
+        
+        # exclude groups
+        query = user0.get_objects_any_perms(TestModelChild, groups=False, parent=['Perm1'])
+        self.assert_(child0 in query)
+        self.assertEqual(1, len(query))
+    
     def test_user_has_any_perms_on_model(self):
         """
         Test checking if a user has any of the perms on any instance of the model
