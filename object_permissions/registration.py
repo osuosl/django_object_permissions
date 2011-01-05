@@ -800,9 +800,9 @@ def filter_on_perms(user, model, perms, groups=True):
     return user_get_objects_any_perms(user, model, perms, groups)
 
 
-def user_get_objects_any_perms(user, model, perms=None, groups=True):
+def user_get_objects_any_perms(user, model, perms=None, groups=True, **related):
     """
-    Make a filtered QuerySet of objects for which the User has any of the 
+    Make a filtered QuerySet of objects for which the User has any of the
     requested permissions, optionally including permissions inherited from
     Groups.
 
@@ -810,25 +810,52 @@ def user_get_objects_any_perms(user, model, perms=None, groups=True):
     @param model: model on which to filter
     @param perms: list of perms to match
     @param groups: include perms the user has from membership in Groups
+    @param related: kwargs for related models.  Each kwarg name should be a
+    valid query argument, you may follow as many tables as you like and perms
+    are optional  E.g. foo__bar=['xoo'], foo=None
     @return a queryset of matching objects
     """
+    
+    q = Q(operms__user=user)
 
+    # optionally add groups
+    if groups:
+        q |= Q(operms__group__user=user)
+    
+    # optionally add specific perms
     if perms:
-        # permissions specified, OR all user permission clauses together
+        # OR all user permission clauses together
         model_perms = get_model_perms(model)
         perm_clause = reduce(or_, (Q(**{"operms__%s" % perm: True}) \
                                    for perm in perms if perm in model_perms))
-        base = model.objects.filter(perm_clause)
-    else:
-        # implicit any, no filtering based on specific perms
-        base = model.objects
+        q &= perm_clause
 
-    if groups:
-        # must match either a user or group clause
-        return base.filter(Q(operms__user=user) | Q(operms__group__user=user))
-    else:
-        # must match user clause
-        return base.filter(operms__user=user)
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        
+        for field in related:
+            # build user clause that follows relationship through operms to user
+            clause = Q(**{'%s__operms__user'%field:user})
+            perms = related[field]
+            
+            # optionally include groups
+            if groups:
+                clause |= Q(**{'%s__operms__group__user'%field:user})
+            
+            # optionally include specific perms.
+            if perms:
+                perm_field = '%s__operms__%%s' % field
+                perm_clause = reduce(or_, (Q(**{perm_field % perm: True}) \
+                                                for perm in perms))
+                clause &= perm_clause
+            
+            #add finished query
+            q |= clause
+
+    # return objects query filtered by the intricate Q statement
+    return model.objects.filter(q).distinct()
 
 
 def group_get_objects_any_perms(group, model, perms=None):
