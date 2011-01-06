@@ -858,7 +858,7 @@ def user_get_objects_any_perms(user, model, perms=None, groups=True, **related):
     return model.objects.filter(q).distinct()
 
 
-def group_get_objects_any_perms(group, model, perms=None):
+def group_get_objects_any_perms(group, model, perms=None, **related):
     """
     Make a filtered QuerySet of objects for which the Group has any of the 
     requested permissions.
@@ -870,18 +870,36 @@ def group_get_objects_any_perms(group, model, perms=None):
     @return a queryset of matching objects
     """
 
+    # base clause matches group
+    q = Q(operms__group=group)
+
+    # optionally add permissions
     if perms:
         # permissions specified, OR all user permission clauses together
         model_perms = get_model_perms(model)
         perm_clause = reduce(or_, (Q(**{"operms__%s" % perm: True}) \
                                    for perm in perms if perm in model_perms))
-        base = model.objects.filter(perm_clause)
+        q &= perm_clause
     
-    else:
-        # implicit any, no filtering based on specific perms
-        base = model.objects
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        for field, perms in related.items():
+            # build group clause that follows relationship
+            clause = Q(**{'%s__operms__group'%field:group})
+            
+            # optionally include specific perms.
+            if perms:
+                perm_field = '%s__operms__%%s' % field
+                perm_clause = reduce(or_, (Q(**{perm_field % perm: True}) \
+                                                for perm in perms))
+                clause &= perm_clause
+            
+            #add finished query
+            q |= clause
     
-    return base.filter(operms__group=group)
+    return model.objects.filter(q).distinct()
 
 
 def user_get_objects_all_perms(user, model, perms, groups=True, **related):
