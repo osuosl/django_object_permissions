@@ -101,7 +101,7 @@ def view_users(request, object_, url, template='permissions/users.html'):
     @param url: base url for editing permissions
     @param template: template for rendering User/Group list.
     """
-    users = get_users(object_)
+    users = get_users(object_, groups=False)
     groups = get_groups(object_)
     return render_to_response(template, \
             {'object': object_,
