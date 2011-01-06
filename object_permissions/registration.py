@@ -955,7 +955,7 @@ def user_get_objects_all_perms(user, model, perms, groups=True, **related):
     return model.objects.filter(q).distinct()
 
 
-def group_get_objects_all_perms(group, model, perms):
+def group_get_objects_all_perms(group, model, perms, **related):
     """
     Make a filtered QuerySet of objects for which the User has all requested
     permissions, optionally including permissions inherited from Groups.
@@ -967,12 +967,30 @@ def group_get_objects_all_perms(group, model, perms):
     @return a queryset of matching objects
     """
 
+    # base clause matches group
+    q = Q(operms__group=group)
+
     # create kwargs including all perms that must be matched
     perm_clause = {}
     for perm in perms:
         perm_clause['operms__%s' % perm] = True
+    q &= Q(**perm_clause)
     
-    return model.objects.filter(operms__group=group, **perm_clause)
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        for field, perms in related.items():
+            # build group clause that follows relationship
+            q &= Q(**{'%s__operms__group'%field:group})
+            
+            # create kwargs including all perms that must be matched
+            perm_clause = {}
+            for perm in perms:
+                perm_clause['operms__%s' % perm] = True
+            q &= Q(**perm_clause)
+    
+    return model.objects.filter(q).distinct()
 
 
 def user_get_all_objects_any_perms(user, groups=True):
