@@ -10,6 +10,8 @@ from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 
 from object_permissions import get_model_perms, grant, revoke, get_user_perms
+from object_permissions.signals import view_add_user, view_remove_user, \
+    view_edit_user
 from object_permissions.views.permissions import ObjectPermissionForm
 
 
@@ -125,10 +127,10 @@ def add_user(request, id):
     
     @param id: id of Group
     """
-    user = request.user
+    editor = request.user
     group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', group)):
+    if not (editor.is_superuser or editor.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
@@ -136,6 +138,9 @@ def add_user(request, id):
         if form.is_valid():
             user = form.cleaned_data['user']
             group.user_set.add(user)
+            
+            # signal
+            view_add_user.send(sender=editor, user=user, obj=group)
             
             # return html for new user row
             url = reverse('usergroup-permissions', args=[id])
@@ -159,10 +164,10 @@ def remove_user(request, id):
     
     @param id: id of Group
     """
-    user = request.user
+    editor = request.user
     group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', group)):
+    if not (editor.is_superuser or editor.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method != 'POST':
@@ -173,6 +178,9 @@ def remove_user(request, id):
         user = form.cleaned_data['user']
         group.user_set.remove(user)
         user.revoke_all(group)
+        
+        # signal
+        view_remove_user.send(sender=editor, user=user, obj=group)
         
         # return success
         return HttpResponse('1', mimetype='application/json')
@@ -189,10 +197,10 @@ def user_permissions(request, id, user_id=None):
     
     @param id: id of Group
     """
-    user = request.user
+    editor = request.user
     group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', group)):
+    if not (editor.is_superuser or editor.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
@@ -200,6 +208,9 @@ def user_permissions(request, id, user_id=None):
         if form.is_valid():
             form.update_perms()
             user = form.cleaned_data['user']
+            
+            # send signal
+            view_edit_user.send(sender=editor, user=user, obj=group)
             
             # return html to replace existing user row
             url = reverse('usergroup-permissions', args=[id])
