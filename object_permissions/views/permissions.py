@@ -10,6 +10,8 @@ from django.template import RequestContext
 from object_permissions import get_user_perms, get_group_perms, \
     get_model_perms, grant, revoke, get_users, get_groups
 from object_permissions.models import Group
+from object_permissions.signals import view_add_user, view_remove_user, \
+    view_edit_user
 
 
 class ObjectPermissionForm(forms.Form):
@@ -81,9 +83,20 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
             
             # if grantee does not have permissions, then this is a new user:
             #    - permissions must be selected
-            if not grantee.get_perms(self.object) and not perms:
+            
+            old_perms = grantee.get_perms(self.object)
+            if old_perms:
+                # not new, has perms already
+                data['new'] = True
+                
+            elif not perms:
+                # new, doesn't have perms specified
                 msg = """You must grant at least 1 permission for new users and groups"""
                 self._errors["permissions"] = self.error_class([msg])
+                
+            else:
+                # new, perms specified
+                data['new'] = False
         
         return data
 
@@ -112,7 +125,7 @@ def view_users(request, object_, url, template='permissions/users.html'):
     )
 
 
-def view_permissions(request, object_, url, user_id=None, group_id=None,
+def view_permissions(request, obj, url, user_id=None, group_id=None,
                 key='id',
                 user_template='permissions/user_row.html',
                 group_template='permissions/group_row.html'
@@ -131,41 +144,54 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
     @param group_template: template used to render group rows
     """
     if request.method == 'POST':
-        form = ObjectPermissionFormNewUsers(object_, request.POST)
+        form = ObjectPermissionFormNewUsers(obj, request.POST)
         if form.is_valid():
             data = form.cleaned_data
+            form_user = form.cleaned_data['user']
             if form.update_perms():
-                # return html to replace existing user row
-                form_user = form.cleaned_data['user']
                 group = form.cleaned_data['group']
-                if form_user:
-                    response = render_to_response(user_template, \
-                                {'object':object_, 'user':form_user, 'url':url})
+                
+                # send correct signal based on new or edited user
+                if data['new']:
+                    view_add_user.send(sender=obj.__class__, \
+                                       editor=request.user, \
+                                       user=form_user, obj=obj)
                 else:
-                    response = render_to_response(group_template, \
-                                {'object':object_, 'group':group, 'url':url})
+                    view_edit_user.send(sender=obj.__class__, \
+                                        editor=request.user, \
+                                        user=form_user, obj=obj)
+                
+                # return html to replace existing user row
+                if form_user:
+                    return render_to_response(user_template, \
+                                {'object':obj, 'user':form_user, 'url':url})
+                else:
+                    return render_to_response(group_template, \
+                                {'object':obj, 'group':group, 'url':url})
                 
             else:
                 # no permissions, send ajax response to remove user
-                response = HttpResponse('1', mimetype='application/json')
-            return response, True
+                view_remove_user.send(sender=obj.__class__, \
+                                      editor=request.user, user=form_user, \
+                                      obj=obj)
+                return HttpResponse('1', mimetype='application/json')
         
         # error in form return ajax response
         content = json.dumps(form.errors)
-        return HttpResponse(content, mimetype='application/json'), False
+        return HttpResponse(content, mimetype='application/json')
 
     if user_id:
         form_user = get_object_or_404(User, id=user_id)
-        data = {'permissions':get_user_perms(form_user, object_), \
+        data = {'permissions':get_user_perms(form_user, obj), \
                 'user':user_id}
     elif group_id:
         group = get_object_or_404(Group, id=group_id)
-        data = {'permissions':get_group_perms(group, object_), \
+        data = {'permissions':get_group_perms(group, obj), \
                 'group':group_id}
     else:
         data = {}
-    form = ObjectPermissionFormNewUsers(object_, data)
+    form = ObjectPermissionFormNewUsers(obj, data)
     return render_to_response('permissions/form.html', \
-                {'form':form, 'object':object_, 'user_id':user_id, \
+                {'form':form, 'object':obj, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
-               context_instance=RequestContext(request)), False
+               context_instance=RequestContext(request))

@@ -8,6 +8,8 @@ from django.test.client import Client
 from object_permissions import *
 from object_permissions.registration import TestModel, TestModelChild, \
     TestModelChildChild, UnknownPermissionException
+from object_permissions.signals import view_add_user, view_remove_user, \
+    view_edit_user, view_group_edited, view_group_created, view_group_deleted
 
 __all__ = ('TestGroups','TestGroupViews')
 
@@ -923,6 +925,13 @@ class TestGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         
+        # setup signal
+        self.signal_editor = self.signal_group = None
+        def callback(sender, editor, **kwargs):
+            self.signal_user = user
+            self.signal_group = sender
+        view_group_edited.connect(callback)
+        
         # successful edit
         data = {'id':group.id, 'name':'EDITED_NAME'}
         response = c.post(url % group.id, data, follow=True)
@@ -931,6 +940,10 @@ class TestGroupViews(TestCase):
         self.assertTemplateUsed(response, 'group/group_row.html')
         group = Group.objects.get(id=group.id)
         self.assertEqual('EDITED_NAME', group.name)
+        
+        # check signal set properties
+        self.assertEqual(group, self.signal_group)
+        self.assertEqual(user, self.signal_user)
     
     def test_view_create(self):
         """
@@ -975,6 +988,13 @@ class TestGroupViews(TestCase):
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'group/edit.html')
         
+        # setup signal
+        self.signal_editor = self.signal_group = None
+        def callback(sender, editor, **kwargs):
+            self.signal_user = user
+            self.signal_group = sender
+        view_group_created.connect(callback)
+        
         # successful edit
         data = {'name':'ADD_NEW_GROUP'}
         response = c.post(url, data, follow=True)
@@ -982,6 +1002,10 @@ class TestGroupViews(TestCase):
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'group/group_row.html')
         self.assert_(Group.objects.filter(name='ADD_NEW_GROUP').exists())
+        
+        # check signal set properties
+        self.assertEqual(Group.objects.get(name='ADD_NEW_GROUP'), self.signal_group)
+        self.assertEqual(user, self.signal_user)
     
     def test_view_delete(self):
         """
@@ -1019,6 +1043,13 @@ class TestGroupViews(TestCase):
         self.assertFalse(Group.objects.filter(id=group0.id).exists())
         self.assertEqual('1', response.content)
         
+        # setup signal
+        self.signal_editor = self.signal_group = None
+        def callback(sender, editor, **kwargs):
+            self.signal_user = user
+            self.signal_group = sender
+        view_group_deleted.connect(callback)
+        
         # get form - authorized (superuser)
         user.is_superuser = True
         user.save()
@@ -1027,6 +1058,11 @@ class TestGroupViews(TestCase):
         self.assertEquals('application/json', response['content-type'])
         self.assertFalse(Group.objects.filter(id=group1.id).exists())
         self.assertEqual('1', response.content)
+        
+        # check signal set properties
+        print group1.id, self.signal_group.id
+        self.assertEqual(group1.name, self.signal_group.name)
+        self.assertEqual(user, self.signal_user)
     
     def test_view_add_user(self):
         """
@@ -1058,14 +1094,14 @@ class TestGroupViews(TestCase):
         response = c.post(url % args)
         self.assertEqual(403, response.status_code)
         
-        # authorized post (perm granted)
+        # authorized get (perm granted)
         grant(user, 'admin', group)
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'group/add_user.html')
         
-        # authorized post (superuser)
+        # authorized get (superuser)
         revoke(user, 'admin', group)
         user.is_superuser = True
         user.save()
@@ -1084,6 +1120,14 @@ class TestGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         
+        # setup signal
+        self.signal_sender = self.signal_user = self.signal_obj = None
+        def callback(sender, user, obj, **kwargs):
+            self.signal_sender = sender
+            self.signal_user = user
+            self.signal_obj = obj
+        view_add_user.connect(callback)
+        
         # valid post
         data = {'user':user.id}
         response = c.post(url % args, data)
@@ -1091,6 +1135,12 @@ class TestGroupViews(TestCase):
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'permissions/user_row.html')
         self.assert_(group.user_set.filter(id=user.id).exists())
+        
+        # check signal fired
+        self.assertEqual(self.signal_sender, user)
+        self.assertEqual(self.signal_user, user)
+        self.assertEqual(self.signal_obj, group)
+        view_add_user.disconnect(callback)
         
         # same user again
         response = c.post(url % args, data)
@@ -1146,6 +1196,14 @@ class TestGroupViews(TestCase):
         self.assertFalse(group.user_set.filter(id=user.id).exists())
         self.assertEqual([], user.get_perms(group))
         
+        # setup signal
+        self.signal_sender = self.signal_user = self.signal_obj = None
+        def callback(sender, user, obj, **kwargs):
+            self.signal_sender = sender
+            self.signal_user = user
+            self.signal_obj = obj
+        view_remove_user.connect(callback)
+        
         # valid request (superuser)
         revoke(user, 'admin', group)
         user.is_superuser = True
@@ -1156,6 +1214,12 @@ class TestGroupViews(TestCase):
         self.assertEquals('application/json', response['content-type'])
         self.assertEqual('1', response.content)
         self.assertFalse(group.user_set.filter(id=user.id).exists())
+        
+        # check signal fired
+        self.assertEqual(self.signal_sender, user)
+        self.assertEqual(self.signal_user, user)
+        self.assertEqual(self.signal_obj, group)
+        view_remove_user.disconnect(callback)
         
         # remove user again
         response = c.post(url % args, data)
@@ -1262,6 +1326,14 @@ class TestGroupViews(TestCase):
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
+        # setup signal
+        self.signal_sender = self.signal_user = self.signal_obj = None
+        def callback(sender, user, obj, **kwargs):
+            self.signal_sender = sender
+            self.signal_user = user
+            self.signal_obj = obj
+        view_edit_user.connect(callback)
+        
         # valid post user
         data = {'permissions':['admin'], 'user':user.id}
         response = c.post(url_post % args_post, data)
@@ -1270,6 +1342,12 @@ class TestGroupViews(TestCase):
         self.assertTemplateUsed(response, 'permissions/user_row.html')
         self.assert_(user.has_perm('admin', group))
         self.assertEqual(['admin'], get_user_perms(user, group))
+        
+        # check signal fired with correct values
+        self.assertEqual(self.signal_sender, user)
+        self.assertEqual(self.signal_user, user)
+        self.assertEqual(self.signal_obj, group)
+        view_edit_user.disconnect(callback)
         
         # valid post no permissions user
         data = {'permissions':[], 'user':user.id}
