@@ -882,29 +882,49 @@ def get_groups_any(obj, perms=None):
     return Group.objects.filter(**d).distinct()
 
 
-def get_groups_all(obj, perms):
+def get_groups_all(obj, perms, **related):
     """
     Retrieve the list of Groups that have all of the permissions on the given
     object.
 
     @param perms - perms to check
     """
-    
     model = obj.__class__
+    name = model.__name__
     permissions = permission_map[model]
-
-    perm_table = "%s_gperms__%%s" % model.__name__
-    obj_table = "%s_gperms__obj" % model.__name__
-    d = {
-            obj_table: obj,
-    }
-
-    # add all perm clauses to the main clause dictionary.  This will cause them
-    # all to be AND'd together.
-    for perm in perms:
-        d[perm_table % perm] = True
     
-    return Group.objects.filter(**d).distinct()
+    # base query is object
+    q = Q(**{"%s_gperms__obj"%name:obj})
+    
+    # add all perms
+    perm_table = "%s_gperms__%%s" % name
+    perm_clause = {}
+    for perm in perms:
+        perm_clause[perm_table % perm] = True
+    q &= Q(**perm_clause)
+
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path from
+    # the object to its related models.  We must also join on the group to the
+    # resulting permissions table so that the group rows are matched.
+    if related:
+        for field in related:
+            # add group
+            format = (name, field)
+            clause = Q(pk=F('%s_gperms__obj__%s__operms__group' % format))
+            
+            # add all perms
+            perm_table = '%s_gperms__obj__%s__operms__%%s' % format
+            perm_clause = {}
+            for perm in related[field]:
+                perm_clause[perm_table % perm] = True
+            clause &= Q(**perm_clause)
+            
+            # add finished query
+            q &= clause
+
+    # return users filted by intricate Q statement
+    return Group.objects.filter(q).distinct()
 
 
 def get_groups(obj):

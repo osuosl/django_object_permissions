@@ -420,6 +420,54 @@ class TestGroups(TestCase):
         self.assert_(group0 in get_groups_all(object0, ['Perm1','Perm2']))
         self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
 
+    def test_get_groups_all_related(self):
+        """ Tests get_groups_all with related models """
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)
+        group1.grant('Perm1', object0)
+        group0.grant('Perm1', object1)
+        group0.grant('Perm2', object1)
+        
+        group0.grant('Perm1', child0)
+        group0.grant('Perm1', child1)
+        group0.grant('Perm2', child1)
+        group0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        query = get_groups_all(child0, perms=['Perm1'], parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(group0 in query)
+        self.assertFalse(group1 in query)
+        
+        # related field with single perms - has parent but not child
+        query = get_groups_all(child0, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(0, len(query))
+        
+        # related field with single perms - has child but not parent
+        query = get_groups_all(child0, perms=['Perm1'], parent=['Perm4'])
+        self.assertEqual(0, len(query))
+        
+        # related field with multiple perms
+        query = get_groups_all(child1, perms=['Perm1'], parent=['Perm1','Perm2'])
+        self.assertEqual(1, len(query))
+        self.assert_(group0 in query)
+        self.assertFalse(user1 in query)
+        
+        # multiple relations
+        query = get_groups_all(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(group0 in query)
+
     def test_get_users_all_related(self):
         """ Tests get_users_all with related models """
         group0 = self.test_save('TestGroup0')
