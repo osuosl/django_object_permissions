@@ -148,18 +148,19 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
         if form.is_valid():
             data = form.cleaned_data
             form_user = form.cleaned_data['user']
+            group = form.cleaned_data['group']
+            edited_user = form_user if form_user else group
+            
             if form.update_perms():
-                group = form.cleaned_data['group']
-                
                 # send correct signal based on new or edited user
                 if data['new']:
                     view_add_user.send(sender=obj.__class__, \
                                        editor=request.user, \
-                                       user=form_user, obj=obj)
+                                       user=edited_user, obj=obj)
                 else:
                     view_edit_user.send(sender=obj.__class__, \
                                         editor=request.user, \
-                                        user=form_user, obj=obj)
+                                        user=edited_user, obj=obj)
                 
                 # return html to replace existing user row
                 if form_user:
@@ -172,7 +173,7 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
             else:
                 # no permissions, send ajax response to remove user
                 view_remove_user.send(sender=obj.__class__, \
-                                      editor=request.user, user=form_user, \
+                                      editor=request.user, user=edited_user, \
                                       obj=obj)
                 return HttpResponse('1', mimetype='application/json')
         
