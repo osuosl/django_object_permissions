@@ -458,6 +458,51 @@ class TestModelPermissions(TestCase):
         self.assert_(user0 in get_users_all(object0, ['Perm1','Perm2'], groups=False))
         self.assertFalse(user0 in get_users_all(object1, ['Perm1','Perm3'], groups=False))
     
+    def test_get_users_all_related(self):
+        """ Tests get_users_all with related models """
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        user0.grant('Perm1', object0)
+        user1.grant('Perm1', object0)
+        user0.grant('Perm1', object1)
+        user0.grant('Perm2', object1)
+        
+        user0.grant('Perm1', child0)
+        user0.grant('Perm1', child1)
+        user0.grant('Perm2', child1)
+        user0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        query = get_users_all(child0, perms=['Perm1'], parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(user0 in query)
+        self.assertFalse(user1 in query)
+        
+        # related field with single perms - has parent but not child
+        query = get_users_all(child0, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(0, len(query))
+        
+        # related field with single perms - has child but not parent
+        query = get_users_all(child0, perms=['Perm1'], parent=['Perm4'])
+        self.assertEqual(0, len(query))
+        
+        # related field with multiple perms
+        query = get_users_all(child1, perms=['Perm1'], parent=['Perm1','Perm2'])
+        self.assertEqual(1, len(query))
+        self.assert_(user0 in query)
+        self.assertFalse(user1 in query)
+        
+        # multiple relations
+        query = get_users_all(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(user0 in query)
+    
     def test_get_user_permissions(self):
         
         # grant single property

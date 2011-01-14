@@ -779,6 +779,76 @@ def get_users_all(obj, perms, groups=True):
     return User.objects.filter(**d).distinct()
 
 
+def get_users_all(obj, perms, groups=True, **related):
+    """
+    Retrieve the list of Users that have all of the permissions on the given
+    object.
+
+    @param perms - perms to check
+    @param groups - include users with permissions via groups
+    """
+    model = obj.__class__
+    name = model.__name__
+    permissions = permission_map[model]
+    
+    # base query is object
+    base = {"%s_uperms__obj"%name:obj}
+    
+    # add all perms
+    perm_table = "%s_uperms__%%s" % name
+    for perm in perms:
+        base[perm_table % perm] = True
+
+    # build base query
+    q = Q(**base)
+    
+    # optionally add groups
+    if groups:
+        clause = {"groups__%s_gperms__obj" % name: obj}
+        group_perm_table = "groups__%s_gperms__%%s" % name
+        for perm in perms:
+            clause[group_perm_table % perm] = True
+        q |= Q(**clause)
+
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path from
+    # the object to its related models.  We must also join on the user to the
+    # resulting permissions table so that the user rows are matched.
+    if related:
+        for field in related:
+            # add user
+            format = (name, field)
+            clause = Q(pk=F('%s_uperms__obj__%s__operms__user' % format))
+            
+            if groups:
+                clause |= Q(groups=F("%s_uperms__obj__%s__operms__group" % format))
+            
+            # add all perms
+            perm_table = '%s_uperms__obj__%s__operms__%%s' % format
+            perm_clause = {}
+            for perm in related[field]:
+                perm_clause[perm_table % perm] = True
+            clause &= Q(**perm_clause)
+            
+            
+            
+            # optionally add groups
+            #if groups:
+            #    group_clause = {
+            #        "groups":F("%s_uperms__obj__%s__operms__group" % format),
+            #    }
+            #    group_perm_table = "%s_uperms__obj__%s__operms__%%s" % format
+            #    for perm in perms:
+            #        group_clause[group_perm_table % perm] = True
+            #    clause |= Q(**group_clause)
+            
+            # add finished query
+            q &= clause
+
+    # return users filted by intricate Q statement
+    return User.objects.filter(q).distinct()
+
+
 def get_users(obj, groups=True):
     """
     Retrieve the list of Users that have permissions on the given object.
