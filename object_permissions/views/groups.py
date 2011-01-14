@@ -11,7 +11,7 @@ from django.template import RequestContext
 
 from object_permissions import get_model_perms, grant, revoke, get_user_perms
 from object_permissions.signals import view_add_user, view_remove_user, \
-    view_edit_user
+    view_edit_user, view_group_edited, view_group_created, view_group_deleted
 from object_permissions.views.permissions import ObjectPermissionForm
 
 
@@ -98,7 +98,13 @@ def detail(request, id=None):
             # form data, this was a submission
             form = GroupForm(request.POST, instance=group)
             if form.is_valid():
+                new = False if group else True
                 group = form.save()
+                if new:
+                    view_group_created.send(sender=group, editor=user)
+                else:
+                    view_group_edited.send(sender=group, editor=user)
+                    
                 return render_to_response("group/group_row.html", \
                         {'group':group}, \
                         context_instance=RequestContext(request))
@@ -115,6 +121,7 @@ def detail(request, id=None):
     
     elif method == 'DELETE':
         group.delete()
+        view_group_deleted.send(sender=group, editor=user)
         return HttpResponse('1', mimetype='application/json')
 
     return HttpResponseNotAllowed(['PUT', 'HEADER'])
