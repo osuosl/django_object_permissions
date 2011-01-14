@@ -1060,7 +1060,6 @@ class TestGroupViews(TestCase):
         self.assertEqual('1', response.content)
         
         # check signal set properties
-        print group1.id, self.signal_group.id
         self.assertEqual(group1.name, self.signal_group.name)
         self.assertEqual(user, self.signal_user)
     
