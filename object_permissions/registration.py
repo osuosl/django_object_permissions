@@ -360,6 +360,7 @@ def revoke_group(group, perm, obj):
         # Group didnt have permission to begin with; do nothing.
         pass
 
+
 def revoke_all(user, obj):
     """
     Revoke all permissions from a User.
