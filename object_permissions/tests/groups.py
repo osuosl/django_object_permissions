@@ -337,6 +337,84 @@ class TestGroups(TestCase):
         group0.revoke_all(object0)
         group1.revoke_all(object0)
     
+    def test_group_has_all_perm(self):
+        """
+        Test group_has_all_perms.  Group having any of the listed perms
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user0)
+        
+        # no perms
+        self.assertFalse(group_has_all_perms(group0, object0, ['Perm1', 'Perm2']))
+        
+        # grant perms
+        group0.grant("Perm1", object0)
+        group1.grant("Perm2", object0)
+        group1.grant("Perm3", object0)
+        
+        # single perm
+        self.assertTrue(group_has_all_perms(group0, object0, ['Perm1']))
+        self.assertTrue(group_has_all_perms(group1, object0, ['Perm2']))
+        
+        # single perm - missing one
+        self.assertFalse(group_has_all_perms(group0, object0, ['Perm1', 'Perm2']))
+        self.assertFalse(group_has_all_perms(group1, object0, ['Perm1', 'Perm2']))
+        
+        # multiple perms - missing one
+        self.assertFalse(group_has_all_perms(group0, object0, ['Perm1', 'Perm2']))
+        
+        # multiple perms - ok
+        self.assertTrue(group_has_all_perms(group1, object0, ['Perm2', 'Perm3']))
+        
+        group0.revoke_all(object0)
+        group1.revoke_all(object0)
+    
+    def test_group_has_all_perm_related(self):
+        """
+        Test retrieving objects with all matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user0)
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)
+        group1.grant('Perm1', object0)
+        group0.grant('Perm1', object1)
+        group0.grant('Perm2', object1)
+        
+        group0.grant('Perm1', child0)
+        group0.grant('Perm1', child1)
+        group0.grant('Perm2', child1)
+        group0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        self.assert_(group0.has_all_perms(child0, perms=['Perm1'], parent=['Perm1']))
+        self.assertFalse(group1.has_all_perms(child0, perms=['Perm1'], parent=['Perm1']))
+        
+        # related field with single perms - has parent but not child
+        self.assertFalse(group0.has_all_perms(child0, perms=['Perm4'], parent=['Perm1']))
+        self.assertFalse(group1.has_all_perms(child0, perms=['Perm4'], parent=['Perm1']))
+        
+        # related field with single perms - has child but not parent
+        self.assertFalse(group0.has_all_perms(child0, perms=['Perm1'], parent=['Perm4']))
+        self.assertFalse(group1.has_all_perms(child0, perms=['Perm1'], parent=['Perm4']))
+        
+        # related field with multiple perms
+        self.assert_(group0.has_all_perms(child1, perms=['Perm1'], parent=['Perm1','Perm2']))
+        self.assertFalse(group1.has_all_perms(child1, perms=['Perm1'], parent=['Perm1','Perm2']))
+        
+        # multiple relations
+        self.assert_(group0.has_all_perms(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1']))
+        self.assertFalse(group1.has_all_perms(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1']))
+    
     def test_get_groups(self):
         """
         Tests retrieving list of Groups with perms on an object
