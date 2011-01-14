@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django import db
 from django.db import models
 from django.db.models import Model
-from django.db.models import Q
+from django.db.models import Q, F
 
 from object_permissions.signals import granted, revoked
 
@@ -209,7 +209,7 @@ def grant(user, perm, obj):
     if not getattr(user_perms, perm):
         setattr(user_perms, perm, True)
         user_perms.save()
-
+        
         granted.send(sender=user, perm=perm, object=obj)
 
 
@@ -513,7 +513,7 @@ def group_has_perm(group, perm, obj):
     return permissions.objects.filter(group=group, obj=obj, **d).exists()
 
 
-def user_has_any_perms(user, obj, perms=None, groups=True):
+def user_has_any_perms(user, obj, perms=None, groups=True, **related):
     """
     Check whether the User has *any* permission on the given object.
     """
@@ -668,6 +668,75 @@ def get_users_any(obj, perms=None, groups=True):
         return User.objects.filter(Q(**d) | group_clause).distinct()
     
     return User.objects.filter(**d).distinct()
+
+
+def get_users_any(obj, perms=None, groups=True, **related):
+    """
+    Retrieve the list of Users that have any of the permissions on the given
+    object.
+
+    @param perms - perms to check, or None if match *any* perms
+    @param groups - include users with permissions via groups
+    """
+    model = obj.__class__
+    permissions = permission_map[model]
+    name = model.__name__
+
+    # base query is any permissions on object
+    q = Q(**{"%s_uperms__obj"%name:obj})
+
+    # optionally add perms
+    if perms:
+        # create Q clauses out of perms and OR them all together
+        perm_table = "%s_uperms__%%s" % name
+        q &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+        
+        if groups:
+            # handle groups by checking perms for any group users are in.
+            #
+            # Do this by creating separate user and group clauses that check
+            # the right object with the right set of perms.  Combine the clauses
+            # together like so:
+            #     (obj AND perms) OR (group_obj AND group perms)
+            
+            group_perm_table = "groups__%s_gperms__%%s" % name
+            group_obj_table = "groups__%s_gperms__obj" % name
+            gperms = reduce(or_, (Q(**{group_perm_table % perm:True}) \
+                                  for perm in perms))
+            q |= (Q(**{group_obj_table:obj}) & gperms)
+    
+    elif groups:
+        # handle groups with *any* perm by adding a clause that checks for the
+        # object via the groups table.  this give inherent group membership
+        # check.
+        q |= Q(**{"groups__%s_gperms__obj" % name:obj})
+    
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path from
+    # the object to its related models.  We must also join on the user to the
+    # resulting permissions table so that the user rows are matched.
+    if related:
+        for field in related:
+            # join object through related models perm table
+            clause = Q(**{'%s__obj__%s__operms__obj'%(name, field):obj})
+            
+            # add user through
+            clause = Q(pk=F('%s__obj__%s__operms__user_id' % name))
+            
+            # optionally add groups, join through groups table
+            if groups:
+                clause |= Q(pk=F('%s__obj__%s__operms__group__user' % name))
+            
+            # optionally add perms
+            perms = related[field]
+            if perms:
+                perm_table = '%s__obj__%s__operms__%%s' % (name, field)
+                clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+            
+            # add finished query
+            q |= clause
+
+    return User.objects.filter(q).distinct()
 
 
 def get_users_all(obj, perms, groups=True):
