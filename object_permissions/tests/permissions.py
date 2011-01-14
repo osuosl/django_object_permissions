@@ -923,7 +923,6 @@ class TestModelPermissions(TestCase):
         user0.revoke_all(object0)
         user1.revoke_all(object0)
         
-        
         # perm on group, but not checking
         group.grant("Perm3", object0)
         self.assertFalse(user_has_any_perms(user0, object0, groups=False))
@@ -998,7 +997,6 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm3', 'Perm4']))
         self.assertFalse(user1.has_all_perms(TestModel, ['Perm1', 'Perm4']))
 
-
     def test_has_all_perm(self):
         """
         Test the user_has_any_perm() function.
@@ -1023,3 +1021,43 @@ class TestModelPermissions(TestCase):
         
         # perm on group, checking groups
         self.assert_(user_has_all_perms(user0, object0, ['Perm3']))
+    
+    def test_has_all_perm_related(self):
+        """ Tests get_users_all with related models """
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        user0.grant('Perm1', object0)
+        user1.grant('Perm1', object0)
+        user0.grant('Perm1', object1)
+        user0.grant('Perm2', object1)
+        
+        user0.grant('Perm1', child0)
+        user0.grant('Perm1', child1)
+        user0.grant('Perm2', child1)
+        user0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        self.assert_(user0.has_all_perms(child0, perms=['Perm1'], parent=['Perm1']))
+        self.assertFalse(user1.has_all_perms(child0, perms=['Perm1'], parent=['Perm1']))
+        
+        # related field with single perms - has parent but not child
+        self.assertFalse(user0.has_all_perms(child0, perms=['Perm4'], parent=['Perm1']))
+        self.assertFalse(user1.has_all_perms(child0, perms=['Perm4'], parent=['Perm1']))
+        
+        # related field with single perms - has child but not parent
+        self.assertFalse(user0.has_all_perms(child0, perms=['Perm1'], parent=['Perm4']))
+        self.assertFalse(user1.has_all_perms(child0, perms=['Perm1'], parent=['Perm4']))
+        
+        # related field with multiple perms
+        self.assert_(user0.has_all_perms(child1, perms=['Perm1'], parent=['Perm1','Perm2']))
+        self.assertFalse(user1.has_all_perms(child1, perms=['Perm1'], parent=['Perm1','Perm2']))
+        
+        # multiple relations
+        self.assert_(user0.has_all_perms(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1']))
+        self.assert_(user1.has_all_perms(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1']))
