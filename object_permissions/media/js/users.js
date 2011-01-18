@@ -94,7 +94,7 @@ function update(responseText, statusText, xhr, $form) {
         if (responseText == 1) {
             // 1 code means success but no more permissions
             $('.qtip').qtip('hide');
-            $("#users #" + html.attr('id')).remove();
+            $("#op_users #" + html.attr('id')).remove();
         } else {
             // parse errors
             errors = responseText
@@ -108,11 +108,11 @@ function update(responseText, statusText, xhr, $form) {
         $('.qtip').qtip('hide');
         html = $(responseText);
         id = html.attr('id')
-        $row = $('#users #' + id);
+        $row = $('#op_users #' + id);
         if ($row.length == 1) {
             $row.replaceWith(html);
         } else {
-            $("#users").append(html);
+            $("#op_users").append(html);
         }
     }
 }
