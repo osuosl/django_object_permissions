@@ -1022,41 +1022,43 @@ def get_groups_all(obj, perms, **related):
 
     @param perms - perms to check
     """
-    model = obj.__class__
+    instance = isinstance(obj, (Model,))
+    model = obj.__class__ if instance else obj
     name = model.__name__
-    permissions = permission_map[model]
-    
-    # base query is object
-    q = Q(**{"%s_gperms__obj"%name:obj})
-    
-    # add all perms
-    perm_table = "%s_gperms__%%s" % name
-    perm_clause = {}
-    for perm in perms:
-        perm_clause[perm_table % perm] = True
-    q &= Q(**perm_clause)
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
 
+    # build main clause out of object and perms
+    clause = {'%s_gperms__obj'%name:obj}
+    perm_table = '%s_gperms__%%s' % name
+    for perm in perms:
+        clause[perm_table % perm] = True
+    q = Q(**clause)
+    
     # related fields are built as sub-clauses for each related field.  To follow
     # the relation we must add a clause that follows the relationship path from
     # the object to its related models.  We must also join on the group to the
     # resulting permissions table so that the group rows are matched.
-    if related:
-        for field in related:
-            # add group
-            format = (name, field)
-            clause = Q(pk=F('%s_gperms__obj__%s__operms__group' % format))
-            
-            # add all perms
-            perm_table = '%s_gperms__obj__%s__operms__%%s' % format
-            perm_clause = {}
-            for perm in related[field]:
-                perm_clause[perm_table % perm] = True
-            clause &= Q(**perm_clause)
-            
-            # add finished query
-            q &= clause
-
-    # return users filted by intricate Q statement
+    for field, perms in related.items():
+        field, chaff, path = field.partition('__')
+        table = '%s_gperms' % field
+        
+        # build base clause off object
+        if path == '':
+            # we must have a path to map this class to the related instance
+            raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+        clause = {'%s__obj__%s'%(table, path):obj}
+        
+        # add perms to clause
+        perm_table = '%s__%%s' % table
+        for perm in perms:
+            clause[perm_table % perm] = True
+        
+        # add related clause to main clause
+        q &= Q(**clause)
+    
     return Group.objects.filter(q).distinct()
 
 

@@ -582,6 +582,11 @@ class TestGroups(TestCase):
         query = get_groups_any(childchild, perms=['Perm4'], TestModelChild__child=['Perm4'], TestModel__child__child=['Perm1'])
         self.assertEqual(1, len(query))
         self.assert_(group0 in query)
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(group0.has_any_perms(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
     
     def test_get_groups_all(self):
         """
@@ -637,29 +642,34 @@ class TestGroups(TestCase):
         group0.grant('Perm1', childchild)
         
         # related field with single perms
-        query = get_groups_all(child0, perms=['Perm1'], parent=['Perm1'])
+        query = get_groups_all(child0, perms=['Perm1'], TestModel__child=['Perm1'])
         self.assertEqual(1, len(query))
         self.assert_(group0 in query)
         self.assertFalse(group1 in query)
         
         # related field with single perms - has parent but not child
-        query = get_groups_all(child0, perms=['Perm4'], parent=['Perm1'])
+        query = get_groups_all(child0, perms=['Perm4'], TestModel__child=['Perm1'])
         self.assertEqual(0, len(query))
         
         # related field with single perms - has child but not parent
-        query = get_groups_all(child0, perms=['Perm1'], parent=['Perm4'])
+        query = get_groups_all(child0, perms=['Perm1'], TestModel__child=['Perm4'])
         self.assertEqual(0, len(query))
         
         # related field with multiple perms
-        query = get_groups_all(child1, perms=['Perm1'], parent=['Perm1','Perm2'])
+        query = get_groups_all(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2'])
         self.assertEqual(1, len(query))
         self.assert_(group0 in query)
         self.assertFalse(user1 in query)
         
         # multiple relations
-        query = get_groups_all(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1'])
+        query = get_groups_all(childchild, perms=['Perm1'], TestModelChild__child=['Perm1'], TestModel__child__child=['Perm1'])
         self.assertEqual(1, len(query))
         self.assert_(group0 in query)
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(group0.has_any_perms(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
 
     def test_get_users_all_related(self):
         """ Tests get_users_all with related models """
