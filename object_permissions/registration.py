@@ -549,27 +549,81 @@ def user_has_any_perms(user, obj, perms=None, groups=True, **related):
     return base.filter(obj=obj).exists() if instance else base.exists()
 
 
-def group_has_any_perms(group, obj, perms=None):
+def group_has_any_perms(group, obj, perms=None, **related):
     """
     Check whether the Group has *any* permission on the given object.
     """
     instance = isinstance(obj, (Model,))
     model = obj.__class__ if instance else obj
+    name = model.__name__
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
 
-    # create perm clause, or implicit any
-    if perms:
-        # create Q clauses out of perms and OR them all together
-        q = reduce(or_, (Q(**{perm:True}) for perm in perms))
-        base = permissions.objects.filter(q, group=group)
+    # XXX when performing related query for has_any, start with the group
+    # table, this allows us to join the different model tables together
+    if related:
+        # start clause by matching group
+        q = Q(**{'%s_gperms__group' % name:group})
+        
+        # optionally filter by instance
+        if instance:
+            q &= Q(pk=obj.pk)
+        
+        # optionally add perms
+        if perms:
+            # create Q clauses out of perms and OR them all together
+            table = '%s_gperms__%%s' % name
+            q &= reduce(or_, (Q(**{table % perm:True}) for perm in perms))
+        
+        # add related models - has any queries the related name is a Class name
+        # with an optional path appended at the end.  The Class is used to join
+        # against the additional perm table, and optionally through to the
+        # original item.
+        for field, perms in related.items():
+            field, chaff, path = field.partition('__')
+            table = '%s_gperms' % field
+            
+            # start clause by matching group
+            clause = Q(**{'%s__group' % table:group})
+            
+            if instance:
+                # optionally join object using supplied path
+                if path != '':
+                    clause &= Q(**{'%s__obj__%s'%(table, path):obj})
+                else:
+                    # we must have a path to map this class to the related instance
+                    raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+            
+            # optionally add perms
+            if perms:
+                # create Q clauses out of perms and OR them all together
+                table = '%s__%%s' % table
+                clause &= reduce(or_, (Q(**{table % perm:True}) for perm in perms))
+            
+            q |= clause
+        
+        return Group.objects.filter(q).exists()
+
     else:
-        base = permissions.objects.filter(group=group)
-    
-    # select model or instance level query
-    return base.filter(obj=obj).exists() if instance else base.exists()
+        # standard query - query the perms table directly to avoid joins
+        # create perm clause, or implicit any
+        
+        # start query with group
+        q = Q(group=group)
+        
+        # optionally filter by instance
+        if instance:
+            q &= Q(obj=obj)
+        
+        # optionally add perms
+        if perms:
+            # create Q clauses out of perms and OR them all together
+            q &= reduce(or_, (Q(**{perm:True}) for perm in perms))
+        
+        # select model or instance level query
+        return permissions.objects.filter(q).exists()
 
 
 def user_has_all_perms(user, obj, perms, groups=True, **related):
