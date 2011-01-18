@@ -969,7 +969,7 @@ def get_users(obj, groups=True):
     return get_users_any(obj)
 
 
-def get_groups_any(obj, perms=None):
+def get_groups_any(obj, perms=None, **related):
     """
     Retrieve the list of Groups that have any of the permissions on the given
     object.
@@ -977,21 +977,42 @@ def get_groups_any(obj, perms=None):
     @param perms - perms to check, or None to check for *any* perms
     """
     
-    model = obj.__class__
-    permissions = permission_map[model]
+    instance = isinstance(obj, (Model,))
+    model = obj.__class__ if instance else obj
+    name = model.__name__
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
 
-    perm_table = "%s_gperms__%%s" % model.__name__
-    obj_table = "%s_gperms__obj" % model.__name__
-    d = {
-            obj_table: obj,
-    }
-
+    q = Q(**{'%s_gperms__obj'%name:obj})
+    
+    # optionally add perms
     if perms:
         # create Q clauses out of perms and OR them all together
-        q = reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
-        return Group.objects.filter(q, **d).distinct()
+        table = '%s_gperms__%%s' % name
+        q &= reduce(or_, (Q(**{table % perm:True}) for perm in perms))
+        
     
-    return Group.objects.filter(**d).distinct()
+    for field, perms in related.items():
+        field, chaff, path = field.partition('__')
+        table = '%s_gperms' % field
+        
+        # build base clause off object
+        if path == '':
+            # we must have a path to map this class to the related instance
+            raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+        clause = Q(**{'%s__obj__%s'%(table, path):obj})
+        
+        # optionally add perms
+        if perms:
+            # create Q clauses out of perms and OR them all together
+            perm_table = '%s__%%s' % table
+            clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+        
+        q |= clause
+    
+    return Group.objects.filter(q).distinct()
 
 
 def get_groups_all(obj, perms, **related):
