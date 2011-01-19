@@ -632,51 +632,91 @@ def user_has_all_perms(user, obj, perms, groups=True, **related):
     """
     instance = isinstance(obj, (Model,))
     model = obj.__class__ if instance else obj
+    name = model.__name__
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
-
-    # base matches object
-    q = Q(user=user)
     
-    # optionally check groups
-    if groups:
-        q |= Q(group__user=user)
-
-    # base query matches object
-    if instance:
-        q &= Q(obj=obj)
-
-    # create base query requiring all permissions
-    perm_clauses = {}
-    for perm in perms:
-        perm_clauses[perm] = True
-    q &= Q(**perm_clauses)
-
     # related fields are built as sub-clauses for each related field.  To follow
     # the relation we must add a clause that follows the relationship path from
     # the object to its related models.  We must also join on the user to the
     # resulting permissions table so that the user rows are matched.
     if related:
-        for field in related:
-            # add user
-            clause = Q(pk=F('obj__%s__operms__user' % field))
+        
+        # base matches object
+        q = Q(pk=user.pk)
+        
+        # optionally match instance
+        if instance:
+            q &= Q(**{'%s_uperms__obj'%name:obj})
+        
+        # create base query requiring all permissions
+        perm_clauses = {}
+        for perm in perms:
+            table = '%s_uperms__%%s' % name
+            perm_clauses[table%perm] = True
+        q &= Q(**perm_clauses)
+        
+        # optionally check groups
+        if groups:
+            table = 'groups__%s_gperms__%%s' % name
+            perm_clause = {'groups__%s_gperms__obj' % name: obj} if instance else {}
+            for perm in perms:
+                perm_clause[table % perm] = True
+            q |= Q(**perm_clause)
+        
+        # optionally add related fields
+        for field, perms in related.items():
+            field, chaff, path = field.partition('__')
+            table = '%s_uperms' % field
             
-            if groups:
-                clause |= Q(pk=F("obj__%s__operms__group__user" % field))
+            # build base clause off object
+            if instance:
+                if path == '':
+                    # we must have a path to map this class to the related instance
+                    raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+                q &= Q(**{'%s__obj__%s'%(table, path):obj})
             
             # add all perms
-            perm_table = 'obj__%s__operms__%%s' % field
+            table = '%s__%%s' % table
             perm_clause = {}
-            for perm in related[field]:
-                perm_clause[perm_table % perm] = True
-            clause &= Q(**perm_clause)
+            for perm in perms:
+                perm_clause[table % perm] = True
+            q &= Q(**perm_clause)
+            
+            # optionally add groups
+            if groups:
+                table = 'groups__%s_gperms__%%s' % field
+                if instance:
+                    perm_clause = {'groups__%s_gperms__obj' % field: obj}
+                else:
+                    perm_clause = {}
+                for perm in perms:
+                    perm_clause[table % perm] = True
+                q |= Q(**perm_clause)
         
-        # add final clause
-        q &= clause
-    
-    return permissions.objects.filter(q).exists()
+        return User.objects.filter(q).exists()
+
+    else:
+        # base matches object
+        q = Q(user=user)
+        
+        # optionally check groups
+        if groups:
+            q |= Q(group__user=user)
+        
+        # base query matches object
+        if instance:
+            q &= Q(obj=obj)
+        
+        # create base query requiring all permissions
+        perm_clauses = {}
+        for perm in perms:
+            perm_clauses[perm] = True
+        q &= Q(**perm_clauses)
+        
+        return permissions.objects.filter(q).exists()
 
 
 def group_has_all_perms(group, obj, perms, **related):

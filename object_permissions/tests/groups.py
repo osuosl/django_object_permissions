@@ -927,6 +927,57 @@ class TestGroups(TestCase):
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm2', 'Perm4'], False))
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm2'], False))
     
+    def test_user_has_all_on_model_related(self):
+        """ Tests get_users_all with related models """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user1)
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)
+        group1.grant('Perm1', object0)
+        group0.grant('Perm1', object1)
+        group0.grant('Perm2', object1)
+        
+        group0.grant('Perm1', child0)
+        group0.grant('Perm1', child1)
+        group0.grant('Perm2', child1)
+        group0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        self.assert_(user0.has_all_perms(TestModelChild, perms=['Perm1'], TestModel=['Perm1']))
+        self.assert_(user1.has_all_perms(TestModelChild, perms=['Perm1'], TestModel=['Perm1']))
+        
+        # related field with single perms - has parent but not child
+        self.assertFalse(user0.has_all_perms(TestModelChild, perms=['Perm4'], TestModel=['Perm1']))
+        self.assertFalse(user1.has_all_perms(TestModelChild, perms=['Perm4'], TestModel=['Perm1']))
+        
+        # related field with single perms - has child but not parent
+        self.assertFalse(user0.has_all_perms(TestModelChild, perms=['Perm1'], TestModel=['Perm4']))
+        self.assertFalse(user1.has_all_perms(TestModelChild, perms=['Perm1'], TestModel=['Perm4']))
+        
+        # related field with multiple perms
+        self.assert_(user0.has_all_perms(TestModelChild, perms=['Perm1'], TestModel__child=['Perm1','Perm2']))
+        self.assertFalse(user1.has_all_perms(TestModelChild, perms=['Perm1'], TestModel=['Perm1','Perm2']))
+        
+        # relationship spanning multiple tables
+        self.assert_(user0.has_all_perms(TestModelChildChild, perms=['Perm1'], TestModel=['Perm1']))
+        
+        # multiple relations
+        self.assertFalse(user1.has_all_perms(TestModelChildChild, perms=['Perm1'], TestModelChild=['Perm1'], TestModel=['Perm1']))
+        self.assert_(user0.has_all_perms(TestModelChildChild, perms=['Perm1'], TestModelChild=['Perm1'], TestModel=['Perm1']))
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(user0.has_all_perms(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
+    
     def test_user_get_objects_all_perms_related(self):
         """
         Test retrieving objects with all matching perms and related model
