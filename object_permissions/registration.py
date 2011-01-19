@@ -851,46 +851,6 @@ def get_users_any(obj, perms=None, groups=True, **related):
     return User.objects.filter(q).distinct()
 
 
-def get_users_all(obj, perms, groups=True):
-    """
-    Retrieve the list of Users that have all of the permissions on the given
-    object.
-
-    @param perms - perms to check
-    @param groups - include users with permissions via groups
-    """
-    model = obj.__class__
-    permissions = permission_map[model]
-
-    perm_table = "%s_uperms__%%s" % model.__name__
-    obj_table = "%s_uperms__obj" % model.__name__
-    d = {
-            obj_table: obj,
-    }
-
-    # add all perm clauses to the main clause dictionary.  This will cause them
-    # all to be AND'd together.
-    for perm in perms:
-        d[perm_table % perm] = True
-    
-    if groups:
-        # handle groups by checking perms for any group users are in.
-        #
-        # Do this by creating separate user and group clauses that check
-        # the right object with the right set of perms.  Combine the clauses
-        # together like so:
-        #     (obj AND perms) OR (group_obj AND group perms)
-        
-        group_perm_table = "groups__%s_gperms__%%s" % model.__name__
-        group_obj_table = "groups__%s_gperms__obj" % model.__name__
-        group_clause = {group_obj_table: obj}
-        for perm in perms:
-            group_clause[group_perm_table % perm] = True
-        return User.objects.filter(Q(**d) | Q(**group_clause)).distinct()
-
-    return User.objects.filter(**d).distinct()
-
-
 def get_users_all(obj, perms, groups=True, **related):
     """
     Retrieve the list of Users that have all of the permissions on the given
@@ -903,58 +863,46 @@ def get_users_all(obj, perms, groups=True, **related):
     name = model.__name__
     permissions = permission_map[model]
     
-    # base query is object
-    base = {"%s_uperms__obj"%name:obj}
-    
-    # add all perms
-    perm_table = "%s_uperms__%%s" % name
+    # create base query requiring all permissions
+    perm_clauses = {'%s_uperms__obj'%name:obj}
     for perm in perms:
-        base[perm_table % perm] = True
-
-    # build base query
-    q = Q(**base)
+        table = '%s_uperms__%%s' % name
+        perm_clauses[table%perm] = True
+    q = Q(**perm_clauses)
     
-    # optionally add groups
+    # optionally check groups
     if groups:
-        clause = {"groups__%s_gperms__obj" % name: obj}
-        group_perm_table = "groups__%s_gperms__%%s" % name
+        table = 'groups__%s_gperms__%%s' % name
+        perm_clauses = {'groups__%s_gperms__obj' % name: obj}
         for perm in perms:
-            clause[group_perm_table % perm] = True
-        q |= Q(**clause)
+            perm_clauses[table % perm] = True
+        q |= Q(**perm_clauses)
 
     # related fields are built as sub-clauses for each related field.  To follow
     # the relation we must add a clause that follows the relationship path from
     # the object to its related models.  We must also join on the user to the
     # resulting permissions table so that the user rows are matched.
     if related:
-        for field in related:
-            # add user
-            format = (name, field)
-            clause = Q(pk=F('%s_uperms__obj__%s__operms__user' % format))
-            
-            if groups:
-                clause |= Q(groups=F("%s_uperms__obj__%s__operms__group" % format))
+        # optionally add related fields
+        for field, perms in related.items():
+            field, chaff, path = field.partition('__')
+            table = '%s_uperms' % field
             
             # add all perms
-            perm_table = '%s_uperms__obj__%s__operms__%%s' % format
-            perm_clause = {}
-            for perm in related[field]:
-                perm_clause[perm_table % perm] = True
-            clause &= Q(**perm_clause)
-            
-            
+            perm_table = '%s__%%s' % table
+            perm_clauses = {'%s__obj__%s'%(table, path):obj}
+            for perm in perms:
+                perm_clauses[perm_table % perm] = True
+            clause = Q(**perm_clauses)
             
             # optionally add groups
-            #if groups:
-            #    group_clause = {
-            #        "groups":F("%s_uperms__obj__%s__operms__group" % format),
-            #    }
-            #    group_perm_table = "%s_uperms__obj__%s__operms__%%s" % format
-            #    for perm in perms:
-            #        group_clause[group_perm_table % perm] = True
-            #    clause |= Q(**group_clause)
+            if groups:
+                table = 'groups__%s_gperms__%%s' % field
+                perm_clauses = {'groups__%s_gperms__obj__%s' % (field, path): obj}
+                for perm in perms:
+                    perm_clauses[table % perm] = True
+                clause |= Q(**perm_clauses)
             
-            # add finished query
             q &= clause
 
     # return users filted by intricate Q statement
