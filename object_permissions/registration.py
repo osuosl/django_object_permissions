@@ -693,44 +693,70 @@ def group_has_all_perms(group, obj, perms, **related):
     """
     instance = isinstance(obj, (Model,))
     model = obj.__class__ if instance else obj
+    name = model.__name__
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
-
-    # base matches object
-    q = Q(group=group)
     
-    # base query matches object
-    if instance:
-        q &= Q(obj=obj)
-
-    # create base query requiring all permissions
-    perm_clauses = {}
-    for perm in perms:
-        perm_clauses[perm] = True
-    q &= Q(**perm_clauses)
-
     # related fields are built as sub-clauses for each related field.  To follow
     # the relation we must add a clause that follows the relationship path from
     # the object to its related models.  We must also join on the user to the
     # resulting permissions table so that the user rows are matched.
     if related:
+        
+        # start clause by matching group
+        q = Q(**{'%s_gperms__group' % name:group})
+        
+        # optionally filter by instance
+        if instance:
+            q &= Q(**{'%s_gperms__obj' % name:obj})
+        
+        # add perms
+        table = '%s_gperms__%%s' % name
+        perm_clause = {}
+        for perm in perms:
+            perm_clause[table % perm] = True
+        q &= Q(**perm_clause)
+        
         for field, perms in related.items():
-            # add user
-            clause = Q(**{'obj__%s__operms__group' % field:group})
+            field, chaff, path = field.partition('__')
+            
+            # add group
+            q &= Q(**{'%s_gperms__group' % field:group})
+            
+            if instance:
+                # optionally join object using supplied path
+                if path != '':
+                    q &= Q(**{'%s_gperms__obj__%s'%(field, path):obj})
+                else:
+                    # we must have a path to map this class to the related instance
+                    raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
             
             # add all perms
-            perm_table = 'obj__%s__operms__%%s' % field
+            table = '%s_gperms__%%s' % field
             perm_clause = {}
             for perm in perms:
-                perm_clause[perm_table % perm] = True
-            clause &= Q(**perm_clause)
+                perm_clause[table % perm] = True
+            q &= Q(**perm_clause)
             
-            # add final clause
-            q &= clause
+        return Group.objects.filter(q).exists()
     
-    return permissions.objects.filter(q).exists()
+    else:
+        # base matches object
+        q = Q(group=group)
+        
+        # base query matches object
+        if instance:
+            q &= Q(obj=obj)
+        
+        # create base query requiring all permissions
+        perm_clauses = {}
+        for perm in perms:
+            perm_clauses[perm] = True
+        q &= Q(**perm_clauses)
+        
+        return permissions.objects.filter(q).exists()
 
 
 def get_users_any(obj, perms=None, groups=True):

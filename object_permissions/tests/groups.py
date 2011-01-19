@@ -456,24 +456,33 @@ class TestGroups(TestCase):
         group0.grant('Perm1', childchild)
         
         # related field with single perms
-        self.assert_(group0.has_all_perms(child0, perms=['Perm1'], parent=['Perm1']))
-        self.assertFalse(group1.has_all_perms(child0, perms=['Perm1'], parent=['Perm1']))
+        self.assert_(group0.has_all_perms(child0, perms=['Perm1'], TestModel__child=['Perm1']))
+        self.assertFalse(group1.has_all_perms(child0, perms=['Perm1'], TestModel__child=['Perm1']))
         
         # related field with single perms - has parent but not child
-        self.assertFalse(group0.has_all_perms(child0, perms=['Perm4'], parent=['Perm1']))
-        self.assertFalse(group1.has_all_perms(child0, perms=['Perm4'], parent=['Perm1']))
+        self.assertFalse(group0.has_all_perms(child0, perms=['Perm4'], TestModel__child=['Perm1']))
+        self.assertFalse(group1.has_all_perms(child0, perms=['Perm4'], TestModel__child=['Perm1']))
         
         # related field with single perms - has child but not parent
-        self.assertFalse(group0.has_all_perms(child0, perms=['Perm1'], parent=['Perm4']))
-        self.assertFalse(group1.has_all_perms(child0, perms=['Perm1'], parent=['Perm4']))
+        self.assertFalse(group0.has_all_perms(child0, perms=['Perm1'], TestModel__child=['Perm4']))
+        self.assertFalse(group1.has_all_perms(child0, perms=['Perm1'], TestModel__child=['Perm4']))
         
         # related field with multiple perms
-        self.assert_(group0.has_all_perms(child1, perms=['Perm1'], parent=['Perm1','Perm2']))
-        self.assertFalse(group1.has_all_perms(child1, perms=['Perm1'], parent=['Perm1','Perm2']))
+        self.assert_(group0.has_all_perms(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2']))
+        self.assertFalse(group0.has_all_perms(child1, perms=['Perm3'], TestModel__child=['Perm1','Perm2']))
+        self.assertFalse(group1.has_all_perms(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2']))
+        
         
         # multiple relations
-        self.assert_(group0.has_all_perms(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1']))
-        self.assertFalse(group1.has_all_perms(childchild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1']))
+        self.assert_(group0.has_all_perms(childchild, perms=['Perm1'], TestModelChild__parent=['Perm1'], TestModel__child__child=['Perm1']))
+        self.assertFalse(group0.has_all_perms(childchild, perms=['Perm2'], TestModelChild__parent=['Perm1'], TestModel__child__child=['Perm1']))
+        self.assertFalse(group0.has_all_perms(childchild, perms=['Perm1'], TestModelChild__parent=['Perm2'], TestModel__child__child=['Perm1']))
+        self.assertFalse(group1.has_all_perms(childchild, perms=['Perm1'], TestModelChild__parent=['Perm1'], TestModel__child__child=['Perm1']))
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(group0.has_all_perms(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
     
     def test_get_groups(self):
         """
