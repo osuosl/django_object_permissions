@@ -502,6 +502,11 @@ class TestModelPermissions(TestCase):
         query = get_users_all(childchild, perms=['Perm1'], TestModelChild__child=['Perm1'], TestModel__child__child=['Perm1'])
         self.assertEqual(1, len(query))
         self.assert_(user0 in query)
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(get_users_all(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
     
     def test_get_user_permissions(self):
         

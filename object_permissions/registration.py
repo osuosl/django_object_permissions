@@ -928,6 +928,11 @@ def get_users_all(obj, perms, groups=True, **related):
             field, chaff, path = field.partition('__')
             table = '%s_uperms' % field
             
+            # build base clause off object
+            if path == '':
+                # we must have a path to map this class to the related instance
+                raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+            
             # add all perms
             perm_table = '%s__%%s' % table
             perm_clauses = {'%s__obj__%s'%(table, path):obj}
