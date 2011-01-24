@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
+from django.utils.safestring import SafeString
 
 from object_permissions import get_user_perms, get_group_perms, \
     get_model_perms, grant, revoke, get_users, get_groups
@@ -24,14 +25,44 @@ class ObjectPermissionForm(forms.Form):
     group = forms.ModelChoiceField(queryset=Group.objects.all(), \
                                    required=False)
     
-    def __init__(self, object, *args, **kwargs):
+    choices = {}
+    """ dictionary used for caching the choices for specific models """
+    
+    def __init__(self, obj, *args, **kwargs):
         """
         @param object - the object being granted permissions
         """
         super(ObjectPermissionForm, self).__init__(*args, **kwargs)
-        self.object = object
-        model_perms = get_model_perms(object)
-        self.fields['permissions'].choices = zip(model_perms, model_perms)
+        self.object = obj
+        
+        self.fields['permissions'].choices = self.get_choices(obj)
+
+    @classmethod
+    def get_choices(cls, obj):
+        """ helper method for getting choices for a model.  This method uses an
+        internal cache to store the choices. """
+        try: 
+            return ObjectPermissionForm.choices[obj.__class__]
+        except KeyError:
+            # choices weren't built yet.
+            choices = []
+            model_perms = get_model_perms(obj.__class__)
+            
+            for perm, params in model_perms.items():
+                if 'label' in params and 'description' in params:
+                    text = '<strong>%s:</strong> <span class="perm_desc">%s</span>' % (params['label'], params['description'])
+                    choices.append((perm, SafeString(text)))
+                elif 'label' in params:
+                    text = '</strong>%s</strong>' % params['label']
+                    choices.append((perm, SafeString(text)))
+                elif 'description' in params:
+                    text = '<strong>%s:</strong> %s' % (perm, params['description'])
+                    choices.append((perm, SafeString(text)))
+                else:
+                    choices.append((perm, perm))
+                    
+            ObjectPermissionForm.choices[obj.__class__] = choices
+            return choices
 
     def clean(self):
         """
