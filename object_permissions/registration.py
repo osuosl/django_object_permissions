@@ -71,6 +71,11 @@ permissions_for_model = {}
 A mapping of Models to lists of permissions defined for that model.
 """
 
+params_for_model = {}
+"""
+A mapping of Models to their param dictionaries.
+"""
+
 forbidden = set([
     "full_clean",
     "clean_fields",
@@ -86,7 +91,7 @@ Names reserved by Django for Model instances.
 """
 
 _DELAYED = []
-def register(perms, model):
+def register(params, model):
     """
     Register permissions for a Model.
 
@@ -99,23 +104,39 @@ def register(perms, model):
     deprecated; please fix your code if you depend on this.
     """
 
-    if isinstance(perms, (str, unicode)):
+    if isinstance(params, (str, unicode)):
         warn("Using a single permission is deprecated!")
         perms = [perms]
+
+    # REPACK - for backward compatibility repack list of perms as a dict
+    if isinstance(params, (list, tuple)):
+        perms = params
+        params = {'perms':params}
+    else:
+        perms = params['perms']
 
     for perm in perms:
         if perm in forbidden:
             raise RegistrationException("Permission %s is a reserved name!")
 
+    # REPACK - For backwards compatibility and flexibility with parameters,
+    # repack permissions list to ensure it is a dict of dicts
+    if isinstance(perms, (list, tuple)):
+        # repack perm list as a dictionary
+        repack = {}
+        for perm in perms:
+            repack[perm] = {}
+        params['perms'] = repack
+
     try:
-        return _register(perms, model)
+        return _register(params, model)
     except db.utils.DatabaseError:
         # there was an error, likely due to a missing table.  Delay this
         # registration.
-        _DELAYED.append((perms, model))
+        _DELAYED.append((params, model))
 
 
-def _register(perms, model):
+def _register(params, model):
     """
     Real method for registering permissions.
 
@@ -140,7 +161,7 @@ def _register(perms, model):
             related_name="operms"),
     }
 
-    for perm in perms:
+    for perm in params['perms']:
         fields[perm] = models.BooleanField(default=False)
 
     class Meta:
@@ -150,7 +171,8 @@ def _register(perms, model):
 
     perm_model = type(name, (models.Model,), fields)
     permission_map[model] = perm_model
-    permissions_for_model[model] = perms
+    permissions_for_model[model] = params['perms']
+    params_for_model[model] = params
     return perm_model
 
 
@@ -184,7 +206,30 @@ if settings.DEBUG:
         parent = models.ForeignKey(TestModel, null=True)
     class TestModelChildChild(models.Model):
         parent = models.ForeignKey(TestModelChild, null=True)
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModel)
+        
+    TEST_MODEL_PARAMS = {
+        'perms' : {
+            'Perm1': {
+                'description':'The first permission',
+                'display':'Perm1'
+            },
+            'Perm2': {
+                'description':'The second permission',
+                'display':'Perm2'
+            },
+            'Perm3': {
+                'description':'The third permission',
+                'display':'Perm3'
+            },
+            'Perm4': {
+                'description':'The fourth permission',
+                'display':'Perm4'
+            }
+        },
+        'url':'test_model-detail',
+        'url-params':['name']
+    }
+    register(TEST_MODEL_PARAMS, TestModel)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
 

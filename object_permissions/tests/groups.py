@@ -15,7 +15,7 @@ __all__ = ('TestGroups','TestGroupViews')
 
 
 class TestGroups(TestCase):
-    perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
+    perms = set(['Perm1', 'Perm2', 'Perm3', 'Perm4'])
     
     def setUp(self):
         self.tearDown()
@@ -65,7 +65,7 @@ class TestGroups(TestCase):
     
     def test_permissions(self):
         """ Verify all model perms are created """
-        self.assertEqual(['admin'], get_model_perms(Group))
+        self.assert_('admin' in get_model_perms(Group))
     
     def test_grant_group_permissions(self):
         """
@@ -156,45 +156,45 @@ class TestGroups(TestCase):
         
         # revoke single perm
         group0.revoke('Perm1', object0)
-        self.assertEqual([u'Perm2', u'Perm3', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual(perms, group0.get_perms(object1))
-        self.assertEqual(perms, group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm3', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(perms, set(group0.get_perms(object1)))
+        self.assertEqual(perms, set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke a second perm
         group0.revoke('Perm3', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual(perms, group0.get_perms(object1))
-        self.assertEqual(perms, group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(perms, set(group0.get_perms(object1)))
+        self.assertEqual(perms, set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke from another object
         group0.revoke('Perm3', object1)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual(perms, group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(perms, set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke from another user
         group1.revoke('Perm4', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm3']), set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke perm user does not have
         group0.revoke('Perm1', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm3']), set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke perm that does not exist
         group0.revoke('DoesNotExist', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm3']), set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
     
     def test_revoke_all_group(self):
         """
@@ -216,21 +216,21 @@ class TestGroups(TestCase):
         
         revoke_all_group(group0, object0)
         self.assertEqual([], get_group_perms(group0, object0))
-        self.assertEqual(perms, get_group_perms(group0, object1))
-        self.assertEqual(perms, get_group_perms(group1, object0))
-        self.assertEqual(perms, get_group_perms(group1, object1))
+        self.assertEqual(perms, set(get_group_perms(group0, object1)))
+        self.assertEqual(perms, set(get_group_perms(group1, object0)))
+        self.assertEqual(perms, set(get_group_perms(group1, object1)))
         
         revoke_all_group(group0, object1)
         self.assertEqual([], get_group_perms(group0, object0))
         self.assertEqual([], get_group_perms(group0, object1))
-        self.assertEqual(perms, get_group_perms(group1, object0))
-        self.assertEqual(perms, get_group_perms(group1, object1))
+        self.assertEqual(perms, set(get_group_perms(group1, object0)))
+        self.assertEqual(perms, set(get_group_perms(group1, object1)))
         
         revoke_all_group(group1, object0)
         self.assertEqual([], get_group_perms(group0, object0))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
-        self.assertEqual(perms, get_group_perms(group1, object1))
+        self.assertEqual(perms, set(get_group_perms(group1, object1)))
         
         revoke_all_group(group1, object1)
         self.assertEqual([], get_group_perms(group0, object0))
@@ -245,23 +245,23 @@ class TestGroups(TestCase):
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
         perms1 = self.perms
-        perms2 = ['Perm1', 'Perm2']
-        perms3 = ['Perm2', 'Perm3']
+        perms2 = set(['Perm1', 'Perm2'])
+        perms3 = set(['Perm2', 'Perm3'])
         perms4 = []
         
         # grant single property
         set_group_perms(group0, perms1, object0)
-        self.assertEqual(perms1, get_group_perms(group0, object0))
+        self.assertEqual(perms1, set(get_group_perms(group0, object0)))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
         set_group_perms(group0, perms2, object0)
-        self.assertEqual(perms2, get_group_perms(group0, object0))
+        self.assertEqual(perms2, set(get_group_perms(group0, object0)))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
         set_group_perms(group0, perms3, object0)
-        self.assertEqual(perms3, get_group_perms(group0, object0))
+        self.assertEqual(perms3, set(get_group_perms(group0, object0)))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
@@ -274,13 +274,13 @@ class TestGroups(TestCase):
         
         set_group_perms(group0, perms2, object1)
         self.assertEqual(perms4, get_group_perms(group0, object0))
-        self.assertEqual(perms2, get_group_perms(group0, object1))
+        self.assertEqual(perms2, set(get_group_perms(group0, object1)))
         self.assertEqual([], get_group_perms(group1, object0))
         
         set_group_perms(group1, perms1, object0)
         self.assertEqual(perms4, get_group_perms(group0, object0))
-        self.assertEqual(perms2, get_group_perms(group0, object1))
-        self.assertEqual(perms1, get_group_perms(group1, object0))
+        self.assertEqual(perms2, set(get_group_perms(group0, object1)))
+        self.assertEqual(perms1, set(get_group_perms(group1, object0)))
     
     def test_has_perm(self):
         """
@@ -1004,7 +1004,7 @@ class TestGroups(TestCase):
 
 
 class TestGroupViews(TestCase):
-    perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
+    perms = ['Perm1', 'Perm2', 'Perm3', 'Perm4']
     
     def setUp(self):
         self.tearDown()

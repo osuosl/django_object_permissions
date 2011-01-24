@@ -8,7 +8,7 @@ from object_permissions.registration import TestModel, TestModelChild, \
 
 
 class TestModelPermissions(TestCase):
-    perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
+    perms = set(['Perm1', 'Perm2', 'Perm3', 'Perm4'])
 
     def setUp(self):
         self.tearDown()
@@ -43,6 +43,24 @@ class TestModelPermissions(TestCase):
 
     def test_trivial(self):
         pass
+
+    def test_registration(self):
+        """
+        Test that permissions were registered correctly
+        """
+        perms1 = get_model_perms(TestModel)
+        perms2 = get_model_perms(TestModelChild)
+        
+        self.assert_('Perm1' in perms1)
+        self.assert_('Perm2' in perms1)
+        self.assert_('Perm3' in perms1)
+        self.assert_('Perm4' in perms1)
+        
+        self.assert_(isinstance(perms2, (dict,)))
+        self.assert_('Perm1' in perms2)
+        self.assert_('Perm2' in perms2)
+        self.assert_('Perm3' in perms2)
+        self.assert_('Perm4' in perms2)
 
     def test_grant_user_permissions(self):
         """
@@ -128,45 +146,45 @@ class TestModelPermissions(TestCase):
         
         # revoke single perm
         revoke(user0, 'Perm1', object0)
-        self.assertEqual([u'Perm2', u'Perm3', u'Perm4'], get_user_perms(user0, object0))
-        self.assertEqual(perms, get_user_perms(user0, object1))
-        self.assertEqual(perms, get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(set(['Perm2', u'Perm3', 'Perm4']), set(get_user_perms(user0, object0)))
+        self.assertEqual(perms, set(get_user_perms(user0, object1)))
+        self.assertEqual(perms, set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         # revoke a second perm
         revoke(user0, 'Perm3', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], get_user_perms(user0, object0))
-        self.assertEqual(perms, get_user_perms(user0, object1))
-        self.assertEqual(perms, get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(get_user_perms(user0, object0)))
+        self.assertEqual(perms, set(get_user_perms(user0, object1)))
+        self.assertEqual(perms, set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         # revoke from another object
         revoke(user0, 'Perm3', object1)
-        self.assertEqual([u'Perm2', u'Perm4'], get_user_perms(user0, object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], get_user_perms(user0, object1))
-        self.assertEqual(perms, get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(get_user_perms(user0, object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(get_user_perms(user0, object1)))
+        self.assertEqual(perms, set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         # revoke from another user
         revoke(user1, 'Perm4', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], get_user_perms(user0, object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], get_user_perms(user0, object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(get_user_perms(user0, object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(get_user_perms(user0, object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', u'Perm3']), set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         # revoke perm user does not have
         revoke(user0, 'Perm1', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], get_user_perms(user0, object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], get_user_perms(user0, object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(get_user_perms(user0, object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(get_user_perms(user0, object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', u'Perm3']), set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         # revoke perm that does not exist
         revoke(user0, 'DoesNotExist', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], get_user_perms(user0, object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], get_user_perms(user0, object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(get_user_perms(user0, object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(get_user_perms(user0, object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', u'Perm3']), set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
     
     def test_revoke_all(self):
         """
@@ -185,21 +203,21 @@ class TestModelPermissions(TestCase):
         
         revoke_all(user0, object0)
         self.assertEqual([], get_user_perms(user0, object0))
-        self.assertEqual(perms, get_user_perms(user0, object1))
-        self.assertEqual(perms, get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(perms, set(get_user_perms(user0, object1)))
+        self.assertEqual(perms, set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         revoke_all(user0, object1)
         self.assertEqual([], get_user_perms(user0, object0))
         self.assertEqual([], get_user_perms(user0, object1))
-        self.assertEqual(perms, get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(perms, set(get_user_perms(user1, object0)))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         revoke_all(user1, object0)
         self.assertEqual([], get_user_perms(user0, object0))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
-        self.assertEqual(perms, get_user_perms(user1, object1))
+        self.assertEqual(perms, set(get_user_perms(user1, object1)))
         
         revoke_all(user1, object1)
         self.assertEqual([], get_user_perms(user0, object0))
@@ -217,23 +235,23 @@ class TestModelPermissions(TestCase):
         object1 = self.object1
         
         perms1 = self.perms
-        perms2 = ['Perm1', 'Perm2']
-        perms3 = ['Perm2', 'Perm3']
+        perms2 = set(['Perm1', 'Perm2'])
+        perms3 = set(['Perm2', 'Perm3'])
         perms4 = []
 
         # grant single property
         set_user_perms(user0, perms1, object0)
-        self.assertEqual(perms1, get_user_perms(user0, object0))
+        self.assertEqual(perms1, set(get_user_perms(user0, object0)))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         
         set_user_perms(user0, perms2, object0)
-        self.assertEqual(perms2, get_user_perms(user0, object0))
+        self.assertEqual(perms2, set(get_user_perms(user0, object0)))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         
         set_user_perms(user0, perms3, object0)
-        self.assertEqual(perms3, get_user_perms(user0, object0))
+        self.assertEqual(perms3, set(get_user_perms(user0, object0)))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         
@@ -246,13 +264,13 @@ class TestModelPermissions(TestCase):
         
         set_user_perms(user0, perms2, object1)
         self.assertEqual(perms4, get_user_perms(user0, object0))
-        self.assertEqual(perms2, get_user_perms(user0, object1))
+        self.assertEqual(perms2, set(get_user_perms(user0, object1)))
         self.assertEqual([], get_user_perms(user1, object0))
         
         set_user_perms(user1, perms1, object0)
         self.assertEqual(perms4, get_user_perms(user0, object0))
-        self.assertEqual(perms2, get_user_perms(user0, object1))
-        self.assertEqual(perms1, get_user_perms(user1, object0))
+        self.assertEqual(perms2, set(get_user_perms(user0, object1)))
+        self.assertEqual(perms1, set(get_user_perms(user1, object0)))
     
     def test_has_perm(self):
         """
@@ -462,37 +480,37 @@ class TestModelPermissions(TestCase):
         
         # grant single property
         grant(user0, 'Perm1', object0)
-        self.assertEqual([u'Perm1'], get_user_perms(user0, object0))
+        self.assertEqual(['Perm1'], get_user_perms(user0, object0))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
         
         # grant property again
         grant(user0, 'Perm1', object0)
-        self.assertEqual([u'Perm1'], get_user_perms(user0, object0))
+        self.assertEqual(['Perm1'], get_user_perms(user0, object0))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
         
         # grant second property
         grant(user0, 'Perm2', object0)
-        self.assertEqual([u'Perm1', u'Perm2'], get_user_perms(user0, object0))
+        self.assertEqual(set(['Perm1', 'Perm2']), set(get_user_perms(user0, object0)))
         self.assertEqual([], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
         
         # grant property to another object
         grant(user0, 'Perm2', object1)
-        self.assertEqual([u'Perm1', u'Perm2'], get_user_perms(user0, object0))
-        self.assertEqual([u'Perm2'], get_user_perms(user0, object1))
+        self.assertEqual(set(['Perm1', 'Perm2']), set(get_user_perms(user0, object0)))
+        self.assertEqual(['Perm2'], get_user_perms(user0, object1))
         self.assertEqual([], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
         
         # grant perms to other user
         grant(user1, 'Perm3', object0)
-        self.assertEqual([u'Perm1', u'Perm2'], get_user_perms(user0, object0))
-        self.assertEqual([u'Perm2'], get_user_perms(user0, object1))
-        self.assertEqual([u'Perm3'], get_user_perms(user1, object0))
+        self.assertEqual(set(['Perm1', 'Perm2']), set(get_user_perms(user0, object0)))
+        self.assertEqual(['Perm2'], get_user_perms(user0, object1))
+        self.assertEqual(['Perm3'], get_user_perms(user1, object0))
         self.assertEqual([], get_user_perms(user1, object1))
     
     def test_get_objects_any_perms(self):
