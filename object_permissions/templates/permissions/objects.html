@@ -1,0 +1,24 @@
+{% load object_permission_tags %}
+
+<style>
+    table.permissions {margin-bottom:25px !important;}
+    table.permissions td, table.permissions th {text-align:left !important;}
+    table.permissions td.obj {color:black; width:200px;}
+    table.permissions td.perms {color:#555;}
+</style>
+
+{% for cls, objs in perm_dict.items %}
+    <table class="permissions">
+        <tr><th colspan="100%">{{cls|class_name}}</th></tr>
+        {% for obj in objs %}
+            <tr>
+                <td class="obj">{{obj}}</td>
+                <td class="perms">
+                    {% for permission in persona|permissions:obj %}
+                        {{permission}}{%if not forloop.last%}, {%endif%}
+                    {% endfor %}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endfor %}

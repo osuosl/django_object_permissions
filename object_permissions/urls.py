@@ -11,6 +11,12 @@ urlpatterns = patterns('object_permissions.views.groups',
     url(r'^group/(?P<id>\d+)/user/remove/?$','remove_user', name="usergroup-remove-user"),
     url(r'^group/(?P<id>\d+)/permissions/?$','user_permissions', name="usergroup-permissions"),
     url(r'^group/(?P<id>\d+)/permissions/user/(?P<user_id>\d+)/?$','user_permissions', name="group-user-permissions"),
+    url(r'^group/(?P<id>\d+)/permissions/all/?$','all_permissions', name="group-all-permissions"),
+)
+
+urlpatterns += patterns('object_permissions.views.permissions',
+    # Users
+    url(r'^user/(?P<id>\d+)/permissions/all/?$','all_permissions', name="user-all-permissions"),
 )
 
 #The following is used to serve up local media files like images

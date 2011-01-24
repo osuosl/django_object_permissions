@@ -3,7 +3,7 @@ import json
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 from django.utils.safestring import SafeString
@@ -227,3 +227,33 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
                 {'form':form, 'object':obj, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
                context_instance=RequestContext(request))
+
+
+@login_required
+def all_permissions(request, id, template="permissions/objects.html"):
+    """
+    Generic view for displaying permissions on all objects.
+    
+    @param id: id of user
+    @param template: template to render the results with, default is
+    permissions/objects.html
+    """
+    user = request.user
+    
+    if not (user.is_superuser or id==user.pk):
+        return HttpResponseForbidden('You do not have sufficient privileges')
+    
+    if user.is_superuser:
+        user = get_object_or_404(User, pk=id)
+    
+    perm_dict = user.get_all_objects_any_perms(groups=False)
+    
+    try:
+        del perm_dict[Group]
+    except KeyError:
+        pass
+    
+    return render_to_response(template, \
+            {'persona':user, 'perm_dict':perm_dict}, \
+        context_instance=RequestContext(request),
+    )

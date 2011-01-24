@@ -1618,3 +1618,40 @@ class TestGroupViews(TestCase):
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEqual([], group1.get_perms(group))
+    
+    def test_permissions_all(self):
+        """ tests groups.permissions_all() """
+        user = self.user
+        group = self.test_save()
+        group.user_set.add(user)
+        group1 = self.test_save('other_group')
+        
+        url = '/group/%s/permissions/all'
+        c = Client()
+        
+        # anonymous user
+        response = c.get(url % group.pk, follow=True)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'registration/login.html')
+        
+        # unauthorized user - wrong group
+        self.assert_(c.login(username=user.username, password='secret'))
+        response = c.get(url % group1.pk)
+        self.assertEqual(403, response.status_code)
+        
+        # unknown group
+        response = c.get(url % 123456)
+        self.assertEqual(404, response.status_code)
+        
+        # authorized user - group member
+        self.assert_(c.login(username=user.username, password='secret'))
+        response = c.get(url % group.pk)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'permissions/objects.html')
+        
+        # superuser
+        user.is_superuser = True
+        user.save()
+        response = c.get(url % group1.pk)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'permissions/objects.html')

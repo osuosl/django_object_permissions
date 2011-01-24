@@ -1,6 +1,7 @@
 
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
+from django.test.client import Client
 
 from object_permissions import *
 from object_permissions.registration import TestModel, TestModelChild, \
@@ -996,3 +997,51 @@ class TestModelPermissions(TestCase):
         
         # perm on group, checking groups
         self.assert_(user_has_all_perms(user0, object0, ['Perm3']))
+
+
+class TestPermissionViews(TestCase):
+    """ tests for user specific test views """
+    
+    def setUp(self):
+        self.tearDown()
+        
+        
+        user0 = User(id=2, username='tester0')
+        user0.set_password('secret')
+        user0.save()
+        user1 = User(id=3, username='tester1')
+        user1.set_password('secret')
+        user1.save()
+        
+        d = globals()
+        d['c'] = Client()
+        d['user0'] = user0
+        d['user1'] = user1
+    
+    def tearDown(self):
+        User.objects.all().delete()
+    
+    def test_permissions_all(self):
+        """ tests view for returning all permissions across all objects """
+        url = '/user/%s/permissions/all'
+        
+        # anonymous user
+        response = c.get(url % user1.pk, follow=True)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'registration/login.html')
+        
+        # unauthorized user
+        self.assert_(c.login(username=user0.username, password='secret'))
+        response = c.get(url % user1.pk)
+        self.assertEqual(403, response.status_code)
+        
+        # unknown user
+        user0.is_superuser = True
+        user0.save()
+        response = c.get(url % 123456)
+        self.assertEqual(404, response.status_code)
+        
+        # superuser
+        response = c.get(url % user1.pk)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'permissions/objects.html')

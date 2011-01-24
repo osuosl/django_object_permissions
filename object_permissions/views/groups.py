@@ -239,3 +239,31 @@ def user_permissions(request, id, user_id=None):
                      'url':reverse('usergroup-permissions', args=[group.id])
                      }, \
                     context_instance=RequestContext(request))
+    
+
+@login_required
+def all_permissions(request, id, template='permissions/objects.html' ):
+    """
+    Generic view for displaying permissions on all objects.
+    
+    @param id: id of group
+    @param template: template to render the results with, default is
+    permissions/objects.html
+    """
+    user = request.user
+    group = get_object_or_404(Group, pk=id)
+    
+    if not (user.is_superuser or group.user_set.filter(pk=user.pk).exists()):
+        return HttpResponseForbidden('You do not have sufficient privileges')
+    
+    perm_dict = group.get_all_objects_any_perms()
+    
+    try:
+        del perm_dict[Group]
+    except KeyError:
+        pass
+    
+    return render_to_response(template, \
+            {'persona':group, 'perm_dict':perm_dict}, \
+        context_instance=RequestContext(request),
+    )
