@@ -642,7 +642,7 @@ def group_has_any_perms(group, obj, perms=None, **related):
         
         # optionally filter by instance
         if instance:
-            q &= Q(pk=obj.pk)
+            q &= Q(**{'%s_gperms__obj'%name:obj})
         
         # optionally add perms
         if perms:
