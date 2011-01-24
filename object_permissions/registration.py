@@ -908,63 +908,63 @@ def get_users_any(obj, perms=None, groups=True, **related):
     @param groups - include users with permissions via groups
     """
     model = obj.__class__
-    permissions = permission_map[model]
     name = model.__name__
+    try:
+        permissions = permission_map[model]
+    except KeyError:
+        return False
 
-    # base query is any permissions on object
-    q = Q(**{"%s_uperms__obj"%name:obj})
-
+    # start by filtering instance
+    q = Q(**{'%s_uperms__obj' % name:obj})
+    
     # optionally add perms
     if perms:
         # create Q clauses out of perms and OR them all together
-        perm_table = "%s_uperms__%%s" % name
-        q &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+        table = '%s_uperms__%%s' % name
+        q &= reduce(or_, (Q(**{table % perm:True}) for perm in perms))
+    
+    # optionally add groups
+    if groups:
+        clause = Q(**{'groups__%s_gperms__obj'%name:obj})
+        #optionally add perms
+        if perms:
+            perm_table = 'groups__%s_gperms__%%s' % name
+            clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+        q |= clause
         
-        if groups:
-            # handle groups by checking perms for any group users are in.
-            #
-            # Do this by creating separate user and group clauses that check
-            # the right object with the right set of perms.  Combine the clauses
-            # together like so:
-            #     (obj AND perms) OR (group_obj AND group perms)
-            
-            group_perm_table = "groups__%s_gperms__%%s" % name
-            group_obj_table = "groups__%s_gperms__obj" % name
-            gperms = reduce(or_, (Q(**{group_perm_table % perm:True}) \
-                                  for perm in perms))
-            q |= (Q(**{group_obj_table:obj}) & gperms)
-    
-    elif groups:
-        # handle groups with *any* perm by adding a clause that checks for the
-        # object via the groups table.  this give inherent group membership
-        # check.
-        q |= Q(**{"groups__%s_gperms__obj" % name:obj})
-    
-    # related fields are built as sub-clauses for each related field.  To follow
-    # the relation we must add a clause that follows the relationship path from
-    # the object to its related models.  We must also join on the user to the
-    # resulting permissions table so that the user rows are matched.
+    # add related models - has any queries the related name is a Class name
+    # with an optional path appended at the end.  The Class is used to join
+    # against the additional perm table, and optionally through to the
+    # original item.
     if related:
-        for field in related:
-            # join object through related models perm table
-            clause = Q(**{'%s__obj__%s__operms__obj'%(name, field):obj})
+        for field, perms in related.items():
+            field, chaff, path = field.partition('__')
             
-            # add user through
-            clause = Q(pk=F('%s__obj__%s__operms__user_id' % name))
-            
-            # optionally add groups, join through groups table
-            if groups:
-                clause |= Q(pk=F('%s__obj__%s__operms__group__user' % name))
+            # start clause by instance
+            # we must have a path to map this class to the related instance
+            if path == '':
+                raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+            clause = Q(**{'%s_uperms__obj__%s'%(field, path):obj})
             
             # optionally add perms
-            perms = related[field]
             if perms:
-                perm_table = '%s__obj__%s__operms__%%s' % (name, field)
+                # create Q clauses out of perms and OR them all together
+                perm_table = '%s_uperms__%%s' % field
                 clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
             
-            # add finished query
+            # optionally add groups
+            if groups:
+                group_clause = Q(**{'groups__%s_gperms__obj__%s'%(field, path):obj})
+                #optionally add perms (group)
+                if perms:
+                    perm_table = 'groups__%s_gperms__%%s' % field
+                    group_clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+                clause |= group_clause
+            
             q |= clause
-
+    
+    #print str(User.objects.filter(q).distinct().query)
+    
     return User.objects.filter(q).distinct()
 
 

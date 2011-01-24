@@ -380,6 +380,65 @@ class TestModelPermissions(TestCase):
         self.assert_(user0 in get_users_any(object0, ['Perm1','Perm2'], groups=False))
         self.assertFalse(user0 in get_users_any(object1, ['Perm1','Perm3'], groups=False))
     
+    def test_get_users_any_related(self):
+        """ Tests get_users_all with related models """
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        user0.grant('Perm1', object0)
+        user1.grant('Perm1', object0)
+        user0.grant('Perm1', object1)
+        user0.grant('Perm2', object1)
+        
+        user0.grant('Perm1', child0)
+        user0.grant('Perm1', child1)
+        user0.grant('Perm2', child1)
+        user0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        query = get_users_any(child0, perms=['Perm1'], TestModel__child=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(user0 in query)
+        self.assert_(user1 in query)
+        
+        # related field with single perms - has parent but not child
+        query = get_users_any(child0, perms=['Perm4'], TestModel__child=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(user0 in query)
+        self.assert_(user1 in query)
+        
+        # related field with single perms - has child but not parent
+        query = get_users_any(child0, perms=['Perm1'], TestModel__child=['Perm4'])
+        self.assertEqual(1, len(query))
+        self.assert_(user0 in query)
+        self.assertFalse(user1 in query)
+        
+        # related field with multiple perms
+        
+        print str(get_users_any(child1, perms=['Perm1'], TestModel__child=['Perm2']).query)
+        print '------'
+        print str(get_users_any(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2']).query)
+        
+        query = get_users_any(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2'])
+        self.assertEqual(1, len(query))
+        self.assert_(user0 in query)
+        self.assertFalse(user1 in query)
+        
+        # multiple relations
+        query = get_users_any(childchild, perms=['Perm1'], TestModelChild__child=['Perm1'], TestModel__child__child=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(user0 in query)
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(get_users_any(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
+    
     def test_get_users_all(self):
         """
         Tests retrieving list of users with perms on an object
