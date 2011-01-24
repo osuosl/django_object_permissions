@@ -720,55 +720,59 @@ def user_has_all_perms(user, obj, perms, groups=True, **related):
         # base matches object
         q = Q(pk=user.pk)
         
-        # optionally match instance
-        if instance:
-            q &= Q(**{'%s_uperms__obj'%name:obj})
-        
         # create base query requiring all permissions
-        perm_clauses = {}
+        # optionally match instance
+        uperm_clause = {'%s_uperms__obj'%name:obj} if instance else {}
         for perm in perms:
             table = '%s_uperms__%%s' % name
-            perm_clauses[table%perm] = True
-        q &= Q(**perm_clauses)
+            uperm_clause[table%perm] = True
         
         # optionally check groups
         if groups:
             table = 'groups__%s_gperms__%%s' % name
-            perm_clause = {'groups__%s_gperms__obj' % name: obj} if instance else {}
+            gperm_clause = {'groups__%s_gperms__obj' % name: obj} if instance else {}
             for perm in perms:
-                perm_clause[table % perm] = True
-            q |= Q(**perm_clause)
+                gperm_clause[table % perm] = True
+            q &= (Q(**gperm_clause) | Q(**uperm_clause))
+        else:
+            q &= Q(**uperm_clause)
         
         # optionally add related fields
         for field, perms in related.items():
             field, chaff, path = field.partition('__')
-            table = '%s_uperms' % field
+            
+            if path == '':
+                # we must have a path to map this class to the related instance
+                raise InvalidQueryException('has_all requires query paths for related models')
             
             # build base clause off object
             if instance:
-                if path == '':
-                    # we must have a path to map this class to the related instance
-                    raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
-                q &= Q(**{'%s__obj__%s'%(table, path):obj})
+                clause = {'%s_uperms__obj__%s'%(field, path):obj}
+            else:
+                clause = {'%s_uperms__obj'%name:F('%s_uperms__obj__%s'%(field, path))}
             
             # add all perms
-            table = '%s__%%s' % table
-            perm_clause = {}
+            table = '%s_uperms__%%s' % field
             for perm in perms:
-                perm_clause[table % perm] = True
-            q &= Q(**perm_clause)
+                clause[table % perm] = True
+            uperm_clause = Q(**clause)
             
             # optionally add groups
             if groups:
                 table = 'groups__%s_gperms__%%s' % field
                 if instance:
-                    perm_clause = {'groups__%s_gperms__obj' % field: obj}
+                    gperm_clause = {'groups__%s_gperms__obj' % field: obj}
                 else:
-                    perm_clause = {}
+                    gperm_clause = {'%s_uperms__obj'%name:F('groups__%s_gperms__obj__%s'%(field, path))}
                 for perm in perms:
-                    perm_clause[table % perm] = True
-                q |= Q(**perm_clause)
-        
+                    gperm_clause[table % perm] = True
+                q |= (Q(**gperm_clause) | uperm_clause)
+            else:
+                q &= uperm_clause
+            
+            
+        #print '-----'
+        #print str(User.objects.filter(q).query)
         return User.objects.filter(q).exists()
 
     else:
