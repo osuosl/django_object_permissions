@@ -72,7 +72,7 @@ def list(request):
 
 
 @login_required
-def detail(request, id=None):
+def detail(request, id=None, template='group/detail.html'):
     """
     Display group details
     
@@ -86,8 +86,9 @@ def detail(request, id=None):
     
     method = request.method
     if method == 'GET':
-        return render_to_response("group/detail.html",
+        return render_to_response(template,
                             {'object':group,
+                             'group':group,
                              'users':group.user_set.all(),
                              'url':reverse('usergroup-permissions', args=[id])
                              }, \
