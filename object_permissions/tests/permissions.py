@@ -937,6 +937,65 @@ class TestModelPermissions(TestCase):
         self.assertTrue(user_has_any_perms(user0, object0, groups=True))
         self.assertTrue(user_has_any_perms(user0, object0, ['Perm1', 'Perm3']))
 
+    def test_user_has_any_perm_related(self):
+        """
+        Test user_has_any_perms with related model queries
+        """
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child1)
+        childchild.save()
+        
+        user0.grant('Perm1', object0)
+        user1.grant('Perm1', object0)
+        user0.grant('Perm1', object1)
+        user0.grant('Perm2', object1)
+        user0.grant('Perm4', object2)
+        
+        user0.grant('Perm1', child0)
+        user0.grant('Perm1', child1)
+        user0.grant('Perm2', child1)
+        user0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        self.assert_(user0.has_any_perms(child0, perms=['Perm1'], TestModel__child=['Perm1']))
+        self.assertTrue(user1.has_any_perms(child0, perms=['Perm1'], TestModel__child=['Perm1']))
+        
+        # related field with single perms - has parent but not child
+        self.assertTrue(user0.has_any_perms(child0, perms=['Perm4'], TestModel__child=['Perm1']))
+        self.assertTrue(user1.has_any_perms(child0, perms=['Perm4'], TestModel__child=['Perm1']))
+        
+        # related field with single perms - has child but not parent
+        self.assertTrue(user0.has_any_perms(child0, perms=['Perm1'], TestModel__child=['Perm4']))
+        
+        # has neither
+        self.assertFalse(user1.has_any_perms(child0, perms=['Perm1'], TestModel__child=['Perm4']))
+        
+        # related field with multiple perms
+        print '-------------'
+        self.assert_(user0.has_any_perms(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2']))
+        print '-------------'
+        self.assertFalse(user1.has_any_perms(child1, perms=['Perm1'], TestModel__child=['Perm1','Perm2']))
+        
+        # multiple relations
+        self.assert_(user0.has_any_perms(childchild, perms=['Perm1'], TestModel__child=['Perm1'], TestModel__child__child=['Perm1']))
+        self.assertTrue(user1.has_any_perms(childchild, perms=['Perm1'], TestModel__child=['Perm1'], TestModel__child__child=['Perm1']))
+        self.assertFalse(user1.has_any_perms(child0, perms=['Perm1'], TestModel__child=['Perm4'], TestModel__child__child=['Perm4']))
+        
+        # test relationship where group has permission, but on the wrong instance
+        self.assertFalse(user0.has_any_perms(child0, perms=['Perm4'], TestModel__child=['Perm4']))
+        
+        # if querying an instance than relationship path is required
+        def fail():
+            self.assert_(user0.has_any_perms(child0, perms=['Perm1'], TestModel=['Perm1']))
+        self.assertRaises(InvalidQueryException, fail)
+
     def test_has_all_on_model(self):
         """
         Test checking if a user has perms on any instance of the model

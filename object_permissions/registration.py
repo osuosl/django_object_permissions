@@ -527,26 +527,99 @@ def user_has_any_perms(user, obj, perms=None, groups=True, **related):
     """
     instance = isinstance(obj, (Model,))
     model = obj.__class__ if instance else obj
+    name = model.__name__
     try:
         permissions = permission_map[model]
     except KeyError:
         return False
 
-    # create perm clause, or implicit any
-    if perms:
-        # create Q clauses out of perms and OR them all together
-        q = reduce(or_, (Q(**{perm:True}) for perm in perms))
-        base = permissions.objects.filter(q)
-    else:
-        base = permissions.objects
+    # XXX when performing related query for has_any, start with the group
+    # table, this allows us to join the different model tables together
+    if related:
+        # start clause by matching group
+        q = Q(**{'%s_uperms__user' % name:user})
+        
+        # optionally filter by instance
+        if instance:
+            q &= Q(**{'%s_uperms__obj' % name:obj})
+        
+        # optionally add perms
+        if perms:
+            # create Q clauses out of perms and OR them all together
+            table = '%s_uperms__%%s' % name
+            q &= reduce(or_, (Q(**{table % perm:True}) for perm in perms))
+        
+        # optionally add groups
+        if groups:
+            clause = Q(**{'groups__%s_gperms__obj'%name:obj})
+            #optionally add perms
+            if perms:
+                perm_table = 'groups__%s_gperms__%%s' % name
+                clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+            q |= clause
+        
+        # add related models - has any queries the related name is a Class name
+        # with an optional path appended at the end.  The Class is used to join
+        # against the additional perm table, and optionally through to the
+        # original item.
+        for field, perms in related.items():
+            field, chaff, path = field.partition('__')
+            
+            # start clause by matching user
+            clause = Q(**{'%s_uperms__user'%field:user})
+            
+            if instance:
+                # optionally join object using supplied path
+                if path != '':
+                    clause &= Q(**{'%s_uperms__obj__%s'%(field, path):obj})
+                else:
+                    # we must have a path to map this class to the related instance
+                    raise InvalidQueryException('has_any requires query paths for related models when checking permissions on a specific instance')
+            
+            # optionally add perms
+            if perms:
+                # create Q clauses out of perms and OR them all together
+                perm_table = '%s_uperms__%%s' % field
+                clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+            
+            # optionally add groups
+            if groups:
+                group_clause = Q(**{'groups__%s_gperms__obj__%s'%(field, path):obj})
+                    
+                #optionally add perms (group)
+                if perms:
+                    perm_table = 'groups__%s_gperms__%%s' % field
+                    group_clause &= reduce(or_, (Q(**{perm_table % perm:True}) for perm in perms))
+                clause |= group_clause
+            
+            q |= clause
+        
+        #print (User.objects.filter(q).query)
+        
+        return User.objects.filter(q).exists()
 
-    if groups:
-        base = base.filter(Q(user=user) | Q(group__user=user))
     else:
-        base = base.filter(user=user)
-
-    # select model or instance level query
-    return base.filter(obj=obj).exists() if instance else base.exists()
+        # standard query - query the perms table directly to avoid joins
+        # create perm clause, or implicit any
+        
+        # start query with group
+        q = Q(user=user)
+        
+        # optionally add groups
+        if groups:
+            q |= Q(group__user=user)
+        
+        # optionally filter by instance
+        if instance:
+            q &= Q(obj=obj)
+        
+        # optionally add perms
+        if perms:
+            # create Q clauses out of perms and OR them all together
+            q &= reduce(or_, (Q(**{perm:True}) for perm in perms))
+        
+        # select model or instance level query
+        return permissions.objects.filter(q).exists()
 
 
 def group_has_any_perms(group, obj, perms=None, **related):
