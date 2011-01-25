@@ -132,7 +132,8 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
         return data
 
 
-def view_users(request, object_, url, template='permissions/users.html'):
+def view_users(request, object_, url, \
+               template='object_permissions/permissions/users.html'):
     """
     Generic view for rendering a list of Users who have permissions on an
     object.
@@ -158,8 +159,8 @@ def view_users(request, object_, url, template='permissions/users.html'):
 
 def view_permissions(request, obj, url, user_id=None, group_id=None,
                 key='id',
-                user_template='permissions/user_row.html',
-                group_template='permissions/group_row.html'
+                user_template='object_permissions/permissions/user_row.html',
+                group_template='object_permissions/permissions/group_row.html'
                 ):
     """
     Update a User or Group permissions on an object.  This is a generic view
@@ -223,14 +224,15 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
     else:
         data = {}
     form = ObjectPermissionFormNewUsers(obj, data)
-    return render_to_response('permissions/form.html', \
+    return render_to_response('object_permissions/permissions/form.html', \
                 {'form':form, 'object':obj, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
                context_instance=RequestContext(request))
 
 
 @login_required
-def all_permissions(request, id, template="permissions/objects.html"):
+def all_permissions(request, id, \
+                    template="object_permissions/permissions/objects.html"):
     """
     Generic view for displaying permissions on all objects.
     

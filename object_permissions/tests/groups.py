@@ -1063,7 +1063,7 @@ class TestGroupViews(TestCase):
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/list.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/list.html')
         groups = response.context['groups']
         self.assert_(group in groups)
         self.assert_(group1 in groups)
@@ -1077,7 +1077,7 @@ class TestGroupViews(TestCase):
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/list.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/list.html')
         groups = response.context['groups']
         self.assert_(group in groups)
         self.assert_(group0 in groups)
@@ -1118,13 +1118,13 @@ class TestGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/detail.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/detail.html')
         
         # authorized (superuser)
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/detail.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/detail.html')
 
     def test_view_edit(self):
         user = self.user
@@ -1159,7 +1159,7 @@ class TestGroupViews(TestCase):
         response = c.post(url % group.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # get form - authorized (superuser)
         user.revoke('admin', group)
@@ -1168,7 +1168,7 @@ class TestGroupViews(TestCase):
         response = c.post(url % group.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # missing name
         data = {'id':group.id}
@@ -1188,7 +1188,7 @@ class TestGroupViews(TestCase):
         response = c.post(url % group.id, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/group_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/group_row.html')
         group = Group.objects.get(id=group.id)
         self.assertEqual('EDITED_NAME', group.name)
         
@@ -1230,14 +1230,14 @@ class TestGroupViews(TestCase):
         response = c.post(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # missing name
         data = {'id':group.id}
         response = c.post(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # setup signal
         self.signal_editor = self.signal_group = None
@@ -1251,7 +1251,7 @@ class TestGroupViews(TestCase):
         response = c.post(url, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/group_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/group_row.html')
         self.assert_(Group.objects.filter(name='ADD_NEW_GROUP').exists())
         
         # check signal set properties
@@ -1349,7 +1349,7 @@ class TestGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/add_user.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/add_user.html')
         
         # authorized get (superuser)
         revoke(user, 'admin', group)
@@ -1358,7 +1358,7 @@ class TestGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/add_user.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/add_user.html')
         
         # missing user id
         response = c.post(url % args)
@@ -1383,7 +1383,7 @@ class TestGroupViews(TestCase):
         response = c.post(url % args, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/user_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assert_(group.user_set.filter(id=user.id).exists())
         
         # check signal fired
@@ -1529,7 +1529,7 @@ class TestGroupViews(TestCase):
         response = c.get(url % args, {'user':user.id})
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/form.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
         
         # authorized post (superuser)
         revoke(user, 'admin', group)
@@ -1538,7 +1538,7 @@ class TestGroupViews(TestCase):
         response = c.get(url % args, {'user':user.id})
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/form.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
     
         # invalid user (GET)
         response = c.get(url % (group.id, -1))
@@ -1589,7 +1589,7 @@ class TestGroupViews(TestCase):
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/user_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assert_(user.has_perm('admin', group))
         self.assertEqual(['admin'], get_user_perms(user, group))
         
@@ -1610,7 +1610,7 @@ class TestGroupViews(TestCase):
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/user_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assertEqual(['admin'], group1.get_perms(group))
         
         # valid post no permissions group
@@ -1647,11 +1647,11 @@ class TestGroupViews(TestCase):
         self.assert_(c.login(username=user.username, password='secret'))
         response = c.get(url % group.pk)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'permissions/objects.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/objects.html')
         
         # superuser
         user.is_superuser = True
         user.save()
         response = c.get(url % group1.pk)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'permissions/objects.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/objects.html')

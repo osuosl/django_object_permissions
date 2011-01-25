@@ -66,13 +66,13 @@ def list(request):
         if not groups:
             return HttpResponseForbidden()
 
-    return render_to_response("group/list.html", \
+    return render_to_response("object_permissions/group/list.html", \
                               {'groups':groups}, \
                               context_instance=RequestContext(request)) 
 
 
 @login_required
-def detail(request, id=None, template='group/detail.html'):
+def detail(request, id=None, template='object_permissions/group/detail.html'):
     """
     Display group details
     
@@ -106,9 +106,10 @@ def detail(request, id=None, template='group/detail.html'):
                 else:
                     view_group_edited.send(sender=group, editor=user)
                     
-                return render_to_response("group/group_row.html", \
-                        {'group':group}, \
-                        context_instance=RequestContext(request))
+                return render_to_response( \
+                    "object_permissions/group/group_row.html", \
+                    {'group':group}, \
+                    context_instance=RequestContext(request))
             
             content = json.dumps(form.errors)
             return HttpResponse(content, mimetype='application/json')
@@ -116,7 +117,7 @@ def detail(request, id=None, template='group/detail.html'):
         else:
             form = GroupForm(instance=group)
         
-        return render_to_response("group/edit.html", \
+        return render_to_response("object_permissions/group/edit.html", \
                         {'group':group, 'form':form}, \
                         context_instance=RequestContext(request))
     
@@ -152,7 +153,8 @@ def add_user(request, id):
             
             # return html for new user row
             url = reverse('usergroup-permissions', args=[id])
-            return render_to_response("permissions/user_row.html", \
+            return render_to_response( \
+                        "object_permissions/permissions/user_row.html", \
                         {'user':user, 'object':group, 'url':url})
         
         # error in form return ajax response
@@ -160,7 +162,7 @@ def add_user(request, id):
         return HttpResponse(content, mimetype='application/json')
 
     form = AddUserForm()
-    return render_to_response("group/add_user.html",\
+    return render_to_response("object_permissions/group/add_user.html",\
                               {'form':form, 'group':group}, \
                               context_instance=RequestContext(request))
 
@@ -222,8 +224,9 @@ def user_permissions(request, id, user_id=None):
             
             # return html to replace existing user row
             url = reverse('usergroup-permissions', args=[id])
-            return render_to_response("permissions/user_row.html", \
-                            {'object':group, 'user':user, 'url':url})
+            return render_to_response( \
+                "object_permissions/permissions/user_row.html", \
+                {'object':group, 'user':user, 'url':url})
         
         # error in form return ajax response
         content = json.dumps(form.errors)
@@ -233,7 +236,7 @@ def user_permissions(request, id, user_id=None):
     form_user = get_object_or_404(User, id=user_id)
     data = {'permissions':get_user_perms(form_user, group), 'user':user_id}
     form = ObjectPermissionForm(group, data)
-    return render_to_response("permissions/form.html", \
+    return render_to_response("object_permissions/permissions/form.html", \
                     {
                     'form':form,
                      'user_id':user_id,
@@ -243,7 +246,8 @@ def user_permissions(request, id, user_id=None):
     
 
 @login_required
-def all_permissions(request, id, template='permissions/objects.html' ):
+def all_permissions(request, id, \
+                    template='object_permissions/permissions/objects.html' ):
     """
     Generic view for displaying permissions on all objects.
     

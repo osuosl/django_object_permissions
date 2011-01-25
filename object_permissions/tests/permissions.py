@@ -1044,4 +1044,4 @@ class TestPermissionViews(TestCase):
         # superuser
         response = c.get(url % user1.pk)
         self.assertEqual(200, response.status_code)
-        self.assertTemplateUsed(response, 'permissions/objects.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/objects.html')

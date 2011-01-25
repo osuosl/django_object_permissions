@@ -13,9 +13,9 @@
         <th></th>
     </tr>
     {% for user in users %}
-        {%block user_row%}{% include "permissions/user_row.html" %}{%endblock%}
+        {%block user_row%}{% include "object_permissions/permissions/user_row.html" %}{%endblock%}
     {% endfor %}
     {% for group in groups %}
-        {%block group_row%}{% include "permissions/group_row.html" %}{%endblock%}
+        {%block group_row%}{% include "object_permissions/permissions/group_row.html" %}{%endblock%}
     {% endfor %}
 </table>
