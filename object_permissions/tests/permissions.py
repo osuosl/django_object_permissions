@@ -1065,10 +1065,11 @@ class TestObjectPermissionForm(TestCase):
         d['group'] = group
     
     def tearDown(self):
-        if 'user' in globals():
-            user.revoke_all(obj)
-        if 'group' in globals():
-            group.revoke_all(obj)
+        if 'obj' in globals():
+            if 'user' in globals():
+                user.revoke_all(obj)
+            if 'group' in globals():
+                group.revoke_all(obj)
         TestModel.objects.all().delete()
         TestModelChild.objects.all().delete()
         User.objects.all().delete()
