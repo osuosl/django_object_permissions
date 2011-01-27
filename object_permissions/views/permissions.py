@@ -118,7 +118,7 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
             old_perms = grantee.get_perms(self.object)
             if old_perms:
                 # not new, has perms already
-                data['new'] = True
+                data['new'] = False
                 
             elif not perms:
                 # new, doesn't have perms specified
@@ -127,7 +127,7 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
                 
             else:
                 # new, perms specified
-                data['new'] = False
+                data['new'] = True
         
         return data
 
