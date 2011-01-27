@@ -209,22 +209,21 @@ if settings.DEBUG:
         
     TEST_MODEL_PARAMS = {
         'perms' : {
+            # perm with both params
             'Perm1': {
                 'description':'The first permission',
-                'display':'Perm1'
+                'label':'Perm One'
             },
+            # perm with only description
             'Perm2': {
                 'description':'The second permission',
-                'display':'Perm2'
             },
+            # perm with only label
             'Perm3': {
-                'description':'The third permission',
-                'display':'Perm3'
+                'label':'Perm Three'
             },
-            'Perm4': {
-                'description':'The fourth permission',
-                'display':'Perm4'
-            }
+            # perm with no params
+            'Perm4': {}
         },
         'url':'test_model-detail',
         'url-params':['name']
