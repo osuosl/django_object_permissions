@@ -53,10 +53,10 @@ class ObjectPermissionForm(forms.Form):
                     text = '<strong>%s:</strong> <span class="perm_desc">%s</span>' % (params['label'], params['description'])
                     choices.append((perm, SafeString(text)))
                 elif 'label' in params:
-                    text = '</strong>%s</strong>' % params['label']
+                    text = '<strong>%s</strong>' % params['label']
                     choices.append((perm, SafeString(text)))
                 elif 'description' in params:
-                    text = '<strong>%s:</strong> %s' % (perm, params['description'])
+                    text = '<strong>%s:</strong> <span class="perm_desc">%s</span>' % (perm, params['description'])
                     choices.append((perm, SafeString(text)))
                 else:
                     choices.append((perm, perm))
