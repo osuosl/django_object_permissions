@@ -77,15 +77,14 @@
             $('.qtip').qtip('hide');
             html = $(responseText);
             id = html.attr('id')
-            $row = $('#users #' + id);
+            $row = $('#op_users #' + id);
             if ($row.length == 1) {
                 $row.replaceWith(html)
             } else {
-                $("#users").append(html);
+                $("#op_users").append(html);
             }
         }
     }
 </script>
 
-<h1>{{object.name}}</h1>
-{% include "permissions/table.html" %}
+{% include "object_permissions/permissions/table.html" %}
