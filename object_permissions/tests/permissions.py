@@ -1087,19 +1087,19 @@ class TestObjectPermissionForm(TestCase):
         
         perm, display = choice1
         self.assertEqual('Perm1', perm)
-        self.assertEqual(display, '<strong>Perm One:</strong> <span class="perm_desc">The first permission</span>')
+        self.assertEqual(display, {'label':'Perm One','description':'The first permission'})
         
         perm, display = choice2
         self.assertEqual('Perm2', perm)
-        self.assertEqual(display, '<strong>Perm2:</strong> <span class="perm_desc">The second permission</span>')
+        self.assertEqual(display, {'label':'Perm2','description':'The second permission'})
         
         perm, display = choice3
         self.assertEqual('Perm3', perm)
-        self.assertEqual(display, '<strong>Perm Three</strong>')
+        self.assertEqual(display, {'label':'Perm Three'})
         
         perm, display = choice4
         self.assertEqual('Perm4', perm)
-        self.assertEqual('Perm4', display)
+        self.assertEqual(display, {'label':'Perm4'})
     
     def test_choices_cache(self):
         """ tests that choices lists are cached """

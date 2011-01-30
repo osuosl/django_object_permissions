@@ -49,18 +49,10 @@ class ObjectPermissionForm(forms.Form):
             model_perms = get_model_perms(obj.__class__)
             
             for perm, params in model_perms.items():
-                if 'label' in params and 'description' in params:
-                    text = '<strong>%s:</strong> <span class="perm_desc">%s</span>' % (params['label'], params['description'])
-                    choices.append((perm, SafeString(text)))
-                elif 'label' in params:
-                    text = '<strong>%s</strong>' % params['label']
-                    choices.append((perm, SafeString(text)))
-                elif 'description' in params:
-                    text = '<strong>%s:</strong> <span class="perm_desc">%s</span>' % (perm, params['description'])
-                    choices.append((perm, SafeString(text)))
-                else:
-                    choices.append((perm, perm))
-                    
+                display = params.copy()
+                if 'label' not in display:
+                    display['label'] = perm
+                choices.append((perm, display))
             ObjectPermissionForm.choices[obj.__class__] = choices
             return choices
 
@@ -223,7 +215,9 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
                 'group':group_id}
     else:
         data = {}
+        
     form = ObjectPermissionFormNewUsers(obj, data)
+    
     return render_to_response('object_permissions/permissions/form.html', \
                 {'form':form, 'object':obj, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
