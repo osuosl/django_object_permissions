@@ -1,3 +1,4 @@
+.ajax_form label {font-weight:bold;}
 .ajax_form tr.group td {padding-bottom:10px;}
 .ajax_form tr.permission {
     border-top:1px solid #ddd;
