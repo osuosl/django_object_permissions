@@ -77,8 +77,8 @@ $(document).ready(function() {
                url: this.href,
                title: {text:'Permissions: ', button:'close'}
             },
-            position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
-            style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
+            position: {corner:{ target:"rightMiddle", tooltip:"leftMiddle"}},
+            style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'leftMiddle'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
             api:{onShow:function(){
