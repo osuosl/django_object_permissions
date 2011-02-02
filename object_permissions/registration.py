@@ -195,8 +195,8 @@ def _register_delayed(**kwargs):
 models.signals.post_syncdb.connect(_register_delayed)
 
 
-if settings.DEBUG:
-    # XXX Create test tables only when debug mode.  These models will be used in
+if settings.TESTING:
+    # XXX Create test tables only when TEST mode.  These models will be used in
     # various unittests.  This is used so that we do not alter any models used
     # in production
     from django.db import models
