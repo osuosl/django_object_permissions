@@ -19,7 +19,7 @@ $(document).ready(function() {
                title: {text:'Add User: ', button:'close'}
             },
             position: {  corner:{target:'center', tooltip:'center'}},
-            style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee'},
+            style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
             api:{onShow:function(){
@@ -78,7 +78,7 @@ $(document).ready(function() {
                title: {text:'Permissions: ', button:'close'}
             },
             position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
-            style: {name: 'dark', border:{radius:5}, width:300, background:'#eeeeee', tip: 'bottomMiddle'},
+            style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
             api:{onShow:function(){
@@ -94,7 +94,7 @@ function update(responseText, statusText, xhr, $form) {
         if (responseText == 1) {
             // 1 code means success but no more permissions
             $('.qtip').qtip('hide');
-            $("#users #" + html.attr('id')).remove();
+            $("#op_users #" + html.attr('id')).remove();
         } else {
             // parse errors
             errors = responseText
@@ -108,11 +108,11 @@ function update(responseText, statusText, xhr, $form) {
         $('.qtip').qtip('hide');
         html = $(responseText);
         id = html.attr('id')
-        $row = $('#users #' + id);
+        $row = $('#op_users #' + id);
         if ($row.length == 1) {
             $row.replaceWith(html);
         } else {
-            $("#users").append(html);
+            $("#op_users").append(html);
         }
     }
 }

@@ -22,3 +22,8 @@ def group_admin(user):
     Returns True or False based on if the user is an admin for any Groups
     """
     return user.is_superuser or user.has_any_perms(Group, ['admin'])
+
+
+@register.filter
+def class_name(cls):
+    return cls.__name__

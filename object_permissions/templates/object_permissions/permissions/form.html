@@ -1,0 +1,29 @@
+{% comment  %} Form for setting user permissions on an object {% endcomment %}
+<link rel="stylesheet" type="text/css" href="/object_permissions_media/css/form.css"/>
+<form class="ajax_form" method="post" action="{{url}}">
+    <ul id="errors"></ul>
+    <table>
+    {% if user_id or group_id %}
+        <input type="hidden" name="user" value="{{user_id|default:''}}"/>
+        <input type="hidden" name="group" value="{{group_id|default:''}}"/>
+    {% else %}
+        <tr><td>{{form.user.label}}</td><td>{{form.user}}</td></tr>
+        <tr class="group"><td>{{form.group.label}}</td><td>{{form.group}}</td></tr>
+    {% endif %}
+        {# Manually create permissions checkboxes so we can integrate it into the table #}
+        {% with form.data.permissions as data %}
+        {% for permission in form.fields.permissions.choices %}
+        <tr class="permission">
+            <td class="input">
+                <input id="id_permissions_{{forloop.counter0}}" name="permissions" type="checkbox" value="{{permission.0}}"
+                {%if permission.0 in data %}checked{%endif%}
+                />
+                <label for="id_permissions">{{permission.1.label}}{% if permission.1.description %}:{%endif%}</label>
+            </td>
+            <td>{{permission.1.description}}</td>
+        </tr>
+        {% endfor %}
+        {% endwith %}
+    </table>
+    <input type="submit" class="submit" value="Save"/>
+</form>

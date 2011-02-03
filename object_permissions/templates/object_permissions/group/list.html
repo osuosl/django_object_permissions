@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "menu_base.html" %}
 
 {% block head %}
     <script type="text/javascript" src="{{MEDIA_URL}}/js/jquery.ajax.delete.js"></script>
@@ -97,7 +97,7 @@
             <th></th>
         </tr>
         {% for group in groups %}
-            {% include "group/group_row.html" %}
+            {% include "object_permissions/group/group_row.html" %}
         {% endfor %}
     </table>
 {% endblock %}

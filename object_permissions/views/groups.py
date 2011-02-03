@@ -10,6 +10,8 @@ from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 
 from object_permissions import get_model_perms, grant, revoke, get_user_perms
+from object_permissions.signals import view_add_user, view_remove_user, \
+    view_edit_user, view_group_edited, view_group_created, view_group_deleted
 from object_permissions.views.permissions import ObjectPermissionForm
 
 
@@ -64,13 +66,13 @@ def list(request):
         if not groups:
             return HttpResponseForbidden()
 
-    return render_to_response("group/list.html", \
+    return render_to_response("object_permissions/group/list.html", \
                               {'groups':groups}, \
                               context_instance=RequestContext(request)) 
 
 
 @login_required
-def detail(request, id=None):
+def detail(request, id=None, template='object_permissions/group/detail.html'):
     """
     Display group details
     
@@ -84,8 +86,9 @@ def detail(request, id=None):
     
     method = request.method
     if method == 'GET':
-        return render_to_response("group/detail.html",
+        return render_to_response(template,
                             {'object':group,
+                             'group':group,
                              'users':group.user_set.all(),
                              'url':reverse('usergroup-permissions', args=[id])
                              }, \
@@ -96,10 +99,17 @@ def detail(request, id=None):
             # form data, this was a submission
             form = GroupForm(request.POST, instance=group)
             if form.is_valid():
+                new = False if group else True
                 group = form.save()
-                return render_to_response("group/group_row.html", \
-                        {'group':group}, \
-                        context_instance=RequestContext(request))
+                if new:
+                    view_group_created.send(sender=group, editor=user)
+                else:
+                    view_group_edited.send(sender=group, editor=user)
+                    
+                return render_to_response( \
+                    "object_permissions/group/group_row.html", \
+                    {'group':group}, \
+                    context_instance=RequestContext(request))
             
             content = json.dumps(form.errors)
             return HttpResponse(content, mimetype='application/json')
@@ -107,12 +117,13 @@ def detail(request, id=None):
         else:
             form = GroupForm(instance=group)
         
-        return render_to_response("group/edit.html", \
+        return render_to_response("object_permissions/group/edit.html", \
                         {'group':group, 'form':form}, \
                         context_instance=RequestContext(request))
     
     elif method == 'DELETE':
         group.delete()
+        view_group_deleted.send(sender=group, editor=user)
         return HttpResponse('1', mimetype='application/json')
 
     return HttpResponseNotAllowed(['PUT', 'HEADER'])
@@ -125,10 +136,10 @@ def add_user(request, id):
     
     @param id: id of Group
     """
-    user = request.user
+    editor = request.user
     group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', group)):
+    if not (editor.is_superuser or editor.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
@@ -137,9 +148,13 @@ def add_user(request, id):
             user = form.cleaned_data['user']
             group.user_set.add(user)
             
+            # signal
+            view_add_user.send(sender=editor, user=user, obj=group)
+            
             # return html for new user row
             url = reverse('usergroup-permissions', args=[id])
-            return render_to_response("permissions/user_row.html", \
+            return render_to_response( \
+                        "object_permissions/permissions/user_row.html", \
                         {'user':user, 'object':group, 'url':url})
         
         # error in form return ajax response
@@ -147,7 +162,7 @@ def add_user(request, id):
         return HttpResponse(content, mimetype='application/json')
 
     form = AddUserForm()
-    return render_to_response("group/add_user.html",\
+    return render_to_response("object_permissions/group/add_user.html",\
                               {'form':form, 'group':group}, \
                               context_instance=RequestContext(request))
 
@@ -159,10 +174,10 @@ def remove_user(request, id):
     
     @param id: id of Group
     """
-    user = request.user
+    editor = request.user
     group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', group)):
+    if not (editor.is_superuser or editor.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method != 'POST':
@@ -173,6 +188,9 @@ def remove_user(request, id):
         user = form.cleaned_data['user']
         group.user_set.remove(user)
         user.revoke_all(group)
+        
+        # signal
+        view_remove_user.send(sender=editor, user=user, obj=group)
         
         # return success
         return HttpResponse('1', mimetype='application/json')
@@ -189,10 +207,10 @@ def user_permissions(request, id, user_id=None):
     
     @param id: id of Group
     """
-    user = request.user
+    editor = request.user
     group = get_object_or_404(Group, id=id)
     
-    if not (user.is_superuser or user.has_perm('admin', group)):
+    if not (editor.is_superuser or editor.has_perm('admin', group)):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
@@ -201,10 +219,14 @@ def user_permissions(request, id, user_id=None):
             form.update_perms()
             user = form.cleaned_data['user']
             
+            # send signal
+            view_edit_user.send(sender=editor, user=user, obj=group)
+            
             # return html to replace existing user row
             url = reverse('usergroup-permissions', args=[id])
-            return render_to_response("permissions/user_row.html", \
-                            {'object':group, 'user':user, 'url':url})
+            return render_to_response( \
+                "object_permissions/permissions/user_row.html", \
+                {'object':group, 'user':user, 'url':url})
         
         # error in form return ajax response
         content = json.dumps(form.errors)
@@ -214,10 +236,39 @@ def user_permissions(request, id, user_id=None):
     form_user = get_object_or_404(User, id=user_id)
     data = {'permissions':get_user_perms(form_user, group), 'user':user_id}
     form = ObjectPermissionForm(group, data)
-    return render_to_response("permissions/form.html", \
+    return render_to_response("object_permissions/permissions/form.html", \
                     {
                     'form':form,
                      'user_id':user_id,
                      'url':reverse('usergroup-permissions', args=[group.id])
                      }, \
                     context_instance=RequestContext(request))
+    
+
+@login_required
+def all_permissions(request, id, \
+                    template='object_permissions/permissions/objects.html' ):
+    """
+    Generic view for displaying permissions on all objects.
+    
+    @param id: id of group
+    @param template: template to render the results with, default is
+    permissions/objects.html
+    """
+    user = request.user
+    group = get_object_or_404(Group, pk=id)
+    
+    if not (user.is_superuser or group.user_set.filter(pk=user.pk).exists()):
+        return HttpResponseForbidden('You do not have sufficient privileges')
+    
+    perm_dict = group.get_all_objects_any_perms()
+    
+    try:
+        del perm_dict[Group]
+    except KeyError:
+        pass
+    
+    return render_to_response(template, \
+            {'persona':group, 'perm_dict':perm_dict}, \
+        context_instance=RequestContext(request),
+    )

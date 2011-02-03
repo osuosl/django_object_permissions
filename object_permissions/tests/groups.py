@@ -6,13 +6,16 @@ from django.test import TestCase
 from django.test.client import Client
 
 from object_permissions import *
-from object_permissions.registration import TestModel, UnknownPermissionException
+from object_permissions.registration import TestModel, TestModelChild, \
+    TestModelChildChild, UnknownPermissionException
+from object_permissions.signals import view_add_user, view_remove_user, \
+    view_edit_user, view_group_edited, view_group_created, view_group_deleted
 
 __all__ = ('TestGroups','TestGroupViews')
 
 
 class TestGroups(TestCase):
-    perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
+    perms = set(['Perm1', 'Perm2', 'Perm3', 'Perm4'])
     
     def setUp(self):
         self.tearDown()
@@ -42,6 +45,8 @@ class TestGroups(TestCase):
     def tearDown(self):
         User.objects.all().delete()
         TestModel.objects.all().delete()
+        TestModelChild.objects.all().delete()
+        TestModelChildChild.objects.all().delete()
         Group.objects.all().delete()
 
     def test_trivial(self):
@@ -60,7 +65,7 @@ class TestGroups(TestCase):
     
     def test_permissions(self):
         """ Verify all model perms are created """
-        self.assertEqual(['admin'], get_model_perms(Group))
+        self.assert_('admin' in get_model_perms(Group))
     
     def test_grant_group_permissions(self):
         """
@@ -151,45 +156,45 @@ class TestGroups(TestCase):
         
         # revoke single perm
         group0.revoke('Perm1', object0)
-        self.assertEqual([u'Perm2', u'Perm3', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual(perms, group0.get_perms(object1))
-        self.assertEqual(perms, group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm3', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(perms, set(group0.get_perms(object1)))
+        self.assertEqual(perms, set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke a second perm
         group0.revoke('Perm3', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual(perms, group0.get_perms(object1))
-        self.assertEqual(perms, group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(perms, set(group0.get_perms(object1)))
+        self.assertEqual(perms, set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke from another object
         group0.revoke('Perm3', object1)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual(perms, group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(perms, set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke from another user
         group1.revoke('Perm4', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm3']), set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke perm user does not have
         group0.revoke('Perm1', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm3']), set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
         
         # revoke perm that does not exist
         group0.revoke('DoesNotExist', object0)
-        self.assertEqual([u'Perm2', u'Perm4'], group0.get_perms(object0))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm4'], group0.get_perms(object1))
-        self.assertEqual([u'Perm1', u'Perm2', u'Perm3'], group1.get_perms(object0))
-        self.assertEqual(perms, group1.get_perms(object1))
+        self.assertEqual(set(['Perm2', 'Perm4']), set(group0.get_perms(object0)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm4']), set(group0.get_perms(object1)))
+        self.assertEqual(set(['Perm1', 'Perm2', 'Perm3']), set(group1.get_perms(object0)))
+        self.assertEqual(perms, set(group1.get_perms(object1)))
     
     def test_revoke_all_group(self):
         """
@@ -211,21 +216,21 @@ class TestGroups(TestCase):
         
         revoke_all_group(group0, object0)
         self.assertEqual([], get_group_perms(group0, object0))
-        self.assertEqual(perms, get_group_perms(group0, object1))
-        self.assertEqual(perms, get_group_perms(group1, object0))
-        self.assertEqual(perms, get_group_perms(group1, object1))
+        self.assertEqual(perms, set(get_group_perms(group0, object1)))
+        self.assertEqual(perms, set(get_group_perms(group1, object0)))
+        self.assertEqual(perms, set(get_group_perms(group1, object1)))
         
         revoke_all_group(group0, object1)
         self.assertEqual([], get_group_perms(group0, object0))
         self.assertEqual([], get_group_perms(group0, object1))
-        self.assertEqual(perms, get_group_perms(group1, object0))
-        self.assertEqual(perms, get_group_perms(group1, object1))
+        self.assertEqual(perms, set(get_group_perms(group1, object0)))
+        self.assertEqual(perms, set(get_group_perms(group1, object1)))
         
         revoke_all_group(group1, object0)
         self.assertEqual([], get_group_perms(group0, object0))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
-        self.assertEqual(perms, get_group_perms(group1, object1))
+        self.assertEqual(perms, set(get_group_perms(group1, object1)))
         
         revoke_all_group(group1, object1)
         self.assertEqual([], get_group_perms(group0, object0))
@@ -240,23 +245,23 @@ class TestGroups(TestCase):
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
         perms1 = self.perms
-        perms2 = ['Perm1', 'Perm2']
-        perms3 = ['Perm2', 'Perm3']
+        perms2 = set(['Perm1', 'Perm2'])
+        perms3 = set(['Perm2', 'Perm3'])
         perms4 = []
         
         # grant single property
         set_group_perms(group0, perms1, object0)
-        self.assertEqual(perms1, get_group_perms(group0, object0))
+        self.assertEqual(perms1, set(get_group_perms(group0, object0)))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
         set_group_perms(group0, perms2, object0)
-        self.assertEqual(perms2, get_group_perms(group0, object0))
+        self.assertEqual(perms2, set(get_group_perms(group0, object0)))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
         set_group_perms(group0, perms3, object0)
-        self.assertEqual(perms3, get_group_perms(group0, object0))
+        self.assertEqual(perms3, set(get_group_perms(group0, object0)))
         self.assertEqual([], get_group_perms(group0, object1))
         self.assertEqual([], get_group_perms(group1, object0))
         
@@ -269,13 +274,13 @@ class TestGroups(TestCase):
         
         set_group_perms(group0, perms2, object1)
         self.assertEqual(perms4, get_group_perms(group0, object0))
-        self.assertEqual(perms2, get_group_perms(group0, object1))
+        self.assertEqual(perms2, set(get_group_perms(group0, object1)))
         self.assertEqual([], get_group_perms(group1, object0))
         
         set_group_perms(group1, perms1, object0)
         self.assertEqual(perms4, get_group_perms(group0, object0))
-        self.assertEqual(perms2, get_group_perms(group0, object1))
-        self.assertEqual(perms1, get_group_perms(group1, object0))
+        self.assertEqual(perms2, set(get_group_perms(group0, object1)))
+        self.assertEqual(perms1, set(get_group_perms(group1, object0)))
     
     def test_has_perm(self):
         """
@@ -415,7 +420,6 @@ class TestGroups(TestCase):
         self.assert_(group0 in get_groups_all(object0, ['Perm1','Perm2']))
         self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
 
-    
     def test_user_get_objects_any_perms(self):
         """
         Test filtering objects
@@ -473,6 +477,79 @@ class TestGroups(TestCase):
         query = user0.get_objects_any_perms(TestModel, ['Perm1', 'Perm4'], groups=False)
         self.assert_(object4 in query)
         self.assertEqual(1, query.count())
+    
+    def test_user_get_objects_any_perms_related(self):
+        """
+        Test retrieving objects with any matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child2 = TestModelChild.objects.create(parent=object2)
+        child3 = TestModelChild.objects.create(parent=object2)
+        child0.save()
+        child1.save()
+        child2.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child0)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)  # perms on both
+        group0.grant('Perm2', child0)   # perms on both
+        group0.grant('Perm3', object1)  # perm on parent only (child 1)
+        group0.grant('Perm4', child2)   # perm on child only
+        group0.grant('Perm1', childchild)
+        
+        user0.grant('Perm1', object0)  # perms on both
+        user0.grant('Perm2', child0)   # perms on both
+        
+        # related field with implicit perms
+        query = user0.get_objects_any_perms(TestModelChild, parent=None)
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent, and directly')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query))
+        
+        # related field with single perms
+        query = user0.get_objects_any_perms(TestModelChild, parent=['Perm3'])
+        
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query), query.values('id'))
+        
+        # related field with multiple perms
+        query = user0.get_objects_any_perms(TestModelChild, parent=['Perm1','Perm3'])
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query))
+        
+        # mix of direct and related perms
+        query = user0.get_objects_any_perms(TestModelChild, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assertFalse(child1 in query, 'user should not have perms on parent')
+        self.assert_(child2 in query, 'user should have perms directly')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        
+        # multiple relations
+        query = user0.get_objects_any_perms(TestModelChildChild, parent=['Perm2'], parent__parent=['Perm1'])
+        self.assert_(childchild in query)
+        self.assertEqual(1, len(query))
+        
+        # exclude groups
+        query = user0.get_objects_any_perms(TestModelChild, groups=False, parent=['Perm1'])
+        self.assert_(child0 in query)
+        self.assertEqual(1, len(query))
     
     def test_user_has_any_perms_on_model(self):
         """
@@ -550,6 +627,67 @@ class TestGroups(TestCase):
         self.assert_(user0.has_all_perms(TestModel, ['Perm4'], False))
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm2', 'Perm4'], False))
         self.assertFalse(user0.has_all_perms(TestModel, ['Perm2'], False))
+    
+    def test_user_get_objects_all_perms_related(self):
+        """
+        Test retrieving objects with all matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object0)
+        child2 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        child2.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child0)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm1', object1)
+        group0.grant('Perm2', object1)
+        
+        group0.grant('Perm1', child0)
+        group0.grant('Perm1', child1)
+        group0.grant('Perm2', child1)
+        group0.grant('Perm1', childchild)
+        
+        user0.grant('Perm1', object0)  # perms on both
+        user0.grant('Perm1', child0)   # perms on both
+        
+        # related field with single perms
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(child0 in query)
+        self.assert_(child1 in query)
+        self.assertFalse(child2 in query)
+        
+        # related field with single perms - has parent but not child
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(0, len(query))
+        
+        # related field with single perms - has child but not parent
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm4'])
+        self.assertEqual(0, len(query))
+        
+        # related field with multiple perms
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm1','Perm2'])
+        self.assertEqual(1, len(query))
+        self.assertFalse(child0 in query)
+        self.assert_(child1 in query)
+        self.assertFalse(child2 in query)
+        
+        # multiple relations
+        query = user0.get_objects_all_perms(TestModelChildChild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(childchild in query)
+        
+        # exclude groups
+        query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], groups=False, parent=['Perm1'])
+        self.assert_(child0 in query)
+        self.assertEqual(1, len(query))
     
     def test_group_has_any_perms_on_model(self):
         """
@@ -670,6 +808,71 @@ class TestGroups(TestCase):
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
+    def test_group_get_objects_any_perms_related(self):
+        """
+        Test retrieving objects with any matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        
+        object2 = TestModel.objects.create(name='test2')
+        object2.save()
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object1)
+        child2 = TestModelChild.objects.create(parent=object2)
+        child3 = TestModelChild.objects.create(parent=object2)
+        child0.save()
+        child1.save()
+        child2.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child0)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)  # perms on both
+        group0.grant('Perm2', child0)   # perms on both
+        group0.grant('Perm3', object1)  # perm on parent only (child 1)
+        group0.grant('Perm4', child2)   # perm on child only
+        group0.grant('Perm1', childchild)
+        
+        # related field with implicit perms
+        query = group0.get_objects_any_perms(TestModelChild, parent=None)
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent, and directly')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query))
+        
+        # related field with single perms
+        query = group0.get_objects_any_perms(TestModelChild, parent=['Perm3'])
+        
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query), query.values('id'))
+        
+        # related field with multiple perms
+        query = group0.get_objects_any_perms(TestModelChild, parent=['Perm1','Perm3'])
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assert_(child1 in query, 'user should have perms on parent')
+        self.assert_(child2 in query, 'user should have perms on parent')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        self.assertEqual(3, len(query))
+        
+        # mix of direct and related perms
+        query = group0.get_objects_any_perms(TestModelChild, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(child0 in query, 'user should have perms on parent and directly')
+        self.assertFalse(child1 in query, 'user should not have perms on parent')
+        self.assert_(child2 in query, 'user should have perms directly')
+        self.assertFalse(child3 in query, 'user should have no perms on this object or its parent')
+        
+        # multiple relations
+        query = group0.get_objects_any_perms(TestModelChildChild, parent=['Perm2'], parent__parent=['Perm1'])
+        self.assert_(childchild in query)
+        self.assertEqual(1, len(query))
+    
     def test_group_get_objects_all_perms(self):
         """
         Test filtering objects based only on the groups perms
@@ -716,6 +919,59 @@ class TestGroups(TestCase):
         self.assert_(object0 in query)
         self.assertEqual(1, query.count())
     
+    def test_group_get_objects_all_perms_related(self):
+        """
+        Test retrieving objects with all matching perms and related model
+        options
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        
+        child0 = TestModelChild.objects.create(parent=object0)
+        child1 = TestModelChild.objects.create(parent=object0)
+        child2 = TestModelChild.objects.create(parent=object1)
+        child0.save()
+        child1.save()
+        child2.save()
+        
+        childchild = TestModelChildChild.objects.create(parent=child0)
+        childchild.save()
+        
+        group0.grant('Perm1', object0)
+        group0.grant('Perm1', object1)
+        group0.grant('Perm2', object1)
+        
+        group0.grant('Perm1', child0)
+        group0.grant('Perm1', child1)
+        group0.grant('Perm2', child1)
+        group0.grant('Perm1', childchild)
+        
+        # related field with single perms
+        query = group0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm1'])
+        self.assertEqual(2, len(query))
+        self.assert_(child0 in query)
+        self.assert_(child1 in query)
+        self.assertFalse(child2 in query)
+        
+        # related field with single perms - has parent but not child
+        query = group0.get_objects_all_perms(TestModelChild, perms=['Perm4'], parent=['Perm1'])
+        self.assertEqual(0, len(query))
+        
+        # related field with single perms - has child but not parent
+        query = group0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm4'])
+        self.assertEqual(0, len(query))
+        
+        # related field with multiple perms
+        query = group0.get_objects_all_perms(TestModelChild, perms=['Perm1'], parent=['Perm1','Perm2'])
+        self.assertEqual(1, len(query))
+        self.assertFalse(child0 in query)
+        self.assert_(child1 in query)
+        self.assertFalse(child2 in query)
+        
+        # multiple relations
+        query = group0.get_objects_all_perms(TestModelChildChild, perms=['Perm1'], parent=['Perm1'], parent__parent=['Perm1'])
+        self.assertEqual(1, len(query))
+        self.assert_(childchild in query)
+    
     def test_group_get_all_objects_any_perms(self):
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user1)
@@ -748,7 +1004,7 @@ class TestGroups(TestCase):
 
 
 class TestGroupViews(TestCase):
-    perms = [u'Perm1', u'Perm2', u'Perm3', u'Perm4']
+    perms = ['Perm1', 'Perm2', 'Perm3', 'Perm4']
     
     def setUp(self):
         self.tearDown()
@@ -807,7 +1063,7 @@ class TestGroupViews(TestCase):
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/list.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/list.html')
         groups = response.context['groups']
         self.assert_(group in groups)
         self.assert_(group1 in groups)
@@ -821,7 +1077,7 @@ class TestGroupViews(TestCase):
         response = c.get(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/list.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/list.html')
         groups = response.context['groups']
         self.assert_(group in groups)
         self.assert_(group0 in groups)
@@ -862,13 +1118,13 @@ class TestGroupViews(TestCase):
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/detail.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/detail.html')
         
         # authorized (superuser)
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/detail.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/detail.html')
 
     def test_view_edit(self):
         user = self.user
@@ -903,7 +1159,7 @@ class TestGroupViews(TestCase):
         response = c.post(url % group.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # get form - authorized (superuser)
         user.revoke('admin', group)
@@ -912,7 +1168,7 @@ class TestGroupViews(TestCase):
         response = c.post(url % group.id)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # missing name
         data = {'id':group.id}
@@ -920,14 +1176,25 @@ class TestGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         
+        # setup signal
+        self.signal_editor = self.signal_group = None
+        def callback(sender, editor, **kwargs):
+            self.signal_user = user
+            self.signal_group = sender
+        view_group_edited.connect(callback)
+        
         # successful edit
         data = {'id':group.id, 'name':'EDITED_NAME'}
         response = c.post(url % group.id, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/group_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/group_row.html')
         group = Group.objects.get(id=group.id)
         self.assertEqual('EDITED_NAME', group.name)
+        
+        # check signal set properties
+        self.assertEqual(group, self.signal_group)
+        self.assertEqual(user, self.signal_user)
     
     def test_view_create(self):
         """
@@ -963,22 +1230,33 @@ class TestGroupViews(TestCase):
         response = c.post(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
         
         # missing name
         data = {'id':group.id}
         response = c.post(url)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/edit.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/edit.html')
+        
+        # setup signal
+        self.signal_editor = self.signal_group = None
+        def callback(sender, editor, **kwargs):
+            self.signal_user = user
+            self.signal_group = sender
+        view_group_created.connect(callback)
         
         # successful edit
         data = {'name':'ADD_NEW_GROUP'}
         response = c.post(url, data, follow=True)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/group_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/group_row.html')
         self.assert_(Group.objects.filter(name='ADD_NEW_GROUP').exists())
+        
+        # check signal set properties
+        self.assertEqual(Group.objects.get(name='ADD_NEW_GROUP'), self.signal_group)
+        self.assertEqual(user, self.signal_user)
     
     def test_view_delete(self):
         """
@@ -1016,6 +1294,13 @@ class TestGroupViews(TestCase):
         self.assertFalse(Group.objects.filter(id=group0.id).exists())
         self.assertEqual('1', response.content)
         
+        # setup signal
+        self.signal_editor = self.signal_group = None
+        def callback(sender, editor, **kwargs):
+            self.signal_user = user
+            self.signal_group = sender
+        view_group_deleted.connect(callback)
+        
         # get form - authorized (superuser)
         user.is_superuser = True
         user.save()
@@ -1024,6 +1309,10 @@ class TestGroupViews(TestCase):
         self.assertEquals('application/json', response['content-type'])
         self.assertFalse(Group.objects.filter(id=group1.id).exists())
         self.assertEqual('1', response.content)
+        
+        # check signal set properties
+        self.assertEqual(group1.name, self.signal_group.name)
+        self.assertEqual(user, self.signal_user)
     
     def test_view_add_user(self):
         """
@@ -1055,21 +1344,21 @@ class TestGroupViews(TestCase):
         response = c.post(url % args)
         self.assertEqual(403, response.status_code)
         
-        # authorized post (perm granted)
+        # authorized get (perm granted)
         grant(user, 'admin', group)
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/add_user.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/add_user.html')
         
-        # authorized post (superuser)
+        # authorized get (superuser)
         revoke(user, 'admin', group)
         user.is_superuser = True
         user.save()
         response = c.get(url % args)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'group/add_user.html')
+        self.assertTemplateUsed(response, 'object_permissions/group/add_user.html')
         
         # missing user id
         response = c.post(url % args)
@@ -1081,13 +1370,27 @@ class TestGroupViews(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         
+        # setup signal
+        self.signal_sender = self.signal_user = self.signal_obj = None
+        def callback(sender, user, obj, **kwargs):
+            self.signal_sender = sender
+            self.signal_user = user
+            self.signal_obj = obj
+        view_add_user.connect(callback)
+        
         # valid post
         data = {'user':user.id}
         response = c.post(url % args, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/user_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assert_(group.user_set.filter(id=user.id).exists())
+        
+        # check signal fired
+        self.assertEqual(self.signal_sender, user)
+        self.assertEqual(self.signal_user, user)
+        self.assertEqual(self.signal_obj, group)
+        view_add_user.disconnect(callback)
         
         # same user again
         response = c.post(url % args, data)
@@ -1143,6 +1446,14 @@ class TestGroupViews(TestCase):
         self.assertFalse(group.user_set.filter(id=user.id).exists())
         self.assertEqual([], user.get_perms(group))
         
+        # setup signal
+        self.signal_sender = self.signal_user = self.signal_obj = None
+        def callback(sender, user, obj, **kwargs):
+            self.signal_sender = sender
+            self.signal_user = user
+            self.signal_obj = obj
+        view_remove_user.connect(callback)
+        
         # valid request (superuser)
         revoke(user, 'admin', group)
         user.is_superuser = True
@@ -1153,6 +1464,12 @@ class TestGroupViews(TestCase):
         self.assertEquals('application/json', response['content-type'])
         self.assertEqual('1', response.content)
         self.assertFalse(group.user_set.filter(id=user.id).exists())
+        
+        # check signal fired
+        self.assertEqual(self.signal_sender, user)
+        self.assertEqual(self.signal_user, user)
+        self.assertEqual(self.signal_obj, group)
+        view_remove_user.disconnect(callback)
         
         # remove user again
         response = c.post(url % args, data)
@@ -1212,7 +1529,7 @@ class TestGroupViews(TestCase):
         response = c.get(url % args, {'user':user.id})
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/form.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
         
         # authorized post (superuser)
         revoke(user, 'admin', group)
@@ -1221,7 +1538,7 @@ class TestGroupViews(TestCase):
         response = c.get(url % args, {'user':user.id})
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/form.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
     
         # invalid user (GET)
         response = c.get(url % (group.id, -1))
@@ -1259,14 +1576,28 @@ class TestGroupViews(TestCase):
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
+        # setup signal
+        self.signal_sender = self.signal_user = self.signal_obj = None
+        def callback(sender, user, obj, **kwargs):
+            self.signal_sender = sender
+            self.signal_user = user
+            self.signal_obj = obj
+        view_edit_user.connect(callback)
+        
         # valid post user
         data = {'permissions':['admin'], 'user':user.id}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/user_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assert_(user.has_perm('admin', group))
         self.assertEqual(['admin'], get_user_perms(user, group))
+        
+        # check signal fired with correct values
+        self.assertEqual(self.signal_sender, user)
+        self.assertEqual(self.signal_user, user)
+        self.assertEqual(self.signal_obj, group)
+        view_edit_user.disconnect(callback)
         
         # valid post no permissions user
         data = {'permissions':[], 'user':user.id}
@@ -1279,7 +1610,7 @@ class TestGroupViews(TestCase):
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'permissions/user_row.html')
+        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assertEqual(['admin'], group1.get_perms(group))
         
         # valid post no permissions group
@@ -1287,3 +1618,40 @@ class TestGroupViews(TestCase):
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEqual([], group1.get_perms(group))
+    
+    def test_permissions_all(self):
+        """ tests groups.permissions_all() """
+        user = self.user
+        group = self.test_save()
+        group.user_set.add(user)
+        group1 = self.test_save('other_group')
+        
+        url = '/group/%s/permissions/all'
+        c = Client()
+        
+        # anonymous user
+        response = c.get(url % group.pk, follow=True)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'registration/login.html')
+        
+        # unauthorized user - wrong group
+        self.assert_(c.login(username=user.username, password='secret'))
+        response = c.get(url % group1.pk)
+        self.assertEqual(403, response.status_code)
+        
+        # unknown group
+        response = c.get(url % 123456)
+        self.assertEqual(404, response.status_code)
+        
+        # authorized user - group member
+        self.assert_(c.login(username=user.username, password='secret'))
+        response = c.get(url % group.pk)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'object_permissions/permissions/objects.html')
+        
+        # superuser
+        user.is_superuser = True
+        user.save()
+        response = c.get(url % group1.pk)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'object_permissions/permissions/objects.html')

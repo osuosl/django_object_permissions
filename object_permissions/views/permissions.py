@@ -3,13 +3,16 @@ import json
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
+from django.utils.safestring import SafeString
 
 from object_permissions import get_user_perms, get_group_perms, \
     get_model_perms, grant, revoke, get_users, get_groups
 from object_permissions.models import Group
+from object_permissions.signals import view_add_user, view_remove_user, \
+    view_edit_user
 
 
 class ObjectPermissionForm(forms.Form):
@@ -22,14 +25,36 @@ class ObjectPermissionForm(forms.Form):
     group = forms.ModelChoiceField(queryset=Group.objects.all(), \
                                    required=False)
     
-    def __init__(self, object, *args, **kwargs):
+    choices = {}
+    """ dictionary used for caching the choices for specific models """
+    
+    def __init__(self, obj, *args, **kwargs):
         """
         @param object - the object being granted permissions
         """
         super(ObjectPermissionForm, self).__init__(*args, **kwargs)
-        self.object = object
-        model_perms = get_model_perms(object)
-        self.fields['permissions'].choices = zip(model_perms, model_perms)
+        self.object = obj
+        
+        self.fields['permissions'].choices = self.get_choices(obj)
+
+    @classmethod
+    def get_choices(cls, obj):
+        """ helper method for getting choices for a model.  This method uses an
+        internal cache to store the choices. """
+        try: 
+            return ObjectPermissionForm.choices[obj.__class__]
+        except KeyError:
+            # choices weren't built yet.
+            choices = []
+            model_perms = get_model_perms(obj.__class__)
+            
+            for perm, params in model_perms.items():
+                display = params.copy()
+                if 'label' not in display:
+                    display['label'] = perm
+                choices.append((perm, display))
+            ObjectPermissionForm.choices[obj.__class__] = choices
+            return choices
 
     def clean(self):
         """
@@ -81,14 +106,26 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
             
             # if grantee does not have permissions, then this is a new user:
             #    - permissions must be selected
-            if not grantee.get_perms(self.object) and not perms:
+            
+            old_perms = grantee.get_perms(self.object)
+            if old_perms:
+                # not new, has perms already
+                data['new'] = False
+                
+            elif not perms:
+                # new, doesn't have perms specified
                 msg = """You must grant at least 1 permission for new users and groups"""
                 self._errors["permissions"] = self.error_class([msg])
+                
+            else:
+                # new, perms specified
+                data['new'] = True
         
         return data
 
 
-def view_users(request, object_, url, template='permissions/users.html'):
+def view_users(request, object_, url, \
+               template='object_permissions/permissions/users.html'):
     """
     Generic view for rendering a list of Users who have permissions on an
     object.
@@ -101,7 +138,7 @@ def view_users(request, object_, url, template='permissions/users.html'):
     @param url: base url for editing permissions
     @param template: template for rendering User/Group list.
     """
-    users = get_users(object_)
+    users = get_users(object_, groups=False)
     groups = get_groups(object_)
     return render_to_response(template, \
             {'object': object_,
@@ -112,10 +149,10 @@ def view_users(request, object_, url, template='permissions/users.html'):
     )
 
 
-def view_permissions(request, object_, url, user_id=None, group_id=None,
+def view_permissions(request, obj, url, user_id=None, group_id=None,
                 key='id',
-                user_template='permissions/user_row.html',
-                group_template='permissions/group_row.html'
+                user_template='object_permissions/permissions/user_row.html',
+                group_template='object_permissions/permissions/group_row.html'
                 ):
     """
     Update a User or Group permissions on an object.  This is a generic view
@@ -131,41 +168,88 @@ def view_permissions(request, object_, url, user_id=None, group_id=None,
     @param group_template: template used to render group rows
     """
     if request.method == 'POST':
-        form = ObjectPermissionFormNewUsers(object_, request.POST)
+        form = ObjectPermissionFormNewUsers(obj, request.POST)
         if form.is_valid():
             data = form.cleaned_data
+            form_user = form.cleaned_data['user']
+            group = form.cleaned_data['group']
+            edited_user = form_user if form_user else group
+            
             if form.update_perms():
-                # return html to replace existing user row
-                form_user = form.cleaned_data['user']
-                group = form.cleaned_data['group']
-                if form_user:
-                    response = render_to_response(user_template, \
-                                {'object':object_, 'user':form_user, 'url':url})
+                # send correct signal based on new or edited user
+                if data['new']:
+                    view_add_user.send(sender=obj.__class__, \
+                                       editor=request.user, \
+                                       user=edited_user, obj=obj)
                 else:
-                    response = render_to_response(group_template, \
-                                {'object':object_, 'group':group, 'url':url})
+                    view_edit_user.send(sender=obj.__class__, \
+                                        editor=request.user, \
+                                        user=edited_user, obj=obj)
+                
+                # return html to replace existing user row
+                if form_user:
+                    return render_to_response(user_template, \
+                                {'object':obj, 'user':form_user, 'url':url})
+                else:
+                    return render_to_response(group_template, \
+                                {'object':obj, 'group':group, 'url':url})
                 
             else:
                 # no permissions, send ajax response to remove user
-                response = HttpResponse('1', mimetype='application/json')
-            return response, True
+                view_remove_user.send(sender=obj.__class__, \
+                                      editor=request.user, user=edited_user, \
+                                      obj=obj)
+                return HttpResponse('1', mimetype='application/json')
         
         # error in form return ajax response
         content = json.dumps(form.errors)
-        return HttpResponse(content, mimetype='application/json'), False
+        return HttpResponse(content, mimetype='application/json')
 
     if user_id:
         form_user = get_object_or_404(User, id=user_id)
-        data = {'permissions':get_user_perms(form_user, object_), \
+        data = {'permissions':get_user_perms(form_user, obj), \
                 'user':user_id}
     elif group_id:
         group = get_object_or_404(Group, id=group_id)
-        data = {'permissions':get_group_perms(group, object_), \
+        data = {'permissions':get_group_perms(group, obj), \
                 'group':group_id}
     else:
         data = {}
-    form = ObjectPermissionFormNewUsers(object_, data)
-    return render_to_response('permissions/form.html', \
-                {'form':form, 'object':object_, 'user_id':user_id, \
+        
+    form = ObjectPermissionFormNewUsers(obj, data)
+    
+    return render_to_response('object_permissions/permissions/form.html', \
+                {'form':form, 'object':obj, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
-               context_instance=RequestContext(request)), False
+               context_instance=RequestContext(request))
+
+
+@login_required
+def all_permissions(request, id, \
+                    template="object_permissions/permissions/objects.html"):
+    """
+    Generic view for displaying permissions on all objects.
+    
+    @param id: id of user
+    @param template: template to render the results with, default is
+    permissions/objects.html
+    """
+    user = request.user
+    
+    if not (user.is_superuser or id==user.pk):
+        return HttpResponseForbidden('You do not have sufficient privileges')
+    
+    if user.is_superuser:
+        user = get_object_or_404(User, pk=id)
+    
+    perm_dict = user.get_all_objects_any_perms(groups=False)
+    
+    try:
+        del perm_dict[Group]
+    except KeyError:
+        pass
+    
+    return render_to_response(template, \
+            {'persona':user, 'perm_dict':perm_dict}, \
+        context_instance=RequestContext(request),
+    )

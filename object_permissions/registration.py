@@ -71,6 +71,11 @@ permissions_for_model = {}
 A mapping of Models to lists of permissions defined for that model.
 """
 
+params_for_model = {}
+"""
+A mapping of Models to their param dictionaries.
+"""
+
 forbidden = set([
     "full_clean",
     "clean_fields",
@@ -86,7 +91,7 @@ Names reserved by Django for Model instances.
 """
 
 _DELAYED = []
-def register(perms, model):
+def register(params, model):
     """
     Register permissions for a Model.
 
@@ -99,23 +104,39 @@ def register(perms, model):
     deprecated; please fix your code if you depend on this.
     """
 
-    if isinstance(perms, (str, unicode)):
+    if isinstance(params, (str, unicode)):
         warn("Using a single permission is deprecated!")
         perms = [perms]
+
+    # REPACK - for backward compatibility repack list of perms as a dict
+    if isinstance(params, (list, tuple)):
+        perms = params
+        params = {'perms':params}
+    else:
+        perms = params['perms']
 
     for perm in perms:
         if perm in forbidden:
             raise RegistrationException("Permission %s is a reserved name!")
 
+    # REPACK - For backwards compatibility and flexibility with parameters,
+    # repack permissions list to ensure it is a dict of dicts
+    if isinstance(perms, (list, tuple)):
+        # repack perm list as a dictionary
+        repack = {}
+        for perm in perms:
+            repack[perm] = {}
+        params['perms'] = repack
+
     try:
-        return _register(perms, model)
+        return _register(params, model)
     except db.utils.DatabaseError:
         # there was an error, likely due to a missing table.  Delay this
         # registration.
-        _DELAYED.append((perms, model))
+        _DELAYED.append((params, model))
 
 
-def _register(perms, model):
+def _register(params, model):
     """
     Real method for registering permissions.
 
@@ -140,7 +161,7 @@ def _register(perms, model):
             related_name="operms"),
     }
 
-    for perm in perms:
+    for perm in params['perms']:
         fields[perm] = models.BooleanField(default=False)
 
     class Meta:
@@ -150,7 +171,8 @@ def _register(perms, model):
 
     perm_model = type(name, (models.Model,), fields)
     permission_map[model] = perm_model
-    permissions_for_model[model] = perms
+    permissions_for_model[model] = params['perms']
+    params_for_model[model] = params
     return perm_model
 
 
@@ -173,15 +195,42 @@ def _register_delayed(**kwargs):
 models.signals.post_syncdb.connect(_register_delayed)
 
 
-if settings.DEBUG:
-    # XXX Create test tables only when debug mode.  This model will be used in
+if settings.TESTING:
+    # XXX Create test tables only when TEST mode.  These models will be used in
     # various unittests.  This is used so that we do not alter any models used
     # in production
     from django.db import models
     class TestModel(models.Model):
         name = models.CharField(max_length=32)
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModel)
-
+    class TestModelChild(models.Model):
+        parent = models.ForeignKey(TestModel, null=True)
+    class TestModelChildChild(models.Model):
+        parent = models.ForeignKey(TestModelChild, null=True)
+        
+    TEST_MODEL_PARAMS = {
+        'perms' : {
+            # perm with both params
+            'Perm1': {
+                'description':'The first permission',
+                'label':'Perm One'
+            },
+            # perm with only description
+            'Perm2': {
+                'description':'The second permission',
+            },
+            # perm with only label
+            'Perm3': {
+                'label':'Perm Three'
+            },
+            # perm with no params
+            'Perm4': {}
+        },
+        'url':'test_model-detail',
+        'url-params':['name']
+    }
+    register(TEST_MODEL_PARAMS, TestModel)
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
 
 def grant(user, perm, obj):
     """
@@ -710,7 +759,7 @@ def get_users(obj, groups=True):
     Retrieve the list of Users that have permissions on the given object.
     """
     
-    return get_users_any(obj)
+    return get_users_any(obj, groups=groups)
 
 
 def get_groups_any(obj, perms=None):
@@ -795,9 +844,9 @@ def filter_on_perms(user, model, perms, groups=True):
     return user_get_objects_any_perms(user, model, perms, groups)
 
 
-def user_get_objects_any_perms(user, model, perms=None, groups=True):
+def user_get_objects_any_perms(user, model, perms=None, groups=True, **related):
     """
-    Make a filtered QuerySet of objects for which the User has any of the 
+    Make a filtered QuerySet of objects for which the User has any of the
     requested permissions, optionally including permissions inherited from
     Groups.
 
@@ -805,28 +854,55 @@ def user_get_objects_any_perms(user, model, perms=None, groups=True):
     @param model: model on which to filter
     @param perms: list of perms to match
     @param groups: include perms the user has from membership in Groups
+    @param related: kwargs for related models.  Each kwarg name should be a
+    valid query argument, you may follow as many tables as you like and perms
+    are optional  E.g. foo__bar=['xoo'], foo=None
     @return a queryset of matching objects
     """
+    
+    q = Q(operms__user=user)
 
+    # optionally add groups
+    if groups:
+        q |= Q(operms__group__user=user)
+    
+    # optionally add specific perms
     if perms:
-        # permissions specified, OR all user permission clauses together
+        # OR all user permission clauses together
         model_perms = get_model_perms(model)
         perm_clause = reduce(or_, (Q(**{"operms__%s" % perm: True}) \
                                    for perm in perms if perm in model_perms))
-        base = model.objects.filter(perm_clause)
-    else:
-        # implicit any, no filtering based on specific perms
-        base = model.objects
+        q &= perm_clause
 
-    if groups:
-        # must match either a user or group clause
-        return base.filter(Q(operms__user=user) | Q(operms__group__user=user))
-    else:
-        # must match user clause
-        return base.filter(operms__user=user)
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        
+        for field in related:
+            # build user clause that follows relationship through operms to user
+            clause = Q(**{'%s__operms__user'%field:user})
+            perms = related[field]
+            
+            # optionally include groups
+            if groups:
+                clause |= Q(**{'%s__operms__group__user'%field:user})
+            
+            # optionally include specific perms.
+            if perms:
+                perm_field = '%s__operms__%%s' % field
+                perm_clause = reduce(or_, (Q(**{perm_field % perm: True}) \
+                                                for perm in perms))
+                clause &= perm_clause
+            
+            #add finished query
+            q |= clause
+
+    # return objects query filtered by the intricate Q statement
+    return model.objects.filter(q).distinct()
 
 
-def group_get_objects_any_perms(group, model, perms=None):
+def group_get_objects_any_perms(group, model, perms=None, **related):
     """
     Make a filtered QuerySet of objects for which the Group has any of the 
     requested permissions.
@@ -838,21 +914,39 @@ def group_get_objects_any_perms(group, model, perms=None):
     @return a queryset of matching objects
     """
 
+    # base clause matches group
+    q = Q(operms__group=group)
+
+    # optionally add permissions
     if perms:
         # permissions specified, OR all user permission clauses together
         model_perms = get_model_perms(model)
         perm_clause = reduce(or_, (Q(**{"operms__%s" % perm: True}) \
                                    for perm in perms if perm in model_perms))
-        base = model.objects.filter(perm_clause)
+        q &= perm_clause
     
-    else:
-        # implicit any, no filtering based on specific perms
-        base = model.objects
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        for field, perms in related.items():
+            # build group clause that follows relationship
+            clause = Q(**{'%s__operms__group'%field:group})
+            
+            # optionally include specific perms.
+            if perms:
+                perm_field = '%s__operms__%%s' % field
+                perm_clause = reduce(or_, (Q(**{perm_field % perm: True}) \
+                                                for perm in perms))
+                clause &= perm_clause
+            
+            #add finished query
+            q |= clause
     
-    return base.filter(operms__group=group)
+    return model.objects.filter(q).distinct()
 
 
-def user_get_objects_all_perms(user, model, perms, groups=True):
+def user_get_objects_all_perms(user, model, perms, groups=True, **related):
     """
     Make a filtered QuerySet of objects for which the User has all requested
     permissions, optionally including permissions inherited from Groups.
@@ -868,18 +962,44 @@ def user_get_objects_all_perms(user, model, perms, groups=True):
     perm_clause = {}
     for perm in perms:
         perm_clause['operms__%s' % perm] = True
-
+    
     if groups:
         # must match either a user or group clause + one of the perm clauses
         user_clause = Q(operms__group__user=user) | Q(operms__user=user)
-        return model.objects.filter(user_clause, **perm_clause)
+        q = user_clause & Q(**perm_clause)
     
     else:
         # must match user clause + all of the perm clauses
-        return model.objects.filter(operms__user=user, **perm_clause)
+        q = Q(operms__user=user, **perm_clause)
+
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        
+        for field in related:
+            # build user clause that follows relationship through operms to user
+            clause = Q(**{'%s__operms__user'%field:user})
+            perms = related[field]
+            
+            # optionally include groups
+            if groups:
+                clause |= Q(**{'%s__operms__group__user'%field:user})
+            
+            # create kwargs including all perms that must be matched
+            perm_clause = {}
+            for perm in perms:
+                perm_clause['operms__%s' % perm] = True
+            clause &= Q(**perm_clause)
+            
+            #add finished query
+            q &= clause
+
+    # return objects query filtered by the intricate Q statement
+    return model.objects.filter(q).distinct()
 
 
-def group_get_objects_all_perms(group, model, perms):
+def group_get_objects_all_perms(group, model, perms, **related):
     """
     Make a filtered QuerySet of objects for which the User has all requested
     permissions, optionally including permissions inherited from Groups.
@@ -891,12 +1011,30 @@ def group_get_objects_all_perms(group, model, perms):
     @return a queryset of matching objects
     """
 
+    # base clause matches group
+    q = Q(operms__group=group)
+
     # create kwargs including all perms that must be matched
     perm_clause = {}
     for perm in perms:
         perm_clause['operms__%s' % perm] = True
+    q &= Q(**perm_clause)
     
-    return model.objects.filter(operms__group=group, **perm_clause)
+    # related fields are built as sub-clauses for each related field.  To follow
+    # the relation we must add a clause that follows the relationship path to
+    # the operms table for that model, and optionally include perms.
+    if related:
+        for field, perms in related.items():
+            # build group clause that follows relationship
+            q &= Q(**{'%s__operms__group'%field:group})
+            
+            # create kwargs including all perms that must be matched
+            perm_clause = {}
+            for perm in perms:
+                perm_clause['operms__%s' % perm] = True
+            q &= Q(**perm_clause)
+    
+    return model.objects.filter(q).distinct()
 
 
 def user_get_all_objects_any_perms(user, groups=True):

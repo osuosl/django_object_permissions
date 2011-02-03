@@ -5,7 +5,7 @@
 {% block head %}{% endblock %}
 
 <div id="add_user" class="button add">Add User</div>
-<table id="users">
+<table id="op_users">
     <tr>
         <th>Name</th>
         <th>Permissions</th>
@@ -13,9 +13,9 @@
         <th></th>
     </tr>
     {% for user in users %}
-        {%block user_row%}{% include "permissions/user_row.html" %}{%endblock%}
+        {%block user_row%}{% include "object_permissions/permissions/user_row.html" %}{%endblock%}
     {% endfor %}
     {% for group in groups %}
-        {%block group_row%}{% include "permissions/group_row.html" %}{%endblock%}
+        {%block group_row%}{% include "object_permissions/permissions/group_row.html" %}{%endblock%}
     {% endfor %}
 </table>
