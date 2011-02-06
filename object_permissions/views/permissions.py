@@ -25,35 +25,42 @@ class ObjectPermissionForm(forms.Form):
     group = forms.ModelChoiceField(queryset=Group.objects.all(), \
                                    required=False)
     
+    obj = forms.ModelChoiceField(queryset=None, required=True)
+    
     choices = {}
     """ dictionary used for caching the choices for specific models """
     
-    def __init__(self, obj, *args, **kwargs):
+    def __init__(self, model, *args, **kwargs):
         """
         @param object - the object being granted permissions
         """
         super(ObjectPermissionForm, self).__init__(*args, **kwargs)
-        self.object = obj
         
-        self.fields['permissions'].choices = self.get_choices(obj)
+        self.model = model
+        self.fields['obj'].queryset = model.objects.all()
+        self.fields['permissions'].choices = self.get_choices(model)
 
     @classmethod
-    def get_choices(cls, obj):
-        """ helper method for getting choices for a model.  This method uses an
-        internal cache to store the choices. """
+    def get_choices(cls, model):
+        """
+        helper method for getting choices for a model.  This method uses an
+        internal cache to store the choices.
+        
+        @param model - Model class to fetch choices for
+        """
         try: 
-            return ObjectPermissionForm.choices[obj.__class__]
+            return ObjectPermissionForm.choices[model]
         except KeyError:
             # choices weren't built yet.
             choices = []
-            model_perms = get_model_perms(obj.__class__)
+            model_perms = get_model_perms(model)
             
             for perm, params in model_perms.items():
                 display = params.copy()
                 if 'label' not in display:
                     display['label'] = perm
                 choices.append((perm, display))
-            ObjectPermissionForm.choices[obj.__class__] = choices
+            ObjectPermissionForm.choices[model] = choices
             return choices
 
     def clean(self):
@@ -82,7 +89,8 @@ class ObjectPermissionForm(forms.Form):
         """
         perms = self.cleaned_data['permissions']
         grantee = self.cleaned_data['grantee']
-        grantee.set_perms(perms, self.object)
+        obj = self.cleaned_data['obj']
+        grantee.set_perms(perms, obj)
         return perms
     
 
@@ -106,8 +114,7 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
             
             # if grantee does not have permissions, then this is a new user:
             #    - permissions must be selected
-            
-            old_perms = grantee.get_perms(self.object)
+            old_perms = grantee.get_perms(data['obj'])
             if old_perms:
                 # not new, has perms already
                 data['new'] = False
@@ -168,7 +175,7 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
     @param group_template: template used to render group rows
     """
     if request.method == 'POST':
-        form = ObjectPermissionFormNewUsers(obj, request.POST)
+        form = ObjectPermissionFormNewUsers(obj.__class__, request.POST)
         if form.is_valid():
             data = form.cleaned_data
             form_user = form.cleaned_data['user']
@@ -208,15 +215,15 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
     if user_id:
         form_user = get_object_or_404(User, id=user_id)
         data = {'permissions':get_user_perms(form_user, obj), \
-                'user':user_id}
+                'user':user_id, 'obj':obj}
     elif group_id:
         group = get_object_or_404(Group, id=group_id)
         data = {'permissions':get_group_perms(group, obj), \
-                'group':group_id}
+                'group':group_id, 'obj':obj}
     else:
         data = {}
         
-    form = ObjectPermissionFormNewUsers(obj, data)
+    form = ObjectPermissionFormNewUsers(obj.__class__, data)
     
     return render_to_response('object_permissions/permissions/form.html', \
                 {'form':form, 'object':obj, 'user_id':user_id, \
