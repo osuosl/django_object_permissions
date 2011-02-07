@@ -3,6 +3,15 @@
 <form class="ajax_form" method="post" action="{{url}}">
     <ul id="errors"></ul>
     <table>
+    
+    {# Only show object select when an object hasn't been preselected #}
+    {% if obj %}
+        <input type="hidden" name="obj" value="{{obj.pk|default:''}}"/>
+    {% else %}
+        <tr><td>{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
+    {% endif %}
+    
+    {# only show user/group when one hasn't been preselected #}
     {% if user_id or group_id %}
         <input type="hidden" name="user" value="{{user_id|default:''}}"/>
         <input type="hidden" name="group" value="{{group_id|default:''}}"/>
