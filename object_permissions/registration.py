@@ -47,6 +47,7 @@ class UnknownPermissionException(Exception):
 
 __all__ = (
     'register',
+    'get_class',
     'grant', 'grant_group',
     'revoke', 'revoke_group',
     'get_user_perms', 'get_group_perms',
@@ -69,6 +70,11 @@ the Model that stores the permissions on that Model.
 permissions_for_model = {}
 """
 A mapping of Models to lists of permissions defined for that model.
+"""
+
+class_names = {}
+"""
+A mapping of Class name to Class object
 """
 
 params_for_model = {}
@@ -172,7 +178,8 @@ def _register(params, model):
     perm_model = type(name, (models.Model,), fields)
     permission_map[model] = perm_model
     permissions_for_model[model] = params['perms']
-    params_for_model[model] = params
+    params_for_model[model] = params 
+    class_names[model.__name__] = model
     return perm_model
 
 
@@ -231,6 +238,11 @@ if settings.DEBUG:
     register(TEST_MODEL_PARAMS, TestModel)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
+
+
+def get_class(class_name):
+    return class_names[class_name]
+
 
 def grant(user, perm, obj):
     """
