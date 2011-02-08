@@ -206,7 +206,8 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
                 view_remove_user.send(sender=obj.__class__, \
                                       editor=request.user, user=edited_user, \
                                       obj=obj)
-                return HttpResponse('1', mimetype='application/json')
+                id = ('"user_%d"' if form_user else '"group_%d"')%edited_user.pk
+                return HttpResponse(id, mimetype='application/json')
         
         # error in form return ajax response
         content = json.dumps(form.errors)

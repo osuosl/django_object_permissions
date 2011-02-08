@@ -91,10 +91,11 @@ $(document).ready(function() {
 
 function update(responseText, statusText, xhr, $form) {
     if (xhr.getResponseHeader('Content-Type') == 'application/json') {
-        if (responseText == 1) {
+        type = typeof responseText;
+        if (type == 'string') {
             // 1 code means success but no more permissions
             $('.qtip').qtip('hide');
-            $("#op_users #" + html.attr('id')).remove();
+            $("#op_users #" + responseText).remove();
         } else {
             // parse errors
             errors = responseText
