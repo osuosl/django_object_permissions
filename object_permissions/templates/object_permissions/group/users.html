@@ -45,7 +45,7 @@
         });
         
         // Update Permission Button
-        $(".permissions").live("click", function() {
+        $("#op_users .permissions").live("click", function() {
             id = this.parentNode.id.substring(5);
             $('.qtip').qtip('destroy');
             $(this).qtip({
