@@ -15,7 +15,7 @@
         <a class="button add permission" href="{% url group-add-permissions persona.pk class_name %}">
     {% endif %}
         Add {{class_name}}</a>
-    <table id="{{class_name}}" class="permissions">
+    <table id="{{class_name}}" class="permissions object_permissions">
         <tr><th colspan="100%">{{class_name}}</th></tr>
         {% for obj in objs %}
             {% include "object_permissions/permissions/object_row.html" %}

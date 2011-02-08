@@ -1,6 +1,6 @@
 {% comment  %} Form for setting user permissions on an object {% endcomment %}
-<link rel="stylesheet" type="text/css" href="/object_permissions_media/css/form.css"/>
-<form class="ajax_form" method="post" action="{{url}}">
+<link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
+<form class="object_permissions_form" method="post" action="{{url}}">
     <ul id="errors"></ul>
     <table>
     {# Only show object select when an object hasn't been preselected #}

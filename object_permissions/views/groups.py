@@ -234,15 +234,13 @@ def user_permissions(request, id, user_id=None):
     
     # render a form for an existing user only
     form_user = get_object_or_404(User, id=user_id)
-    data = {'permissions':get_user_perms(form_user, group), 'user':user_id}
+    data = {'permissions':get_user_perms(form_user, group),
+            'obj':group, 'user':user_id}
     form = ObjectPermissionForm(Group, data)
     return render_to_response("object_permissions/permissions/form.html", \
-                    {
-                    'form':form,
-                     'user_id':user_id,
-                     'url':reverse('usergroup-permissions', args=[group.id])
-                     }, \
-                    context_instance=RequestContext(request))
+                {'form':form, 'obj':group, 'user_id':user_id, \
+                'url':reverse('usergroup-permissions', args=[group.id])}, \
+                context_instance=RequestContext(request))
     
 
 @login_required

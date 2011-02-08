@@ -5,7 +5,7 @@ $(document).ready(function() {
     // unbind all functions, this ensures that they are never bound more
     // than once.  This is a problem when using jquery ajax tabs
     $('#add_user').unbind();
-    $('.ajax_form .submit').die();
+    $('.object_permissions_form .submit').die();
     $('.user .delete').die();
     $('.group .delete').die();
     $('.permissions').die();
@@ -23,17 +23,20 @@ $(document).ready(function() {
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
             api:{onShow:function(){
-                $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+                $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
+                bind_user_perm_form();
             }}
         });
     });
     
     // form submit button
-    $(".ajax_form").live("submit", function(){
-        $("#errors").empty();
-        $(this).ajaxSubmit({success: update});
-        return false;
-    });
+    function bind_user_perm_form() {
+        $(".object_permissions_form").submit(function(){
+            $("#errors").empty();
+            $(this).ajaxSubmit({success: update_user_permissions});
+            return false;
+        });
+    }
     
     // Delete user button
     $('.user .delete').live("click", function() {
@@ -82,14 +85,15 @@ $(document).ready(function() {
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
             api:{onShow:function(){
-                $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+                $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
+                bind_user_perm_form();
             }}
         });
         return false;
     });
 });
 
-function update(responseText, statusText, xhr, $form) {
+function update_user_permissions(responseText, statusText, xhr, $form) {
     if (xhr.getResponseHeader('Content-Type') == 'application/json') {
         type = typeof responseText;
         if (type == 'string') {

@@ -282,9 +282,8 @@ def view_obj_permissions(request, class_name, obj_id=None, \
                                         user=edited_user, obj=data['obj'])
                 
                 # return html to replace existing user row
-                if form_user:
-                    return render_to_response(row_template, \
-                        {'class_name':class_name, 'obj':data['obj'], 'persona':edited_user})
+                return render_to_response(row_template, \
+                    {'class_name':class_name, 'obj':data['obj'], 'persona':edited_user})
             else:
                 # no permissions, send ajax response to remove object
                 view_remove_user.send(sender=cls, \
@@ -298,6 +297,7 @@ def view_obj_permissions(request, class_name, obj_id=None, \
         return HttpResponse(content, mimetype='application/json')
     
     # GET - create form for editing and return as html
+    
     if obj_id:
         obj = get_object_or_404(cls, pk=obj_id)
         data = {'obj':obj}
@@ -310,7 +310,7 @@ def view_obj_permissions(request, class_name, obj_id=None, \
         elif group_id:
             group = get_object_or_404(Group, id=group_id)
             data['group'] = group_id
-            data['permission'] = get_group_perms(group, obj)
+            data['permissions'] = get_group_perms(group, obj)
             url = reverse('group-edit-permissions', \
                           args=(group_id, class_name, obj_id))
     else:

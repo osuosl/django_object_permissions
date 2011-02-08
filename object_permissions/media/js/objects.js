@@ -11,21 +11,24 @@ $('.button.add.permission').click(function(){
         show: {when:false, ready:true},
         hide: {fixed: true, when:false},
         api:{onShow:function(){
-            $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+            $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
+            bind_form();
         }}
     });
     return false;
 });
 
-// form submit button
-$(".ajax_form").live("submit", function(){
-    $("#errors").empty();
-    $(this).ajaxSubmit({success: update});
-    return false;
-});
+function bind_form(){
+    // form submit button
+    $(".object_permissions_form").submit(function(){
+        $("#errors").empty();
+        $(this).ajaxSubmit({success: update_object_permission});
+        return false;
+    });
+}
 
 // Delete user button
-$('.delete').live("click", function() {
+$('.object_permissions .delete').live("click", function() {
     class_name = this.parentNode.parentNode.parentNode.parentNode.id;
     name = $(this).parent().parent().children('.obj').html();
     if (confirm("Remove this " + class_name +": "+ name)) {
@@ -39,31 +42,12 @@ $('.delete').live("click", function() {
             data['group'] = persona_pk;
         }
         href = $(this).children('a').attr('href');
-        $.post(href, data, update, "json");
+        $.post(href, data, update_object_permission, "json");
     }
     return false;
 });
 
-$('table.permissions tr td.perms a').live('click', function(){
-    // destroy old qtip before showing new one
-    $('.qtip').qtip('destroy');
-    $(this).qtip({
-        content: {
-           url: this.href,
-           title: {text:'Permissions: ', button:'close'}
-        },
-        position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
-        style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
-        show: {when:false, ready:true},
-        hide: {fixed: true, when:false},
-        api:{onShow:function(){
-            $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
-        }}
-    });
-    return false;
-});
-
-function update(responseText, statusText, xhr, $form) {
+function update_object_permission(responseText, statusText, xhr, $form) {
     if (xhr.getResponseHeader('Content-Type') == 'application/json') {
         type = typeof responseText;
         if (type == 'string') {
@@ -92,3 +76,23 @@ function update(responseText, statusText, xhr, $form) {
         }
     }
 }
+
+$('table.permissions tr td.perms a').live('click', function(){
+    // destroy old qtip before showing new one
+    $('.qtip').qtip('destroy');
+    $(this).qtip({
+        content: {
+           url: this.href,
+           title: {text:'Permissions: ', button:'close'}
+        },
+        position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
+        style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
+        show: {when:false, ready:true},
+        hide: {fixed: true, when:false},
+        api:{onShow:function(){
+            $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
+            bind_form();
+        }}
+    });
+    return false;
+});
