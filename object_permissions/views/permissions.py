@@ -3,13 +3,14 @@ import json
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponse, HttpResponseForbidden
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 from django.utils.safestring import SafeString
 
 from object_permissions import get_user_perms, get_group_perms, \
-    get_model_perms, grant, revoke, get_users, get_groups
+    get_model_perms, grant, revoke, get_users, get_groups, get_class
 from object_permissions.models import Group
 from object_permissions.signals import view_add_user, view_remove_user, \
     view_edit_user
@@ -38,6 +39,7 @@ class ObjectPermissionForm(forms.Form):
         
         self.model = model
         self.fields['obj'].queryset = model.objects.all()
+        self.fields['obj'].label = model.__name__
         self.fields['permissions'].choices = self.get_choices(model)
 
     @classmethod
@@ -112,21 +114,30 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
             grantee = data['grantee']
             perms = data['permissions']
             
-            # if grantee does not have permissions, then this is a new user:
-            #    - permissions must be selected
-            old_perms = grantee.get_perms(data['obj'])
-            if old_perms:
-                # not new, has perms already
-                data['new'] = False
-                
-            elif not perms:
-                # new, doesn't have perms specified
-                msg = """You must grant at least 1 permission for new users and groups"""
-                self._errors["permissions"] = self.error_class([msg])
-                
+            
+            if 'obj' in data:
+                # if grantee does not have permissions, then this is a new user:
+                #    - permissions must be selected
+                old_perms = grantee.get_perms(data['obj'])
+                if old_perms:
+                    # not new, has perms already
+                    data['new'] = False
+                    
+                elif not perms:
+                    # new, doesn't have perms specified
+                    msg = """You must grant at least 1 permission for new users and groups"""
+                    self._errors["permissions"] = self.error_class([msg])
+                    
+                else:
+                    # new, perms specified
+                    data['new'] = True
+            
             else:
-                # new, perms specified
-                data['new'] = True
+                # no obj specified, must be adding a new object.  Still need to
+                # verify perms
+                if not perms:
+                    msg = """You must grant at least 1 permission for new users and groups"""
+                    self._errors["permissions"] = self.error_class([msg])
         
         return data
 
@@ -227,10 +238,101 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
     form = ObjectPermissionFormNewUsers(obj.__class__, data)
     
     return render_to_response('object_permissions/permissions/form.html', \
-                {'form':form, 'object':obj, 'user_id':user_id, \
+                {'form':form, 'obj':obj, 'user_id':user_id, \
                 'group_id':group_id, 'url':url}, \
                context_instance=RequestContext(request))
 
+
+@login_required
+def view_obj_permissions(request, class_name, obj_id=None, \
+    user_id=None, group_id=None, \
+    row_template='object_permissions/permissions/object_row.html'):
+    """
+    Generic view for editing permissions on an object when the user is already.
+    Known.  This is an admin only view since it is impossible to know the
+    permission scheme for the apps that are registering properties.
+    """
+    
+    if not request.user.is_superuser:
+        return HttpResponseForbidden('You are not authorized to view this page')
+    
+    try:
+        cls = get_class(class_name)
+    except KeyError:
+        return HttpResponseNotFound('Class type does not exist')
+    
+    if request.method == 'POST':
+        form = ObjectPermissionFormNewUsers(cls, request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            form_user = form.cleaned_data['user']
+            group = form.cleaned_data['group']
+            edited_user = form_user if form_user else group
+            
+            
+            if form.update_perms():
+                # send correct signal based on new or edited user
+                if data['new']:
+                    view_add_user.send(sender=cls, \
+                                       editor=request.user, \
+                                       user=edited_user, obj=data['obj'])
+                else:
+                    view_edit_user.send(sender=cls, \
+                                        editor=request.user, \
+                                        user=edited_user, obj=data['obj'])
+                
+                # return html to replace existing user row
+                if form_user:
+                    return render_to_response(row_template, \
+                        {'class_name':class_name, 'obj':data['obj'], 'persona':edited_user})
+            else:
+                # no permissions, send ajax response to remove object
+                view_remove_user.send(sender=cls, \
+                                      editor=request.user, user=edited_user, \
+                                      obj=data['obj'])
+                id = '"%s_%s"' % (class_name, obj_id)
+                return HttpResponse(id, mimetype='application/json')
+        
+        # error in form return ajax response
+        content = json.dumps(form.errors)
+        return HttpResponse(content, mimetype='application/json')
+    
+    # GET - create form for editing and return as html
+    if obj_id:
+        obj = get_object_or_404(cls, pk=obj_id)
+        data = {'obj':obj}
+        if user_id:
+            form_user = get_object_or_404(User, id=user_id)
+            data['user'] = user_id
+            data['permissions'] = get_user_perms(form_user, obj)
+            url = reverse('user-edit-permissions', \
+                          args=(user_id, class_name, obj_id))
+        elif group_id:
+            group = get_object_or_404(Group, id=group_id)
+            data['group'] = group_id
+            data['permission'] = get_group_perms(group, obj)
+            url = reverse('group-edit-permissions', \
+                          args=(group_id, class_name, obj_id))
+    else:
+        obj = None
+        if user_id:
+            form_user = get_object_or_404(User, id=user_id)
+            data={'user':user_id}
+            url = reverse('user-add-permissions', \
+                          args=(user_id, class_name))
+        elif group_id:
+            group = get_object_or_404(Group, id=group_id)
+            data={'group':group_id}
+            url = reverse('group-add-permissions', \
+                          args=(group_id, class_name))
+    
+    form = ObjectPermissionFormNewUsers(cls, data)
+    return render_to_response('object_permissions/permissions/form.html', \
+            {'form':form, 'obj':obj, 'user_id':user_id, 'group_id':group_id, 
+             'url':url}, \
+            context_instance=RequestContext(request))
+    
+    
 
 @login_required
 def all_permissions(request, id, \

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.template import Library
 
 from object_permissions.models import Group
@@ -26,4 +27,15 @@ def group_admin(user):
 
 @register.filter
 def class_name(cls):
+    """
+    Returns name of class for a class object
+    """
     return cls.__name__
+
+
+@register.filter
+def is_user(obj):
+    """
+    Returns True if obj is a user
+    """
+    return isinstance(obj, (User,))

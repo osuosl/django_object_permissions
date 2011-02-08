@@ -3,7 +3,6 @@
 <form class="ajax_form" method="post" action="{{url}}">
     <ul id="errors"></ul>
     <table>
-    
     {# Only show object select when an object hasn't been preselected #}
     {% if obj %}
         <input type="hidden" name="obj" value="{{obj.pk|default:''}}"/>
@@ -19,6 +18,7 @@
         <tr><td>{{form.user.label}}</td><td>{{form.user}}</td></tr>
         <tr class="group"><td>{{form.group.label}}</td><td>{{form.group}}</td></tr>
     {% endif %}
+    
         {# Manually create permissions checkboxes so we can integrate it into the table #}
         {% with form.data.permissions as data %}
         {% for permission in form.fields.permissions.choices %}

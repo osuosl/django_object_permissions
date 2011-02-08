@@ -8,17 +8,24 @@
 </style>
 
 {% for cls, objs in perm_dict.items %}
-    <table class="permissions">
-        <tr><th colspan="100%">{{cls|class_name}}</th></tr>
+    {% with cls|class_name as class_name %}
+    {% if persona|is_user %}
+        <a class="button add permission" href="{% url user-add-permissions persona.pk class_name %}">
+    {% else %}
+        <a class="button add permission" href="{% url group-add-permissions persona.pk class_name %}">
+    {% endif %}
+        Add {{class_name}}</a>
+    <table id="{{class_name}}" class="permissions">
+        <tr><th colspan="100%">{{class_name}}</th></tr>
         {% for obj in objs %}
-            <tr>
-                <td class="obj">{{obj}}</td>
-                <td class="perms">
-                    {% for permission in persona|permissions:obj %}
-                        {{permission}}{%if not forloop.last%}, {%endif%}
-                    {% endfor %}
-                </td>
-            </tr>
+            {% include "object_permissions/permissions/object_row.html" %}
         {% endfor %}
     </table>
+    {% endwith %}
 {% endfor %}
+
+<script type="text/javascript">
+    var is_user = {% if persona|is_user %}true{% else %}false{% endif %};
+    var persona_pk = {{persona.pk}};
+</script>
+<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/objects.js"></script>
