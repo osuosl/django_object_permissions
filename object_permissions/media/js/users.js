@@ -44,10 +44,11 @@ $(document).ready(function() {
         if (confirm("Remove this user: " + name)) {
             $('.qtip').qtip('destroy');
             id = this.parentNode.parentNode.id.substring(5);
-            data = {user:id, permissions:[]};
+            data = {user:id, permissions:[], obj:obj_id};
             $.post(user_url, data,
                 function(code){
-                    if (code==1) {
+                    type = typeof code
+                    if (type=="string") {
                         $("#user_" + id).remove();
                     }
                 },
@@ -60,10 +61,11 @@ $(document).ready(function() {
         name = $(this).parent().parent().children('.name').html();
         if (confirm("Remove this group: "+ name)) {
             id = this.parentNode.parentNode.id.substring(6);
-            data = {group:id, permissions:[]};
+            data = {group:id, permissions:[], obj:obj_id};
             $.post(user_url, data,
                 function(code){
-                    if (code==1) {
+                    type = typeof code
+                    if (type=="string") {
                         $("#group_" + id).remove();
                     }
                 },
