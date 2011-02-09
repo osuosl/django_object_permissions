@@ -1,8 +1,16 @@
 {% comment  %} Form for setting user permissions on an object {% endcomment %}
-<link rel="stylesheet" type="text/css" href="/object_permissions_media/css/form.css"/>
-<form class="ajax_form" method="post" action="{{url}}">
+<link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
+<form class="object_permissions_form" method="post" action="{{url}}">
     <ul id="errors"></ul>
     <table>
+    {# Only show object select when an object hasn't been preselected #}
+    {% if obj %}
+        <input type="hidden" name="obj" value="{{obj.pk|default:''}}"/>
+    {% else %}
+        <tr><td>{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
+    {% endif %}
+    
+    {# only show user/group when one hasn't been preselected #}
     {% if user_id or group_id %}
         <input type="hidden" name="user" value="{{user_id|default:''}}"/>
         <input type="hidden" name="group" value="{{group_id|default:''}}"/>
@@ -10,6 +18,7 @@
         <tr><td>{{form.user.label}}</td><td>{{form.user}}</td></tr>
         <tr class="group"><td>{{form.group.label}}</td><td>{{form.group}}</td></tr>
     {% endif %}
+    
         {# Manually create permissions checkboxes so we can integrate it into the table #}
         {% with form.data.permissions as data %}
         {% for permission in form.fields.permissions.choices %}

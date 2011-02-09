@@ -1012,13 +1012,21 @@ class TestPermissionViews(TestCase):
         user1 = User(id=3, username='tester1')
         user1.set_password('secret')
         user1.save()
+        superuser = User(id=4, username='superuser', is_superuser=True)
+        superuser.set_password('secret')
+        superuser.save()
+        
+        obj = TestModel.objects.create(name='test')
         
         d = globals()
         d['c'] = Client()
         d['user0'] = user0
         d['user1'] = user1
+        d['superuser'] = superuser
+        d['obj'] = obj
     
     def tearDown(self):
+        TestModel.objects.all().delete()
         User.objects.all().delete()
     
     def test_permissions_all(self):
@@ -1045,7 +1053,117 @@ class TestPermissionViews(TestCase):
         response = c.get(url % user1.pk)
         self.assertEqual(200, response.status_code)
         self.assertTemplateUsed(response, 'object_permissions/permissions/objects.html')
+    
+    def test_permissions_generic_add(self):
+        """
+        Tests adding permissions to a new object using the generic perm view
+        """
+        url = '/user/%s/permissions/%s/'
+        args = (user1.pk, 'TestModel')
+        
+        # anonymous user
+        response = c.get(url % args, follow=True)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'registration/login.html')
+        
+        # unauthorized user
+        self.assert_(c.login(username=user0.username, password='secret'))
+        response = c.get(url % args)
+        self.assertEqual(403, response.status_code)
+        
+        # invalid class
+        self.assert_(c.login(username=superuser.username, password='secret'))
+        response = c.get(url % (user1.pk, 'DoesNotExist'))
+        self.assertEqual(404, response.status_code)
+        
+        # invalid user
+        response = c.get(url % (-1, 'TestModel'))
+        self.assertEqual(404, response.status_code)
+        
+        # GET - success
+        response = c.get(url % args)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
+        
+        # POST - no perms
+        data = {'user':user1.pk, 'obj':obj.pk}
+        response = c.post(url % args, data)
+        self.assertEqual(200, response.status_code)
+        self.assertEquals('application/json', response['content-type'])
+        self.assertEqual([], user1.get_perms(obj))
+        
+        # POST - no object
+        data = {'user':user1.pk, 'permissions':['Perm1']}
+        response = c.post(url % args, data)
+        self.assertEqual(200, response.status_code)
+        self.assertEquals('application/json', response['content-type'])
+        self.assertEqual([], user1.get_perms(obj))
+        
+        # POST - success
+        data = {'user':user1.pk, 'permissions':['Perm1'], 'obj':obj.pk}
+        response = c.post(url % args, data)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'object_permissions/permissions/object_row.html')
+        self.assertEqual(['Perm1'], user1.get_perms(obj))
 
+    def test_permissions_generic_edit(self):
+        """
+        Tests adding permissions to a new object using the generic perm view
+        """
+        url = '/user/%s/permissions/%s/%s/'
+        args = (user1.pk, 'TestModel',obj.pk)
+        user1.grant('Perm1', obj)
+        
+        # anonymous user
+        response = c.get(url % args, follow=True)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'registration/login.html')
+        
+        # unauthorized user
+        self.assert_(c.login(username=user0.username, password='secret'))
+        response = c.get(url % args)
+        self.assertEqual(403, response.status_code)
+        
+        # invalid class
+        self.assert_(c.login(username=superuser.username, password='secret'))
+        response = c.get(url % (user1.pk, 'DoesNotExist',obj.pk))
+        self.assertEqual(404, response.status_code)
+        
+        # invalid user
+        response = c.get(url % (-1, 'TestModel',obj.pk))
+        self.assertEqual(404, response.status_code)
+        
+        #invalid object
+        response = c.get(url % (user1.pk, 'TestModel',-1))
+        self.assertEqual(404, response.status_code)
+        
+        # GET - success
+        response = c.get(url % args)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
+        
+        # POST - no object
+        data = {'user':user1.pk, 'permissions':['Perm2']}
+        response = c.post(url % args, data)
+        self.assertEqual(200, response.status_code)
+        self.assertEquals('application/json', response['content-type'])
+        self.assertEqual(['Perm1'], user1.get_perms(obj))
+        
+        # POST - success
+        data = {'user':user1.pk, 'permissions':['Perm2','Perm3'], 'obj':obj.pk}
+        response = c.post(url % args, data)
+        self.assertEqual(200, response.status_code)
+        self.assertTemplateUsed(response, 'object_permissions/permissions/object_row.html')
+        self.assertEqual(set(['Perm2','Perm3']), set(user1.get_perms(obj)))
+        
+        # POST - no perms (removes all perms)
+        data = {'user':user1.pk, 'obj':obj.pk}
+        response = c.post(url % args, data)
+        self.assertEqual(200, response.status_code)
+        self.assertEquals('application/json', response['content-type'])
+        self.assertEquals('"TestModel_%s"' % obj.pk, response.content)
+        self.assertEqual([], user1.get_perms(obj))
+    
 
 class TestObjectPermissionForm(TestCase):
     """ Tests for testing forms for editing permissions """
@@ -1076,7 +1194,7 @@ class TestObjectPermissionForm(TestCase):
         Group.objects.all().delete()
     
     def test_trivial(self):
-        form = ObjectPermissionForm(obj)
+        form = ObjectPermissionForm(TestModel)
     
     def test_choices_generation(self):
         """ tests that permissions choices lists are generated correctly """
@@ -1103,38 +1221,38 @@ class TestObjectPermissionForm(TestCase):
     
     def test_choices_cache(self):
         """ tests that choices lists are cached """
-        choices = ObjectPermissionForm.get_choices(obj)
-        choices2 = ObjectPermissionForm.get_choices(obj)
-        choices3 = ObjectPermissionForm.get_choices(obj)
-        choices4 = ObjectPermissionForm.get_choices(obj)
+        choices = ObjectPermissionForm.get_choices(TestModel)
+        choices2 = ObjectPermissionForm.get_choices(TestModel)
+        choices3 = ObjectPermissionForm.get_choices(TestModel)
+        choices4 = ObjectPermissionForm.get_choices(TestModel)
         
         self.assertEqual(id(choices), id(choices2))
         self.assertEqual(id(choices3), id(choices4))
     
     def test_invalid_grantee(self):
         """ tests entering bad id for group or user """
-        data = {'user':1234, 'permissions':['Perm1']}
-        form = ObjectPermissionForm(obj, data)
+        data = {'user':1234, 'obj':obj.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionForm(TestModel, data)
         self.assertFalse(form.is_valid())
         
-        data = {'group':1234, 'permissions':['Perm1']}
-        form = ObjectPermissionForm(obj, data)
+        data = {'group':1234, 'obj':obj.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionForm(TestModel, data)
         self.assertFalse(form.is_valid())
     
     def test_user_group_exclusivity(self):
         """ tests that only a user or a group can be selected """
         
-        data = {'user':user.pk, 'group':group.pk, 'permissions':['Perm1']}
-        form = ObjectPermissionForm(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk, 'group':group.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionForm(TestModel, data)
         self.assertFalse(form.is_valid())
         
-        data = {'user':user.pk, 'permissions':['Perm1']}
-        form = ObjectPermissionForm(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionForm(TestModel, data)
         self.assert_(form.is_valid(), form.errors)
         self.assertEqual(user, form.cleaned_data['grantee'])
         
-        data = {'group':group.pk, 'permissions':['Perm1']}
-        form = ObjectPermissionForm(obj, data)
+        data = {'group':group.pk, 'obj':obj.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionForm(TestModel, data)
         self.assert_(form.is_valid())
         self.assertEqual(group, form.cleaned_data['grantee'])
 
@@ -1159,7 +1277,7 @@ class TestObjectPermissionFormNewUsers(TestCase):
         User.objects.all().delete()
     
     def test_trivial(self):
-        form = ObjectPermissionFormNewUsers(obj)
+        form = ObjectPermissionFormNewUsers(TestModel)
 
 
     def test_new_user(self):
@@ -1169,16 +1287,16 @@ class TestObjectPermissionFormNewUsers(TestCase):
         validates:
             * perms must be included
         """
-        data = {'user':user.pk}
-        form = ObjectPermissionFormNewUsers(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk}
+        form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assertFalse(form.is_valid())
         
-        data = {'user':user.pk, 'permissions':[]}
-        form = ObjectPermissionFormNewUsers(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk, 'permissions':[]}
+        form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assertFalse(form.is_valid())
 
-        data = {'user':user.pk, 'permissions':['Perm1']}
-        form = ObjectPermissionFormNewUsers(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assert_(form.is_valid())
         self.assertTrue(form.cleaned_data['new'])
     
@@ -1187,18 +1305,18 @@ class TestObjectPermissionFormNewUsers(TestCase):
         Tests modifying a user's perms
         """
         user.grant('Perm1', obj)
-        data = {'user':user.pk, 'permissions':['Perm1']}
-        form = ObjectPermissionFormNewUsers(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk, 'permissions':['Perm1']}
+        form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assert_(form.is_valid())
         self.assertFalse(form.cleaned_data['new'])
         
-        data = {'user':user.pk}
-        form = ObjectPermissionFormNewUsers(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk}
+        form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assert_(form.is_valid())
         self.assertFalse(form.cleaned_data['new'])
         
         user.grant('Perm1', obj)
-        data = {'user':user.pk, 'permissions':[]}
-        form = ObjectPermissionFormNewUsers(obj, data)
+        data = {'user':user.pk, 'obj':obj.pk, 'permissions':[]}
+        form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assert_(form.is_valid())
         self.assertFalse(form.cleaned_data['new'])
