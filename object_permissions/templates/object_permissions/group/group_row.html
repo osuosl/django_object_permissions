@@ -1,5 +1,8 @@
+{% load object_permission_tags %}
 <tr id="group_{{group.id}}" class="group_row">
     <td class="name"><a href="{% url usergroup-detail group.id %}">{{group.name}}</a></td>
+    <td>{{ group.user_set.count }}</td>
+    <td>{% number_group_admins group %}<td>
     <td class="actions">
         <div class="edit" title="edit"></div>
     </td>

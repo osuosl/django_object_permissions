@@ -10,3 +10,6 @@ settings.py
 
 # Any sqlite database files created by the project
 *.db
+
+# vim swap files
+*.swp
