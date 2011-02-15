@@ -11,6 +11,9 @@ from object_permissions.registration import TestModel, TestModelChild, \
 from object_permissions.signals import view_add_user, view_remove_user, \
     view_edit_user, view_group_edited, view_group_created, view_group_deleted
 
+from object_permissions.templatetags.object_permission_tags import \
+                number_group_admins
+
 __all__ = ('TestGroups','TestGroupViews')
 
 
@@ -1039,10 +1042,11 @@ class TestGroupViews(TestCase):
         """
         Test template tag used in list of Groups view
         """
-        from object_permission.templatetags.object_permission_tags import \
-                number_group_admins
+
         group0 = self.test_save(name='group1')
         group1 = self.test_save(name='group2')
+        user0 = self.user
+        user1 = self.user1
         
         group0.user_set.add(user0)
         group0.user_set.add(user1)
