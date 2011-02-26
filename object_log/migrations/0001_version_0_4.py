@@ -9,14 +9,14 @@ class Migration(SchemaMigration):
     def forwards(self, orm):
         
         # Adding model 'LogAction'
-        db.create_table('logs_logaction', (
+        db.create_table('object_log_logaction', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=128)),
         ))
         db.send_create_signal('object_log', ['LogAction'])
 
         # Adding model 'LogItem'
-        db.create_table('logs_logitem', (
+        db.create_table('object_log_logitem', (
             ('timestamp', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
             ('object_repr', self.gf('django.db.models.fields.CharField')(max_length=128, null=True, blank=True)),
             ('object_type', self.gf('django.db.models.fields.related.ForeignKey')(related_name='log_items', to=orm['contenttypes.ContentType'])),
@@ -32,10 +32,10 @@ class Migration(SchemaMigration):
     def backwards(self, orm):
         
         # Deleting model 'LogAction'
-        db.delete_table('logs_logaction')
+        db.delete_table('object_log_logaction')
 
         # Deleting model 'LogItem'
-        db.delete_table('logs_logitem')
+        db.delete_table('object_log_logitem')
     
     
     models = {
