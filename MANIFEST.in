@@ -1,0 +1,1 @@
+recursive-include object_log *.py *.png *.js *.html
