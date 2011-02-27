@@ -101,24 +101,18 @@ class LogItemManager(models.Manager):
         #from django.utils.encoding import smart_unicode
         # Uncomment below:
         #key = smart_unicode(key)
-        dict = {}
         action = LogAction.objects.get_from_cache(key)
-        
-        dict['action'] = action
-        dict['id'] = None
-        dict['timestamp'] = None
-        dict['user'] = user
-        dict['object1'] = object1
+
+        entry = self.model(action=action, user=user, object1=object1)
         
         if object2 is not None:
-            dict['object2'] = object2
+            entry.object2 = object2
         
         if object3 is not None:
-            dict['object3'] = object3
+            entry.object3 = object3
 
-        m = self.model(**dict)
-        m.save()
-        return m
+        entry.save()
+        return entry
 
 
 class LogItem(models.Model):
