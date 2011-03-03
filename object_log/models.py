@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
+from django.db import transaction
 from django.db.utils import DatabaseError
 from django.template.loader import get_template
 from django.template import Context
@@ -12,14 +13,19 @@ class LogActionManager(models.Manager):
     _cache = {}
     _DELAYED = []
 
+
     def register(self, key, template):
         try:
             return LogAction.objects._register(key, template)
         except DatabaseError:
             # there was an error, likely due to a missing table.  Delay this
             # registration.
+            #
+            # XXX manually rollback the transaction since psycopg2 is not smart
+            # enough when dealing with tables that don't exist yet
             self._DELAYED.append((key, template))
-        
+
+    @transaction.commit_manually
     def _register(self, key, template):
         """
         Registers and caches an LogAction type
@@ -28,17 +34,22 @@ class LogActionManager(models.Manager):
         @param template : template associated with key
         """
         try:
-            action = self.get_from_cache(key)
-            action.template = template
-            action.save()
-        except LogAction.DoesNotExist:
-            action, new = LogAction.objects.get_or_create(name=key, \
-            template=template)
-            self._cache.setdefault(self.db, {})[key] = action
-            action.save()
-        
-        return action
-    
+            try:
+                action = self.get_from_cache(key)
+                action.template = template
+                action.save()
+
+            except LogAction.DoesNotExist:
+                action, new = LogAction.objects.get_or_create(name=key, \
+                template=template)
+                self._cache.setdefault(self.db, {})[key] = action
+                action.save()
+            return action
+        except:
+            transaction.rollback()
+        finally:
+            transaction.commit()
+
     def _register_delayed(**kwargs):
         """
         Register all permissions that were delayed waiting for database tables to
