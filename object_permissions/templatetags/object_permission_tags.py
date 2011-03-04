@@ -1,7 +1,8 @@
+from django.contrib.auth.models import User
 from django.template import Library
 
 from object_permissions.models import Group
-from object_permissions.registration import get_user_perms
+from object_permissions.registration import get_user_perms, get_users_all
 
 register = Library()
 
@@ -26,4 +27,21 @@ def group_admin(user):
 
 @register.filter
 def class_name(cls):
+    """
+    Returns name of class for a class object
+    """
     return cls.__name__
+
+
+@register.filter
+def is_user(obj):
+    """
+    Returns True if obj is a user
+    """
+    return isinstance(obj, (User,))
+
+
+@register.simple_tag
+def number_group_admins(group):
+    "Return number of users with admin perms for specified group"
+    return get_users_all(group, ["admin",], False).count()

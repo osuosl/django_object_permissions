@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ObjectDoesNotExist
 from django import db
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Model
 from django.db.models import Q
 
@@ -47,6 +47,7 @@ class UnknownPermissionException(Exception):
 
 __all__ = (
     'register',
+    'get_class',
     'grant', 'grant_group',
     'revoke', 'revoke_group',
     'get_user_perms', 'get_group_perms',
@@ -69,6 +70,11 @@ the Model that stores the permissions on that Model.
 permissions_for_model = {}
 """
 A mapping of Models to lists of permissions defined for that model.
+"""
+
+class_names = {}
+"""
+A mapping of Class name to Class object
 """
 
 params_for_model = {}
@@ -136,6 +142,7 @@ def register(params, model):
         _DELAYED.append((params, model))
 
 
+@transaction.commit_manually
 def _register(params, model):
     """
     Real method for registering permissions.
@@ -144,36 +151,42 @@ def _register(params, model):
     This inner function is required because its logic must also be available
     to call back from _register_delayed for delayed registrations.
     """
+    try:
+        if model in permission_map:
+            warn("Tried to double-register %s for permissions!" % model)
+            return
 
-    if model in permission_map:
-        warn("Tried to double-register %s for permissions!" % model)
-        return
+        name = "%s_Perms" % model.__name__
+        fields = {
+            "__module__": "",
+            # XXX user xor group null?
+            "user": models.ForeignKey(User, null=True,
+                related_name="%s_uperms" % model.__name__),
+            "group": models.ForeignKey(Group, null=True,
+                related_name="%s_gperms" % model.__name__),
+            "obj": models.ForeignKey(model,
+                related_name="operms"),
+        }
 
-    name = "%s_Perms" % model.__name__
-    fields = {
-        "__module__": "",
-        # XXX user xor group null?
-        "user": models.ForeignKey(User, null=True,
-            related_name="%s_uperms" % model.__name__),
-        "group": models.ForeignKey(Group, null=True,
-            related_name="%s_gperms" % model.__name__),
-        "obj": models.ForeignKey(model,
-            related_name="operms"),
-    }
+        for perm in params['perms']:
+            fields[perm] = models.BooleanField(default=False)
 
-    for perm in params['perms']:
-        fields[perm] = models.BooleanField(default=False)
+        class Meta:
+            app_label = "object_permissions"
 
-    class Meta:
-        app_label = "object_permissions"
+        fields["Meta"] = Meta
 
-    fields["Meta"] = Meta
-
-    perm_model = type(name, (models.Model,), fields)
-    permission_map[model] = perm_model
-    permissions_for_model[model] = params['perms']
-    params_for_model[model] = params
-    return perm_model
+        perm_model = type(name, (models.Model,), fields)
+        permission_map[model] = perm_model
+        permissions_for_model[model] = params['perms']
+        params_for_model[model] = params
+        class_names[model.__name__] = model
+        return perm_model
+    except:
+        transaction.rollback()
+        raise
+    finally:
+        transaction.commit()
 
 
 def _register_delayed(**kwargs):
@@ -231,6 +244,11 @@ if settings.TESTING:
     register(TEST_MODEL_PARAMS, TestModel)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
     register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
+
+
+def get_class(class_name):
+    return class_names[class_name]
+
 
 def grant(user, perm, obj):
     """

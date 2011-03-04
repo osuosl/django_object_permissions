@@ -1,9 +1,9 @@
-.ajax_form label {font-weight:bold;}
-.ajax_form tr.group td {padding-bottom:10px;}
-.ajax_form tr.permission {
+.object_permissions_form label {font-weight:bold;}
+.object_permissions_form tr.group td {padding-bottom:10px;}
+.object_permissions_form tr.permission {
     border-top:1px solid #ddd;
     border-bottom:1px solid #ddd;
 }
-.ajax_form tr.permission td{padding:5px 0; vertical-align:top;}
-.ajax_form .input {white-space:nowrap;}
-.ajax_form label {margin-right:3px;}
+.object_permissions_form tr.permission td{padding:5px 0; vertical-align:top;}
+.object_permissions_form .input {white-space:nowrap;}
+.object_permissions_form label {margin-right:3px;}

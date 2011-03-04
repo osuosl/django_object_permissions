@@ -25,13 +25,6 @@
             return false;
         });
         
-        // submit button
-        $(".ajax_form").live("submit", function(){
-            $("#errors").empty();
-            $(this).ajaxSubmit({success: update});
-            return false;
-        });
-        
         // Delete user button
         $('#op_users .delete').live("click", function() {
             name = $(this).parent().parent().children('.name').html();
@@ -44,6 +37,13 @@
             }
         });
         
+        // submit button
+        $(".add_user_form").live('submit', function(){
+            $("#errors").empty();
+            $(this).ajaxSubmit({success: update_group_user});
+            return false;
+        });
+        
         // Update Permission Button
         $("#op_users .permissions").live("click", function() {
             id = this.parentNode.id.substring(5);
@@ -53,19 +53,26 @@
                    url: this.href,
                    title: {text:'Permissions: '+id, button:'close'},
                 },
-                position: {corner:{ target:"topMiddle", tooltip:"bottomMiddle"}},
+                position: {corner:{ target:"rightMiddle", tooltip:"leftMiddle"}},
                 style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
                 show: {when:false, ready:true},
                 hide: {fixed: true, when:false},
                 api:{onShow:function(){
                     $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
+                    
+                    // submit button
+                    $(".object_permissions_form").submit(function(){
+                        $("#errors").empty();
+                        $(this).ajaxSubmit({success: update_group_user});
+                        return false;
+                    });
                 }}
             });
             return false;
         });
     });
     
-    function update(responseText, statusText, xhr, $form) {
+    function update_group_user(responseText, statusText, xhr, $form) {
         if (xhr.getResponseHeader('Content-Type') == 'application/json') {
             // parse errors
             for (key in responseText) {

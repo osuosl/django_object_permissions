@@ -214,7 +214,7 @@ def user_permissions(request, id, user_id=None):
         return HttpResponseForbidden('You do not have sufficient privileges')
     
     if request.method == 'POST':
-        form = ObjectPermissionForm(group, request.POST)
+        form = ObjectPermissionForm(Group, request.POST)
         if form.is_valid():
             form.update_perms()
             user = form.cleaned_data['user']
@@ -234,15 +234,13 @@ def user_permissions(request, id, user_id=None):
     
     # render a form for an existing user only
     form_user = get_object_or_404(User, id=user_id)
-    data = {'permissions':get_user_perms(form_user, group), 'user':user_id}
-    form = ObjectPermissionForm(group, data)
+    data = {'permissions':get_user_perms(form_user, group),
+            'obj':group, 'user':user_id}
+    form = ObjectPermissionForm(Group, data)
     return render_to_response("object_permissions/permissions/form.html", \
-                    {
-                    'form':form,
-                     'user_id':user_id,
-                     'url':reverse('usergroup-permissions', args=[group.id])
-                     }, \
-                    context_instance=RequestContext(request))
+                {'form':form, 'obj':group, 'user_id':user_id, \
+                'url':reverse('usergroup-permissions', args=[group.id])}, \
+                context_instance=RequestContext(request))
     
 
 @login_required
