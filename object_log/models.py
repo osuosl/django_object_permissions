@@ -1,3 +1,5 @@
+from sys import modules
+
 from django.db import models
 
 from django.contrib.auth.models import User
@@ -11,18 +13,13 @@ from django.template import Context
 
 class LogActionManager(models.Manager):
     _cache = {}
+    _SYNCED = False
     _DELAYED = []
 
-
     def register(self, key, template):
-        try:
+        if LogActionManager._SYNCED:
             return LogAction.objects._register(key, template)
-        except DatabaseError:
-            # there was an error, likely due to a missing table.  Delay this
-            # registration.
-            #
-            # XXX manually rollback the transaction since psycopg2 is not smart
-            # enough when dealing with tables that don't exist yet
+        else:
             self._DELAYED.append((key, template))
 
     @transaction.commit_manually
@@ -50,7 +47,7 @@ class LogActionManager(models.Manager):
         finally:
             transaction.commit()
 
-    def _register_delayed(**kwargs):
+    def _register_delayed(sender, **kwargs):
         """
         Register all permissions that were delayed waiting for database tables to
         be created.
@@ -61,11 +58,15 @@ class LogActionManager(models.Manager):
             for args in LogActionManager._DELAYED:
                 LogAction.objects._register(*args)
             models.signals.post_syncdb.disconnect(LogActionManager._register_delayed)
+            LogActionManager._SYNCED = True
         except DatabaseError:
             # still waiting for models in other apps to be created
             pass
 
-    models.signals.post_syncdb.connect(_register_delayed)
+    # connect signal for delayed registration.  Filter by this module so that
+    # it is only called once
+    models.signals.post_syncdb.connect(_register_delayed, \
+                                       sender=modules['object_log.models'])
 
     def get_from_cache(self, key):
         """
@@ -112,24 +113,18 @@ class LogItemManager(models.Manager):
         #from django.utils.encoding import smart_unicode
         # Uncomment below:
         #key = smart_unicode(key)
-        dict = {}
         action = LogAction.objects.get_from_cache(key)
-        
-        dict['action'] = action
-        dict['id'] = None
-        dict['timestamp'] = None
-        dict['user'] = user
-        dict['object1'] = object1
+
+        entry = self.model(action=action, user=user, object1=object1)
         
         if object2 is not None:
-            dict['object2'] = object2
+            entry.object2 = object2
         
         if object3 is not None:
-            dict['object3'] = object3
+            entry.object3 = object3
 
-        m = self.model(**dict)
-        m.save()
-        return m
+        entry.save()
+        return entry
 
 
 class LogItem(models.Model):
