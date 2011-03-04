@@ -22,8 +22,6 @@ class ObjectPermBackend(object):
                 # happened, and it will hopefully LART the user sufficiently.
                 self.anonymous, new = User.objects.get_or_create(
                         username='anonymous')
-            if new:
-                self.anonymous.save()
         else:
             self.anonymous = None
 
