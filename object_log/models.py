@@ -1,8 +1,11 @@
+from sys import modules
+
 from django.db import models
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.generic import GenericForeignKey
+from django.db import transaction
 from django.db.utils import DatabaseError
 from django.template.loader import get_template
 from django.template import Context
@@ -10,16 +13,16 @@ from django.template import Context
 
 class LogActionManager(models.Manager):
     _cache = {}
+    _SYNCED = False
     _DELAYED = []
 
     def register(self, key, template):
-        try:
+        if LogActionManager._SYNCED:
             return LogAction.objects._register(key, template)
-        except DatabaseError:
-            # there was an error, likely due to a missing table.  Delay this
-            # registration.
+        else:
             self._DELAYED.append((key, template))
-        
+
+    @transaction.commit_manually
     def _register(self, key, template):
         """
         Registers and caches an LogAction type
@@ -28,18 +31,23 @@ class LogActionManager(models.Manager):
         @param template : template associated with key
         """
         try:
-            action = self.get_from_cache(key)
-            action.template = template
-            action.save()
-        except LogAction.DoesNotExist:
-            action, new = LogAction.objects.get_or_create(name=key, \
-            template=template)
-            self._cache.setdefault(self.db, {})[key] = action
-            action.save()
-        
-        return action
-    
-    def _register_delayed(**kwargs):
+            try:
+                action = self.get_from_cache(key)
+                action.template = template
+                action.save()
+
+            except LogAction.DoesNotExist:
+                action, new = LogAction.objects.get_or_create(name=key, \
+                template=template)
+                self._cache.setdefault(self.db, {})[key] = action
+                action.save()
+            return action
+        except:
+            transaction.rollback()
+        finally:
+            transaction.commit()
+
+    def _register_delayed(sender, **kwargs):
         """
         Register all permissions that were delayed waiting for database tables to
         be created.
@@ -50,11 +58,15 @@ class LogActionManager(models.Manager):
             for args in LogActionManager._DELAYED:
                 LogAction.objects._register(*args)
             models.signals.post_syncdb.disconnect(LogActionManager._register_delayed)
+            LogActionManager._SYNCED = True
         except DatabaseError:
             # still waiting for models in other apps to be created
             pass
 
-    models.signals.post_syncdb.connect(_register_delayed)
+    # connect signal for delayed registration.  Filter by this module so that
+    # it is only called once
+    models.signals.post_syncdb.connect(_register_delayed, \
+                                       sender=modules['object_log.models'])
 
     def get_from_cache(self, key):
         """
