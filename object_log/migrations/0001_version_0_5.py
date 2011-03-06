@@ -10,21 +10,23 @@ class Migration(SchemaMigration):
         
         # Adding model 'LogAction'
         db.create_table('object_log_logaction', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=128)),
+            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=128, primary_key=True)),
+            ('template', self.gf('django.db.models.fields.CharField')(unique=True, max_length=128)),
         ))
         db.send_create_signal('object_log', ['LogAction'])
 
         # Adding model 'LogItem'
         db.create_table('object_log_logitem', (
             ('timestamp', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-            ('object_repr', self.gf('django.db.models.fields.CharField')(max_length=128, null=True, blank=True)),
-            ('object_type', self.gf('django.db.models.fields.related.ForeignKey')(related_name='log_items', to=orm['contenttypes.ContentType'])),
-            ('object_id', self.gf('django.db.models.fields.PositiveIntegerField')()),
+            ('object_id3', self.gf('django.db.models.fields.PositiveIntegerField')(null=True)),
+            ('object_id2', self.gf('django.db.models.fields.PositiveIntegerField')(null=True)),
+            ('object_id1', self.gf('django.db.models.fields.PositiveIntegerField')(null=True)),
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='log_items', to=orm['auth.User'])),
             ('action', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['object_log.LogAction'])),
-            ('log_message', self.gf('django.db.models.fields.TextField')(null=True, blank=True)),
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('object_type1', self.gf('django.db.models.fields.related.ForeignKey')(related_name='log_items1', null=True, to=orm['contenttypes.ContentType'])),
+            ('object_type2', self.gf('django.db.models.fields.related.ForeignKey')(related_name='log_items2', null=True, to=orm['contenttypes.ContentType'])),
+            ('object_type3', self.gf('django.db.models.fields.related.ForeignKey')(related_name='log_items3', null=True, to=orm['contenttypes.ContentType'])),
         ))
         db.send_create_signal('object_log', ['LogItem'])
     
@@ -77,17 +79,19 @@ class Migration(SchemaMigration):
         },
         'object_log.logaction': {
             'Meta': {'object_name': 'LogAction'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '128'})
+            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '128', 'primary_key': 'True'}),
+            'template': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '128'})
         },
         'object_log.logitem': {
             'Meta': {'object_name': 'LogItem'},
             'action': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['object_log.LogAction']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'log_message': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
-            'object_id': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'object_repr': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'}),
-            'object_type': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'log_items'", 'to': "orm['contenttypes.ContentType']"}),
+            'object_id1': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
+            'object_id2': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
+            'object_id3': ('django.db.models.fields.PositiveIntegerField', [], {'null': 'True'}),
+            'object_type1': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'log_items1'", 'null': 'True', 'to': "orm['contenttypes.ContentType']"}),
+            'object_type2': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'log_items2'", 'null': 'True', 'to': "orm['contenttypes.ContentType']"}),
+            'object_type3': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'log_items3'", 'null': 'True', 'to': "orm['contenttypes.ContentType']"}),
             'timestamp': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'log_items'", 'to': "orm['auth.User']"})
         }

@@ -2,6 +2,10 @@
 Changelog
 ======================================
 
+0.5.1
+---------
+
+ * #3675 - Migrations are not correctly updating LogItem.action_id for mysql 
 
 
 0.5
