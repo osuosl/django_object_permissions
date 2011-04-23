@@ -89,7 +89,7 @@
 {% block content %}
     <h1>User Groups</h1>
 
-    <a id="add_group" href="javascript:none()" class="button add">Add Group</a>
+    {% if user.is_superuser %}<a id="add_group" href="javascript:none()" class="button add">Add Group</a>{% endif %}
     <table id="groups">
         <tr>
             <th>Name</th>
