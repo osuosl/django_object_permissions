@@ -6,8 +6,7 @@ from django.contrib.auth.models import User, Group
 from django.core.exceptions import ObjectDoesNotExist
 from django import db
 from django.db import models, transaction
-from django.db.models import Model
-from django.db.models import Q
+from django.db.models import Model, Q, Sum
 
 from object_permissions.signals import granted, revoked
 
@@ -422,6 +421,7 @@ def revoke_group(group, perm, obj):
         # Group didnt have permission to begin with; do nothing.
         pass
 
+
 def revoke_all(user, obj):
     """
     Revoke all permissions from a User.
@@ -479,6 +479,27 @@ def get_user_perms(user, obj):
         return []
 
 
+def get_user_perms_any(user, klass, groups=True):
+    """
+    return permission types that the user has on a given Model
+    """
+    permissions = permission_map[klass]
+    try:
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        if groups:
+            q = permissions.objects.filter(Q(user=user) | Q(group__user=user))
+        else:
+            q = permissions.objects.filter(user=user)
+        q = q.aggregate(**kwargs)
+        return set([field for field, value in q.items() if value])
+
+    except permissions.DoesNotExist:
+        return []
+
+
 def get_group_perms(group, obj):
     """
     Return the permissions that the Group has on the given object.
@@ -492,6 +513,23 @@ def get_group_perms(group, obj):
         return [field.name for field in q._meta.fields
                 if isinstance(field, models.BooleanField)
                 and getattr(q, field.name)]
+    except permissions.DoesNotExist:
+        return []
+
+
+def get_group_perms_any(group, klass):
+    """
+    return permission types that the user has on a given Model
+    """
+    permissions = permission_map[klass]
+    try:
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        q = permissions.objects.filter(group=group).aggregate(**kwargs)
+        return set([field for field, value in q.items() if value])
+
     except permissions.DoesNotExist:
         return []
 
@@ -1115,6 +1153,7 @@ setattr(User, 'has_object_perm', user_has_perm)
 setattr(User, 'has_any_perms', user_has_any_perms)
 setattr(User, 'has_all_perms', user_has_all_perms)
 setattr(User, 'get_perms', get_user_perms)
+setattr(User, 'get_perms_any', get_user_perms_any)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'get_objects_any_perms', user_get_objects_any_perms)
 setattr(User, 'get_objects_all_perms', user_get_objects_all_perms)
@@ -1131,6 +1170,7 @@ setattr(Group, 'has_perm', group_has_perm)
 setattr(Group, 'has_any_perms', group_has_any_perms)
 setattr(Group, 'has_all_perms', group_has_all_perms)
 setattr(Group, 'get_perms', get_group_perms)
+setattr(Group, 'get_perms_any', get_group_perms_any)
 setattr(Group, 'set_perms', set_group_perms)
 setattr(Group, 'get_objects_any_perms', group_get_objects_any_perms)
 setattr(Group, 'get_objects_all_perms', group_get_objects_all_perms)

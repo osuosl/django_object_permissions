@@ -289,7 +289,28 @@ class TestGroups(TestCase):
         self.assertEqual(perms4, get_group_perms(group0, object0))
         self.assertEqual(perms2, set(get_group_perms(group0, object1)))
         self.assertEqual(perms1, set(get_group_perms(group1, object0)))
-    
+
+    def test_group_get_perms_any(self):
+        """
+        tests retrieving list of perms across any instance of a model
+
+        Verifies:
+            * No Perms returns empty list
+            * some perms returns just that list
+            * all perms returns all perms
+        """
+        group0 = self.test_save('TestGroup0')
+        group1 = self.test_save('TestGroup1')
+
+        self.assertEqual(set(), group0.get_perms_any(TestModel))
+
+        group0.grant('Perm1', object0)
+        group0.grant('Perm3', object1)
+        group0.grant('Perm4', object1)
+        group1.grant('Perm2', object0)
+
+        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), group0.get_perms_any(TestModel))
+
     def test_has_perm(self):
         """
         Additional tests for has_perms
@@ -427,6 +448,30 @@ class TestGroups(TestCase):
         # has multiple perms
         self.assert_(group0 in get_groups_all(object0, ['Perm1','Perm2']))
         self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
+
+    def test_user_get_perms_any(self):
+        """
+        tests retrieving list of perms across any instance of a model
+
+        Verifies:
+            * No Perms returns empty list
+            * some perms returns just that list
+            * all perms returns all perms
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user0)
+
+        self.assertEqual(set(), user0.get_perms_any(TestModel))
+
+        group0.grant('Perm1', object0)
+        group1.grant('Perm3', object1)
+        group1.grant('Perm4', object1)
+
+        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), user0.get_perms_any(TestModel))
+
+        # exclude group perms
+        self.assertEqual(set(), user0.get_perms_any(TestModel, False))
+
 
     def test_user_get_objects_any_perms(self):
         """

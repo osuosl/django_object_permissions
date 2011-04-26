@@ -298,6 +298,24 @@ class TestModelPermissions(TestCase):
         self.assertFalse(user0.has_perm('Perm1', None))
         self.assertFalse(user0.has_perm('DoesNotExist'), object0)
         self.assertFalse(user0.has_perm('Perm2', object0))
+
+    def test_get_perms_any(self):
+        """
+        tests retrieving list of perms across any instance of a model
+
+        Verifies:
+            * No Perms returns empty list
+            * some perms returns just that list
+            * all perms returns all perms
+        """
+        self.assertEqual(set(), user0.get_perms_any(TestModel))
+        
+        grant(user0, 'Perm1', object0)
+        grant(user0, 'Perm3', object1)
+        grant(user0, 'Perm4', object1)
+        grant(user1, 'Perm2', object0)
+
+        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), user0.get_perms_any(TestModel))
     
     def test_get_users(self):
         """
