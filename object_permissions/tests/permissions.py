@@ -9,32 +9,39 @@ from object_permissions.registration import TestModel, TestModelChild, \
 from object_permissions.views.permissions import ObjectPermissionForm, \
     ObjectPermissionFormNewUsers
 
+# XXX set global vars to make test code a bit cleaner
+user0 = None
+user1 = None
+superuser = None
+obj = None
+object0 = None
+object1 = None
+child = None
+perms = None
+group = None
+c = None
+perms = set(['Perm1', 'Perm2', 'Perm3', 'Perm4'])
+
 class TestModelPermissions(TestCase):
-    perms = set(['Perm1', 'Perm2', 'Perm3', 'Perm4'])
+
 
     def setUp(self):
+        global user0, user1, object0, object1, perms, group
+
         self.tearDown()
-        self.user0 = User(id=2, username='tester')
-        self.user0.save()
-        self.user1 = User(id=3, username='tester2')
-        self.user1.save()
+        user0 = User(id=2, username='tester')
+        user0.save()
+        user1 = User(id=3, username='tester2')
+        user1.save()
         
-        self.object0 = TestModel.objects.create(name='test0')
-        self.object0.save()
-        self.object1 = TestModel.objects.create(name='test1')
-        self.object1.save()
+        object0 = TestModel.objects.create(name='test0')
+        object0.save()
+        object1 = TestModel.objects.create(name='test1')
+        object1.save()
         
-        self.group = Group(name='testers')
-        self.group.save()
-        self.group.user_set.add(self.user0)
-        
-        dict_ = globals()
-        dict_['user0']=self.user0
-        dict_['user1']=self.user1
-        dict_['object0']=self.object0
-        dict_['object1']=self.object1
-        dict_['perms']=self.perms
-        dict_['group']=self.group
+        group = Group(name='testers')
+        group.save()
+        group.user_set.add(user0)
 
     def tearDown(self):
         TestModel.objects.all().delete()
@@ -42,6 +49,13 @@ class TestModelPermissions(TestCase):
         TestModelChildChild.objects.all().delete()
         User.objects.all().delete()
         Group.objects.all().delete()
+
+        global user0, user1, object0, object1, perms, group
+        user0 = None
+        user1 = None
+        object0 = None
+        object1 = None
+        group = None
 
     def test_trivial(self):
         pass
@@ -231,12 +245,7 @@ class TestModelPermissions(TestCase):
         """
         Test setting perms to an exact set
         """
-        user0 = self.user0
-        user1 = self.user1
-        object0 = self.object0
-        object1 = self.object1
-        
-        perms1 = self.perms
+        perms1 = perms
         perms2 = set(['Perm1', 'Perm2'])
         perms3 = set(['Perm2', 'Perm3'])
         perms4 = []
@@ -1005,7 +1014,8 @@ class TestPermissionViews(TestCase):
     
     def setUp(self):
         self.tearDown()
-        
+        global user0, user1, superuser, obj, c
+
         user0 = User(id=2, username='tester0')
         user0.set_password('secret')
         user0.save()
@@ -1017,13 +1027,8 @@ class TestPermissionViews(TestCase):
         superuser.save()
         
         obj = TestModel.objects.create(name='test')
-        
-        d = globals()
-        d['c'] = Client()
-        d['user0'] = user0
-        d['user1'] = user1
-        d['superuser'] = superuser
-        d['obj'] = obj
+
+        c = Client()
     
     def tearDown(self):
         TestModel.objects.all().delete()
@@ -1170,23 +1175,20 @@ class TestObjectPermissionForm(TestCase):
     
     def setUp(self):
         self.tearDown()
-        
+        global obj, child, user, group
+
         obj = TestModel.objects.create()
         child = TestModelChild.objects.create()
         user = User.objects.create(username='tester')
         group = Group.objects.create(name='test_group')
-        
-        d = globals()
-        d['obj'] = obj
-        d['child'] = child
-        d['user'] = user
-        d['group'] = group
-    
+
     def tearDown(self):
-        if 'obj' in globals():
-            if 'user' in globals():
+        global user, child, obj, group
+
+        if obj:
+            if user:
                 user.revoke_all(obj)
-            if 'group' in globals():
+            if group:
                 group.revoke_all(obj)
         TestModel.objects.all().delete()
         TestModelChild.objects.all().delete()
@@ -1194,7 +1196,7 @@ class TestObjectPermissionForm(TestCase):
         Group.objects.all().delete()
     
     def test_trivial(self):
-        form = ObjectPermissionForm(TestModel)
+        ObjectPermissionForm(TestModel)
     
     def test_choices_generation(self):
         """ tests that permissions choices lists are generated correctly """
@@ -1241,7 +1243,7 @@ class TestObjectPermissionForm(TestCase):
     
     def test_user_group_exclusivity(self):
         """ tests that only a user or a group can be selected """
-        
+        global user
         data = {'user':user.pk, 'obj':obj.pk, 'group':group.pk, 'permissions':['Perm1']}
         form = ObjectPermissionForm(TestModel, data)
         self.assertFalse(form.is_valid())
@@ -1261,24 +1263,25 @@ class TestObjectPermissionFormNewUsers(TestCase):
     
     def setUp(self):
         self.tearDown()
+        global obj, user
         
         obj = TestModel.objects.create()
         user = User.objects.create(username='tester')
-        
-        d = globals()
-        d['obj'] = obj
-        d['user'] = user
-    
+
     def tearDown(self):
-        if 'user' in globals():
+        global obj, user
+
+        if user:
             user.revoke_all(obj)
         TestModel.objects.all().delete()
         TestModelChild.objects.all().delete()
         User.objects.all().delete()
+
+        obj = None
+        user = None
     
     def test_trivial(self):
-        form = ObjectPermissionFormNewUsers(TestModel)
-
+        ObjectPermissionFormNewUsers(TestModel)
 
     def test_new_user(self):
         """
@@ -1287,6 +1290,8 @@ class TestObjectPermissionFormNewUsers(TestCase):
         validates:
             * perms must be included
         """
+        global user
+
         data = {'user':user.pk, 'obj':obj.pk}
         form = ObjectPermissionFormNewUsers(TestModel, data)
         self.assertFalse(form.is_valid())
@@ -1304,6 +1309,8 @@ class TestObjectPermissionFormNewUsers(TestCase):
         """
         Tests modifying a user's perms
         """
+        global user
+
         user.grant('Perm1', obj)
         data = {'user':user.pk, 'obj':obj.pk, 'permissions':['Perm1']}
         form = ObjectPermissionFormNewUsers(TestModel, data)
