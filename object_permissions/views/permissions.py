@@ -7,10 +7,9 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
-from django.utils.safestring import SafeString
 
 from object_permissions import get_user_perms, get_group_perms, \
-    get_model_perms, grant, revoke, get_users, get_groups, get_class
+    get_model_perms, get_users, get_groups, get_class
 from object_permissions.models import Group
 from object_permissions.signals import view_add_user, view_remove_user, \
     view_edit_user
@@ -28,8 +27,8 @@ class ObjectPermissionForm(forms.Form):
     
     obj = forms.ModelChoiceField(queryset=None, required=True)
     
+    # dictionary used for caching the choices for specific models
     choices = {}
-    """ dictionary used for caching the choices for specific models """
     
     def __init__(self, model, *args, **kwargs):
         """
@@ -114,11 +113,10 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
             grantee = data['grantee']
             perms = data['permissions']
             
-            
             if 'obj' in data:
                 # if grantee does not have permissions, then this is a new user:
                 #    - permissions must be selected
-                old_perms = grantee.get_perms(data['obj'])
+                old_perms = grantee.get_perms(data['obj'], groups=False)
                 if old_perms:
                     # not new, has perms already
                     data['new'] = False
@@ -168,7 +166,6 @@ def view_users(request, object_, url, \
 
 
 def view_permissions(request, obj, url, user_id=None, group_id=None,
-                key='id',
                 user_template='object_permissions/permissions/user_row.html',
                 group_template='object_permissions/permissions/group_row.html'
                 ):
@@ -219,7 +216,7 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
                                       obj=obj)
                 id = ('"user_%d"' if form_user else '"group_%d"')%edited_user.pk
                 return HttpResponse(id, mimetype='application/json')
-        
+
         # error in form return ajax response
         content = json.dumps(form.errors)
         return HttpResponse(content, mimetype='application/json')
@@ -316,12 +313,12 @@ def view_obj_permissions(request, class_name, obj_id=None, \
     else:
         obj = None
         if user_id:
-            form_user = get_object_or_404(User, id=user_id)
+            get_object_or_404(User, id=user_id)
             data={'user':user_id}
             url = reverse('user-add-permissions', \
                           args=(user_id, class_name))
         elif group_id:
-            group = get_object_or_404(Group, id=group_id)
+            get_object_or_404(Group, id=group_id)
             data={'group':group_id}
             url = reverse('group-add-permissions', \
                           args=(group_id, class_name))
