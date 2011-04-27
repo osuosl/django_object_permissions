@@ -35,7 +35,7 @@ $('.object_permissions .delete').live("click", function() {
         $('.qtip').qtip('destroy');
         id = this.parentNode.parentNode.id;
         id = id.substring(id.lastIndexOf('_')+1);
-        data = {permissions:[], obj:id};
+        data = {obj:id};
         if (is_user) {
             data['user'] = persona_pk;
         } else {
