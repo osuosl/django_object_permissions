@@ -289,6 +289,30 @@ class TestGroups(TestCase):
         self.assertEqual(perms2, set(get_group_perms(group0, object1)))
         self.assertEqual(perms1, set(get_group_perms(group1, object0)))
 
+    def test_get_perms(self):
+        """
+        tests retrieving list of perms
+
+        Verifies:
+            * No Perms returns empty list
+            * some perms returns just that list
+            * all perms returns all perms
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user0)
+
+        self.assertEqual([], group0.get_perms(object0))
+
+        group0.grant('Perm1', object0)
+        group1.grant('Perm3', object1)
+        group1.grant('Perm4', object1)
+
+        self.assertEqual(['Perm1'], group0.get_perms(object0))
+
+        perms = group0.get_perms(object1)
+        self.assertEqual(2, len(perms))
+        self.assertEqual(set(['Perm3','Perm4']), set(perms))
+
     def test_group_get_perms_any(self):
         """
         tests retrieving list of perms across any instance of a model
