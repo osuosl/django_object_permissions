@@ -1,3 +1,6 @@
+var is_user;
+var persona_pk;
+
 // Add object button
 $('.button.add.permission').click(function(){
     $('.qtip').qtip('destroy');
@@ -29,19 +32,19 @@ function bind_form(){
 
 // Delete user button
 $('.object_permissions .delete').live("click", function() {
-    class_name = this.parentNode.parentNode.parentNode.parentNode.id;
-    name = $(this).parent().parent().children('.obj').html();
+    var class_name = this.parentNode.parentNode.parentNode.parentNode.id;
+    var name = $(this).parent().parent().children('.obj').html();
     if (confirm("Remove this " + class_name +": "+ name)) {
         $('.qtip').qtip('destroy');
-        id = this.parentNode.parentNode.id;
+        var id = this.parentNode.parentNode.id;
         id = id.substring(id.lastIndexOf('_')+1);
-        data = {obj:id};
+        var data = {obj:id};
         if (is_user) {
             data['user'] = persona_pk;
         } else {
             data['group'] = persona_pk;
         }
-        href = $(this).children('a').attr('href');
+        var href = $(this).children('a').attr('href');
         $.post(href, data, update_object_permission, "json");
     }
     return false;
@@ -49,29 +52,28 @@ $('.object_permissions .delete').live("click", function() {
 
 function update_object_permission(responseText, statusText, xhr, $form) {
     if (xhr.getResponseHeader('Content-Type') == 'application/json') {
-        type = typeof responseText;
+        var type = typeof responseText;
         if (type == 'string') {
             // 1 code means success but no more permissions
             $('.qtip').qtip('hide');
             $("#" + responseText).remove();
         } else {
             // parse errors
-            errors = responseText
-            for (key in errors) {
-                $("#errors").append("<li>"+ errors[key] +"</li>")
+            for (var key in responseText) {
+                $("#errors").append("<li>"+ responseText[key] +"</li>")
             }
         }
     } else {
         // successful permissions change.  replace the user row with the
         // newly rendered html
         $('.qtip').qtip('hide');
-        html = $(responseText);
-        id = html.attr('id')
-        $row = $('#' + id);
+        var html = $(responseText);
+        var id = html.attr('id');
+        var $row = $('#' + id);
         if ($row.length == 1) {
             $row.replaceWith(html);
         } else {
-            class_name = id.substring(0, id.lastIndexOf('_'));
+            var class_name = id.substring(0, id.lastIndexOf('_'));
             $("#" + class_name).append(html);
         }
     }

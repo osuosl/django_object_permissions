@@ -108,7 +108,7 @@ function update_user_permissions(responseText, statusText, xhr, $form) {
         } else {
             // parse errors
             for (var key in responseText) {
-                $("#errors").append("<li>"+ errors[key] +"</li>");
+                $("#errors").append("<li>"+ responseText[key] +"</li>");
             }
         }
     } else {
