@@ -223,7 +223,7 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
 
     if user_id:
         form_user = get_object_or_404(User, id=user_id)
-        data = {'permissions':get_user_perms(form_user, obj), \
+        data = {'permissions':get_user_perms(form_user, obj, False), \
                 'user':user_id, 'obj':obj}
     elif group_id:
         group = get_object_or_404(Group, id=group_id)
@@ -301,7 +301,7 @@ def view_obj_permissions(request, class_name, obj_id=None, \
         if user_id:
             form_user = get_object_or_404(User, id=user_id)
             data['user'] = user_id
-            data['permissions'] = get_user_perms(form_user, obj)
+            data['permissions'] = get_user_perms(form_user, obj, False)
             url = reverse('user-edit-permissions', \
                           args=(user_id, class_name, obj_id))
         elif group_id:
