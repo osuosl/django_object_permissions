@@ -256,7 +256,6 @@ class TestGroups(TestCase):
         perms2 = set(['Perm1', 'Perm2'])
         perms3 = set(['Perm2', 'Perm3'])
         perms4 = []
-        
         # grant single property
         set_group_perms(group0, perms1, object0)
         self.assertEqual(perms1, set(get_group_perms(group0, object0)))
@@ -448,6 +447,34 @@ class TestGroups(TestCase):
         # has multiple perms
         self.assert_(group0 in get_groups_all(object0, ['Perm1','Perm2']))
         self.assert_(group0 in get_groups_all(object1, ['Perm1','Perm3']))
+
+    def test_user_get_perms(self):
+        """
+        tests retrieving list of perms
+
+        Verifies:
+            * No Perms returns empty list
+            * some perms returns just that list
+            * all perms returns all perms
+        """
+        group0 = self.test_save('TestGroup0', user0)
+        group1 = self.test_save('TestGroup1', user0)
+
+        self.assertEqual([], user0.get_perms(object0))
+
+        group0.grant('Perm1', object0)
+        group1.grant('Perm3', object1)
+        group1.grant('Perm4', object1)
+
+        self.assertEqual(['Perm1'], user0.get_perms(object0))
+
+        perms = user0.get_perms(object1)
+        self.assertEqual(2, len(perms))
+        self.assertEqual(set(['Perm3','Perm4']), set(perms))
+
+        # test excluding groups
+        self.assertEqual([], user0.get_perms(object0, False))
+
 
     def test_user_get_perms_any(self):
         """
@@ -741,7 +768,27 @@ class TestGroups(TestCase):
         query = user0.get_objects_all_perms(TestModelChild, perms=['Perm1'], groups=False, parent=['Perm1'])
         self.assert_(child0 in query)
         self.assertEqual(1, len(query))
-    
+    def test_get_perms(self):
+        """
+        tests retrieving list of perms across any instance of a model
+
+        Verifies:
+            * No Perms returns empty list
+            * some perms returns just that list
+            * all perms returns all perms
+        """
+        self.assertEqual([], user0.get_perms(object0))
+
+        grant(user0, 'Perm1', object0)
+        grant(user0, 'Perm3', object1)
+        grant(user0, 'Perm4', object1)
+        grant(user1, 'Perm2', object0)
+
+        self.assertEqual(['Perm1'], user0.get_perms(object0))
+
+        perms = user0.get_perms(object1)
+        self.assertEqual(2, len(perms))
+        self.assertEqual(set(['Perm3','Perm4']), set(perms))
     def test_group_has_any_perms_on_model(self):
         """
         Test checking if a user has any of the perms on any instance of the model

@@ -462,19 +462,24 @@ def revoke_all_group(group, obj):
         pass
 
 
-def get_user_perms(user, obj):
+def get_user_perms(user, obj, groups=True):
     """
     Return the permissions that the User has on the given object.
     """
-
-    model = obj.__class__
-    permissions = permission_map[model]
-
+    klass = obj.__class__
+    permissions = permission_map[klass]
     try:
-        q = permissions.objects.get(user=user, obj=obj)
-        return [field.name for field in q._meta.fields
-                if isinstance(field, models.BooleanField)
-                and getattr(q, field.name)]
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        if groups:
+            q = permissions.objects.filter(Q(user=user) | Q(group__user=user))
+        else:
+            q = permissions.objects.filter(user=user)
+        q = q.filter(obj=obj).aggregate(**kwargs)
+        return [field for field, value in q.items() if value]
+
     except permissions.DoesNotExist:
         return []
 
