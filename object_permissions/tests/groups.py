@@ -325,14 +325,16 @@ class TestGroups(TestCase):
         group0 = self.test_save('TestGroup0')
         group1 = self.test_save('TestGroup1')
 
-        self.assertEqual(set(), group0.get_perms_any(TestModel))
+        self.assertEqual([], group0.get_perms_any(TestModel))
 
         group0.grant('Perm1', object0)
         group0.grant('Perm3', object1)
         group0.grant('Perm4', object1)
         group1.grant('Perm2', object0)
 
-        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), group0.get_perms_any(TestModel))
+        perms = group0.get_perms_any(TestModel)
+        self.assertEqual(3, len(perms))
+        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), set(perms))
 
     def test_has_perm(self):
         """
@@ -512,17 +514,18 @@ class TestGroups(TestCase):
         group0 = self.test_save('TestGroup0', user0)
         group1 = self.test_save('TestGroup1', user0)
 
-        self.assertEqual(set(), user0.get_perms_any(TestModel))
+        self.assertEqual([], user0.get_perms_any(TestModel))
 
         group0.grant('Perm1', object0)
         group1.grant('Perm3', object1)
         group1.grant('Perm4', object1)
 
-        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), user0.get_perms_any(TestModel))
+        perms = user0.get_perms_any(TestModel)
+        self.assertEqual(3, len(perms))
+        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), set(perms))
 
         # exclude group perms
-        self.assertEqual(set(), user0.get_perms_any(TestModel, False))
-
+        self.assertEqual([], user0.get_perms_any(TestModel, False))
 
     def test_user_get_objects_any_perms(self):
         """

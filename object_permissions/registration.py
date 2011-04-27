@@ -499,25 +499,28 @@ def get_user_perms_any(user, klass, groups=True):
         else:
             q = permissions.objects.filter(user=user)
         q = q.aggregate(**kwargs)
-        return set([field for field, value in q.items() if value])
+        return [field for field, value in q.items() if value]
 
     except permissions.DoesNotExist:
         return []
 
 
-def get_group_perms(group, obj):
+def get_group_perms(group, obj, groups=True):
     """
     Return the permissions that the Group has on the given object.
+
+    @param groups - does nothing, compatibility with user version
     """
-
-    model = obj.__class__
-    permissions = permission_map[model]
-
+    klass = obj.__class__
+    permissions = permission_map[klass]
     try:
-        q = permissions.objects.get(group=group, obj=obj)
-        return [field.name for field in q._meta.fields
-                if isinstance(field, models.BooleanField)
-                and getattr(q, field.name)]
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        q = permissions.objects.filter(group=group, obj=obj).aggregate(**kwargs)
+        return [field for field, value in q.items() if value]
+
     except permissions.DoesNotExist:
         return []
 
@@ -533,7 +536,7 @@ def get_group_perms_any(group, klass):
         for field in fields:
             kwargs[field] = Sum(field)
         q = permissions.objects.filter(group=group).aggregate(**kwargs)
-        return set([field for field, value in q.items() if value])
+        return [field for field, value in q.items() if value]
 
     except permissions.DoesNotExist:
         return []

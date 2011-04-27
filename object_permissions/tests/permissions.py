@@ -330,14 +330,16 @@ class TestModelPermissions(TestCase):
             * some perms returns just that list
             * all perms returns all perms
         """
-        self.assertEqual(set(), user0.get_perms_any(TestModel))
+        self.assertEqual([], user0.get_perms_any(TestModel))
         
         grant(user0, 'Perm1', object0)
         grant(user0, 'Perm3', object1)
         grant(user0, 'Perm4', object1)
         grant(user1, 'Perm2', object0)
 
-        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), user0.get_perms_any(TestModel))
+        perms = user0.get_perms_any(TestModel)
+        self.assertEqual(3, len(perms))
+        self.assertEqual(set(['Perm1', 'Perm3', 'Perm4']), set(perms))
     
     def test_get_users(self):
         """
