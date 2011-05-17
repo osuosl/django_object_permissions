@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.template.loader import get_template
 from django.template import Context
+from django.utils import simplejson
 
 
 class LogActionManager(models.Manager):
@@ -100,7 +101,7 @@ class LogAction(models.Model):
 
 class LogItemManager(models.Manager):
 
-    def log_action(self, key, user, object1, object2=None,  object3=None):
+    def log_action(self, key, user, object1, object2=None, object3=None, data=None):
         """
         Creates new log entry
 
@@ -123,7 +124,10 @@ class LogItemManager(models.Manager):
         if object3 is not None:
             entry.object3 = object3
 
-        entry.save()
+        if data is not None:
+            entry.data = data
+
+        entry.save(force_insert=True)
         return entry
 
 
@@ -151,12 +155,24 @@ class LogItem(models.Model):
     object_id3 = models.PositiveIntegerField(null=True)
     object3 = GenericForeignKey("object_type3", "object_id3")
 
-    #log_message = models.TextField(blank=True, null=True)
+    serialized_data = models.TextField(null=True)
 
     objects = LogItemManager()
+    _data = None
 
     class Meta:
         ordering = ("timestamp", )
+
+    @property
+    def data(self):
+        if self._data is None and not self.serialized_data is None:
+            self._data = simplejson.loads(self.serialized_data)
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+        self.serialized_data = None
 
     @property
     def template(self):
@@ -165,6 +181,11 @@ class LogItem(models.Model):
         """
         action = LogAction.objects.get_from_cache(self.action_id)
         return get_template(action.template)
+
+    def save(self, *args, **kwargs):
+        if self._data is not None and self.serialized_data is None:
+            self.serialized_data = simplejson.dumps(self._data)
+        super(LogItem, self).save(*args, **kwargs)
 
     def render(self, **context):
         """

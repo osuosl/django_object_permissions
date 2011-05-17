@@ -140,6 +140,24 @@ class TestLogItemModel(TestCase):
         self.assertEqual('<td class="timestamp">29/09/2010 15:31</td><td>Mod edited user Joe User</td>', str(item1))
         self.assertEqual('<td class="timestamp">29/09/2010 15:31</td><td>Mod deleted user Joe User</td>', str(item2))
 
+    def test_data(self):
+        """
+        Test setting data in a LogItem
+        """
+        item1 = LogItem.objects.log_action('EDIT', user1, user2)
+
+        data = {'a':1, 'b':2}
+        item1.data = data
+
+        # set data
+        self.assertEqual(None, item1.serialized_data)
+        item1.save()
+        self.assertNotEqual(None, item1.serialized_data)
+
+        item = LogItem.objects.get(pk=item1.pk)
+        self.assertEqual(item1.serialized_data, item.serialized_data)
+        self.assertEqual(data, item.data)
+
 
 class TestObjectLogViews(TestCase):
 
