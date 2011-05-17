@@ -17,14 +17,14 @@ class LogActionManager(models.Manager):
     _SYNCED = False
     _DELAYED = []
 
-    def register(self, key, template):
+    def register(self, key, template, build_cache=None):
         if LogActionManager._SYNCED:
-            return LogAction.objects._register(key, template)
+            return LogAction.objects._register(key, template, build_cache)
         else:
-            self._DELAYED.append((key, template))
+            self._DELAYED.append((key, template, build_cache))
 
     @transaction.commit_manually
-    def _register(self, key, template):
+    def _register(self, key, template, build_cache=None):
         """
         Registers and caches an LogAction type
         
@@ -36,12 +36,12 @@ class LogActionManager(models.Manager):
                 action = self.get_from_cache(key)
                 action.template = template
                 action.save()
-
             except LogAction.DoesNotExist:
                 action, new = LogAction.objects.get_or_create(name=key, \
                 template=template)
                 self._cache.setdefault(self.db, {})[key] = action
                 action.save()
+            action.build_cache = build_cache
             return action
         except:
             transaction.rollback()
@@ -81,6 +81,12 @@ class LogActionManager(models.Manager):
         except KeyError:
             action = LogAction.objects.get(name=key)
             self._cache.setdefault(self.db, {})[key]=action
+
+            # update build_cache function if needed
+            for key_, template, build_cache in LogActionManager._DELAYED:
+                if key == key_:
+                    action.build_cache = build_cache
+
         return action
 
 
@@ -115,7 +121,6 @@ class LogItemManager(models.Manager):
         # Uncomment below:
         #key = smart_unicode(key)
         action = LogAction.objects.get_from_cache(key)
-
         entry = self.model(action=action, user=user, object1=object1)
         
         if object2 is not None:
@@ -123,8 +128,11 @@ class LogItemManager(models.Manager):
         
         if object3 is not None:
             entry.object3 = object3
-
-        if data is not None:
+        
+        # build cached data and or arbitrary data.
+        if action.build_cache is not None:
+            entry.data = action.build_cache(user, object1, object2, object3, data)
+        elif data is not None:
             entry.data = data
 
         entry.save(force_insert=True)
