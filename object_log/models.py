@@ -143,7 +143,7 @@ class LogItem(models.Model):
     """
     Single entry in log
     """
-    action = models.ForeignKey(LogAction)
+    action = models.ForeignKey(LogAction, related_name="entries")
     #action = models.CharField(max_length=128)
     timestamp = models.DateTimeField(auto_now_add=True, )
     user = models.ForeignKey(User, related_name='log_items')
