@@ -221,9 +221,14 @@ class LogItem(models.Model):
         return self.render()
 
 
+def build_default_cache(user, obj1, obj2, obj3, data):
+    """ build cache for default log types """
+    return {'object1_str':str(obj1)}
+
+
 #Most common log types, registered by default for convenience
 def create_defaults():
-    LogAction.objects.register('EDIT', 'object_log/edit.html')
-    LogAction.objects.register('CREATE', 'object_log/add.html')
-    LogAction.objects.register('DELETE', 'object_log/delete.html')
+    LogAction.objects.register('EDIT', 'object_log/edit.html', build_default_cache)
+    LogAction.objects.register('CREATE', 'object_log/add.html', build_default_cache)
+    LogAction.objects.register('DELETE', 'object_log/delete.html', build_default_cache)
 create_defaults()
