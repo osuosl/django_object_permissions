@@ -35,7 +35,7 @@ def user_permissions(request, id, user_id=None):
             view_edit_user.send(sender=editor, user=user, obj=group)
             
             # return html to replace existing user row
-            url = reverse('usergroup-permissions', args=[id])
+            url = reverse('group-permissions', args=[id])
             return render_to_response( \
                 "object_permissions/permissions/user_row.html", \
                 {'object':group, 'user':user, 'url':url})
@@ -51,7 +51,7 @@ def user_permissions(request, id, user_id=None):
     form = ObjectPermissionForm(Group, data)
     return render_to_response("object_permissions/permissions/form.html", \
                 {'form':form, 'obj':group, 'user_id':user_id, \
-                'url':reverse('usergroup-permissions', args=[group.id])}, \
+                'url':reverse('group-permissions', args=[group.id])}, \
                 context_instance=RequestContext(request))
     
 

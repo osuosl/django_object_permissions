@@ -3,7 +3,7 @@ import os
 from django.conf.urls.defaults import url, patterns
 
 urlpatterns = patterns('object_permissions.views.groups',
-    url(r'^group/(?P<id>\d+)/permissions/?$','user_permissions', name="usergroup-permissions"),
+    url(r'^group/(?P<id>\d+)/permissions/?$','user_permissions', name="group-permissions"),
     url(r'^group/(?P<id>\d+)/permissions/user/(?P<user_id>\d+)/?$','user_permissions', name="group-user-permissions"),
     url(r'^group/(?P<id>\d+)/permissions/all/?$','all_permissions', name="group-all-permissions"),
 )
