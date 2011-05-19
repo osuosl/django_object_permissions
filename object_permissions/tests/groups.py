@@ -6,8 +6,7 @@ from django.test.client import Client
 from object_permissions import *
 from object_permissions.registration import TestModel, TestModelChild, \
     TestModelChildChild, UnknownPermissionException
-from object_permissions.signals import view_add_user, view_remove_user, \
-    view_edit_user, view_group_edited, view_group_created, view_group_deleted
+from object_permissions.signals import view_edit_user
 
 from object_permissions.templatetags.object_permission_tags import \
                 number_group_admins
