@@ -29,6 +29,10 @@ urlpatterns += patterns('object_permissions.views.permissions',
         'view_obj_permissions', name="group-edit-permissions"),
 )
 
+urlpatterns += patterns('object_permissions.views.widgets',
+    url(r'^user/search/?$', 'search_users', name='user-search')
+)
+
 #The following is used to serve up local media files like images
 root = '%s/media' % os.path.dirname(os.path.realpath(__file__))
 urlpatterns += patterns('',
