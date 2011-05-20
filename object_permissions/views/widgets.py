@@ -38,18 +38,19 @@ def search_users_and_groups(term=None, limit=10):
         groups = groups [:limit]
 
     # format lists better for the interface
-    f = 'user:%s:%s'
-    users = [f % (i['pk'], i['username']) for i in users]
-    f = 'group:%s:%s'
-    groups = [f % (i['pk'], i['name']) for i in groups]
+    f = 'user'
+    users = [(i['username'], (f,i['pk'])) for i in users]
+    f = 'group'
+    groups = [(i['name'], (f,i['pk'])) for i in groups]
 
-    # merge and trim list if needed
+    # merge, sort, trim, and unzip list into suggestions/data (if needed)
     merged = users + groups
-    # TODO: need to sort by names
-    #merged = sorted(merged, key=lambda x: x['label'])
+    merged = sorted(merged, key=lambda x: x[0])
     merged = merged if len(merged) < limit else merged[:limit]
+    suggestions, data = zip(*merged) if merged else ((),())
 
     return {
         'query':term,
-        'suggestions':merged
+        'suggestions':suggestions,
+        'data':data
     }

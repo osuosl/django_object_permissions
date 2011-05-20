@@ -50,7 +50,7 @@
     this.initialize();
     this.setOptions(options);
   }
-  
+
   $.fn.autocomplete = function(options) {
     return new Autocomplete(this.get(0)||$('<input />'), options);
   };
@@ -90,7 +90,7 @@
       this.el.blur(function() { me.enableKillerFn(); });
       this.el.focus(function() { me.fixPosition(); });
     },
-    
+
     setOptions: function(options){
       var o = this.options;
       $.extend(o, options);
@@ -101,16 +101,16 @@
       $('#'+this.mainContainerId).css({ zIndex:o.zIndex });
       this.container.css({ maxHeight: o.maxHeight + 'px', width:o.width });
     },
-    
+
     clearCache: function(){
       this.cachedResponse = [];
       this.badQueries = [];
     },
-    
+
     disable: function(){
       this.disabled = true;
     },
-    
+
     enable: function(){
       this.disabled = false;
     },
@@ -150,7 +150,7 @@
           this.hide();
           break;
         case 9: //KEY_TAB:
-          this.select(0)
+          this.select(0);
         case 13: //KEY_RETURN:
           if (this.selectedIndex === -1) {
             this.hide();
@@ -179,7 +179,7 @@
         case 40: //KEY_DOWN:
           return;
       }
-      
+
       clearInterval(this.onChangeInterval);
       if (this.currentValue !== this.el.val()) {
         if (this.options.deferRequestBy > 0) {
@@ -231,7 +231,7 @@
       }
       return ret;
     },
-    
+
     getSuggestions: function(q) {
       var cr, me;
       cr = this.isLocal ? this.getSuggestionsLocal(q) : this.cachedResponse[q];
@@ -261,23 +261,20 @@
     },
 
     suggest: function() {
+      var fn;
       if (this.suggestions.length === 0) {
         this.hide();
-        var fn = this.options.fnDeselect;
+        fn = this.options.fnDeselect;
         if ($.isFunction(fn)) { fn(); }
         return;
       }
 
-      var cv = this.getQuery(this.currentValue)
-      if (this.suggestions.length == 1 && this.suggestions[0].split(':')[2]===cv) {
-        this.select(0);
-      } else {
-        var fn = this.options.fnDeselect;
-        if ($.isFunction(fn)) { fn(); }
-      }
+      fn = this.options.fnDeselect;
+      if ($.isFunction(fn)) { fn(); }
 
+      var cv = this.getQuery(this.currentValue);
       for (i in this.suggestions){
-        if (this.suggestions[i].split(':')[2] === cv) {
+        if (this.suggestions[i] === cv) {
           this.select(i);
           break;
         }
@@ -315,7 +312,7 @@
       if (response.query === this.getQuery(this.currentValue)) {
         this.suggestions = response.suggestions;
         this.data = response.data;
-        this.suggest(); 
+        this.suggest();
       }
     },
 
@@ -396,7 +393,7 @@
       me.el.val(me.getValue(s));
       if ($.isFunction(fn)) { fn(s, d, me.el); }
     },
-    
+
     getValue: function(value){
         var del, currVal, arr, me;
         me = this;

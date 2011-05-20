@@ -1,7 +1,7 @@
 {% comment  %} Form for setting user permissions on an object {% endcomment %}
 
 <script type="text/javascript" src="{{MEDIA_URL}}/js/jquery.js"></script>
-<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media//js/jquery.autocomplete.js"></script>
+<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/jquery.autocomplete.js"></script>
 <link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
 <style>
     #selector_row {display:none;}
@@ -60,10 +60,8 @@
     }
 
     function select_value(value, data) {
-        var split = value.split(':');
-        var type = split[0];
-        var id = split[1];
-        var name = split[2];
+        var type = data[0];
+        var id = data[1];
         if (type=="user"){
             $("#selector")
                 .removeClass('group')
@@ -77,20 +75,17 @@
             $("#id_group").val(id);
             $("#id_user").val('');
         }
-        $("#selector input").val(name);
+        $("#selector input").val(value);
     }
 
     var reEscape = new RegExp('(\\' + ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'].join('|\\') + ')', 'g');
     function format_search_result(value, data, currentValue) {
-        var split = value.split(':');
-        var type = split[0];
-        var id = split[1];
-        var name = split[2];
-
+        var type = data[0];
+        var id = data[1];
         var pattern = '(' + currentValue.replace(reEscape, '\\$1') + ')';
-        name = name.replace(new RegExp(pattern, 'gi'), '<strong>$1<\/strong>');
+        value = value.replace(new RegExp(pattern, 'gi'), '<strong>$1<\/strong>');
 
-        return "<div class='search_result "+type+"'>"+name+"</div>";
+        return "<div class='search_result "+type+"'>"+value+"</div>";
     }
 </script>
 
