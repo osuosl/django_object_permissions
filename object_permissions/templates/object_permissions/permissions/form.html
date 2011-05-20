@@ -1,5 +1,90 @@
 {% comment  %} Form for setting user permissions on an object {% endcomment %}
+
+<script type="text/javascript" src="{{MEDIA_URL}}/js/jquery.js"></script>
+<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media//js/jquery.autocomplete.js"></script>
 <link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
+<style>
+    #selector {
+        background:url(/media/images/icons/delete.png) no-repeat 5px 5px;
+        border:1px solid black;
+        border-radius:3px;
+        height:20px;
+        padding:3px 3px 3px 23px;
+        width:200px;
+    }
+    #selector input {border:0; color: #a71d10; width:190px;}
+    #selector.user input, #selector.group input {color:black;}
+
+    #selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 5px;}
+    #selector.group, .search_result.group {background:url(/media/images/icons/group.png) no-repeat 5px 5px;}
+
+    .search_result.user, .search_result.group {
+        background-position:0 2px;
+    }
+
+    .autocomplete-w1 { background:url(/object_permissions_media/images/shadow.png) no-repeat bottom right; position:absolute; top:0px; left:0px; margin:4px 0 0 -19px; /* IE6 fix: */ _background:none; _margin:1px 0 0 0; }
+    .autocomplete { border:1px solid #999; background:#FFF; cursor:default; text-align:left; max-height:350px; overflow:auto; margin:-2px 6px 6px -2px; /* IE6 specific: */ _height:350px;  _margin:0; _overflow-x:hidden; }
+    .autocomplete .selected { background:#F0F0F0; }
+    .autocomplete div { padding:2px 5px; white-space:nowrap; overflow:hidden; }
+    .autocomplete strong { font-weight:normal; color:#3399FF; }
+
+    .search_result {
+        padding:0 0 0 20px !important;
+    }
+</style>
+
+<script>
+    $(function(){
+        
+        $('#selector input')
+            .autocomplete({
+                serviceUrl:'{% url user-search %}',
+                minChars:2,
+                maxHeight:400,
+                width:300,
+                zIndex: 9999,
+                noCache: false, //default is false, set to true to disable caching
+                onSelect: select_value,
+                fnFormatResult:format_search_result
+            });
+    });
+
+    function select_value(value, data) {
+        var split = value.split(':');
+        var type = split[0];
+        var id = split[1];
+        var name = split[2];
+
+        $("#selected_user").val(type+':'+id);
+        if (type=='user'){
+            $("#selector")
+                .removeClass('group')
+                .addClass(type);
+        } else {
+            $("#selector")
+                .removeClass('user')
+                .addClass(type);
+        }
+        $("#selector input").val(name);
+    }
+
+    var reEscape = new RegExp('(\\' + ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'].join('|\\') + ')', 'g');
+    function format_search_result(value, data, currentValue) {
+        var split = value.split(':');
+        var type = split[0];
+        var id = split[1];
+        var name = split[2];
+
+        var pattern = '(' + currentValue.replace(reEscape, '\\$1') + ')';
+        name = name.replace(new RegExp(pattern, 'gi'), '<strong>$1<\/strong>');
+
+        return "<div class='search_result "+type+"'>"+name+"</div>";
+    }
+    
+
+
+</script>
+
 <form class="object_permissions_form" method="post" action="{{url}}">
     <ul id="errors"></ul>
     <table>
@@ -9,7 +94,12 @@
     {% else %}
         <tr><td>{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
     {% endif %}
-    
+
+    <input type="text" id="selected_user" name="" value=""/>
+    <div id="selector">
+        <input type="text"/>
+    </div>
+
     {# only show user/group when one hasn't been preselected #}
     {% if user_id or group_id %}
         <input type="hidden" name="user" value="{{user_id|default:''}}"/>
