@@ -5,20 +5,21 @@
 <link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
 <style>
     #selector {
-        background:url(/media/images/icons/delete.png) no-repeat 5px 5px;
-        border:1px solid black;
-        border-radius:3px;
-        height:20px;
-        padding:3px 3px 3px 23px;
+        background:url(/media/images/icons/delete.png) no-repeat 5px 5px white;
+        border:1px solid #666;
+        border-radius:4px;
+        height:18px;
+        margin:0 0 10px 0;
+        padding:5px 3px 3px 23px;
         width:200px;
     }
-    #selector input {border:0; color: #a71d10; width:190px;}
+    #selector input {background-color:transparent; border:0; color: #a71d10; width:190px;}
     #selector.user input, #selector.group input {color:black;}
-
-    #selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 5px;}
-    #selector.group, .search_result.group {background:url(/media/images/icons/group.png) no-repeat 5px 5px;}
+    #selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 5px white;}
+    #selector.group, .search_result.group {background:url(/media/images/icons/group.png) no-repeat 5px 5px white;}
 
     .search_result.user, .search_result.group {
+        background-color:transparent;
         background-position:0 2px;
     }
 
