@@ -272,9 +272,9 @@
       fn = this.options.fnDeselect;
       if ($.isFunction(fn)) { fn(); }
 
-      var cv = this.getQuery(this.currentValue);
+      var cv = this.getQuery(this.currentValue).toLowerCase();
       for (i in this.suggestions){
-        if (this.suggestions[i] === cv) {
+        if (this.suggestions[i].toLowerCase() === cv) {
           this.select(i);
           break;
         }
