@@ -4,6 +4,7 @@
 <script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media//js/jquery.autocomplete.js"></script>
 <link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
 <style>
+    #selector_row {display:none;}
     #selector {
         background:url(/media/images/icons/delete.png) no-repeat 5px 5px white;
         border:1px solid #666;
@@ -36,8 +37,8 @@
 
 <script>
     $(function(){
-        
-        $('#selector input')
+        $("#selector_row").show();
+        $("#selector input")
             .autocomplete({
                 serviceUrl:'{% url user-search %}',
                 minChars:2,
@@ -49,11 +50,13 @@
                 fnFormatResult:format_search_result,
                 fnDeselect:deselect_value
             });
+        $("#id_user, #id_group, ").parent().parent().hide();
     });
 
     function deselect_value(){
         $("#id_user").val('');
         $("#id_group").val('');
+        $("#selector").removeClass('user').removeClass('group');
     }
 
     function select_value(value, data) {
@@ -61,7 +64,7 @@
         var type = split[0];
         var id = split[1];
         var name = split[2];
-        if (type=='user'){
+        if (type=="user"){
             $("#selector")
                 .removeClass('group')
                 .addClass(type);
@@ -89,9 +92,6 @@
 
         return "<div class='search_result "+type+"'>"+name+"</div>";
     }
-    
-
-
 </script>
 
 <form class="object_permissions_form" method="post" action="{{url}}">
@@ -104,16 +104,12 @@
         <tr><td>{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
     {% endif %}
 
-    <input type="text" id="selected_user" name="" value=""/>
-    <div id="selector">
-        <input type="text"/>
-    </div>
-
     {# only show user/group when one hasn't been preselected #}
     {% if user_id or group_id %}
         <input type="hidden" name="user" value="{{user_id|default:''}}"/>
         <input type="hidden" name="group" value="{{group_id|default:''}}"/>
     {% else %}
+        <tr id="selector_row"><td><label>User/Group:</label></td><td><div id="selector"><input type="text"/></div></td></tr>
         <tr><td>{{form.user.label}}</td><td>{{form.user}}</td></tr>
         <tr class="group"><td>{{form.group.label}}</td><td>{{form.group}}</td></tr>
     {% endif %}
