@@ -295,6 +295,7 @@
         div.click(mClick(i));
         this.container.append(div);
       }
+      me.fixPosition();
       this.enabled = true;
       this.container.show();
     },
@@ -379,8 +380,6 @@
         this.container.scrollTop(offsetTop - this.options.maxHeight + 25);
       }
       this.el.val(this.getValue(this.suggestions[i]));
-
-      // XXX kreneskyp: when scrolling need to trigger on select
       this.onSelect(i);
     },
 
