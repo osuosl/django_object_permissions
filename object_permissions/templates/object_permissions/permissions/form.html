@@ -45,25 +45,33 @@
                 zIndex: 9999,
                 noCache: false, //default is false, set to true to disable caching
                 onSelect: select_value,
-                fnFormatResult:format_search_result
+                fnFormatResult:format_search_result,
+                fnDeselect:deselect_value
             });
     });
+
+    function deselect_value(){
+        $("#id_user").val('');
+        $("#id_group").val('');
+    }
 
     function select_value(value, data) {
         var split = value.split(':');
         var type = split[0];
         var id = split[1];
         var name = split[2];
-
-        $("#selected_user").val(type+':'+id);
         if (type=='user'){
             $("#selector")
                 .removeClass('group')
                 .addClass(type);
+            $("#id_user").val(id);
+            $("#id_group").val('');
         } else {
             $("#selector")
                 .removeClass('user')
                 .addClass(type);
+            $("#id_group").val(id);
+            $("#id_user").val('');
         }
         $("#selector input").val(name);
     }

@@ -43,6 +43,7 @@
       highlight: true,
       params: {},
       fnFormatResult: fnFormatResult,
+      fnDeselect: null,
       delimiter: null,
       zIndex: 9999
     };
@@ -262,8 +263,8 @@
     suggest: function() {
       if (this.suggestions.length === 0) {
         this.hide();
-        $('#selector').removeClass('group').removeClass('user');
-        $("#selected_user").val("");
+        var fn = this.options.fnDeselect;
+        if ($.isFunction(fn)) { fn(); }
         return;
       }
 
@@ -271,8 +272,8 @@
       if (this.suggestions.length == 1 && this.suggestions[0].split(':')[2]===cv) {
         this.select(0);
       } else {
-        $('#selector').removeClass('group').removeClass('user');
-        $("#selected_user").val("");
+        var fn = this.options.fnDeselect;
+        if ($.isFunction(fn)) { fn(); }
       }
 
       for (i in this.suggestions){
