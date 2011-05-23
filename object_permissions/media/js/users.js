@@ -64,7 +64,7 @@ $(document).ready(function() {
         var name = $(this).parent().parent().children('.name').html();
         if (confirm("Remove this group: "+ name)) {
             var id = this.parentNode.parentNode.id.substring(6);
-            var data = {group:id, permissions:[], obj:obj_id};
+            var data = {group:id, obj:obj_id};
             $.post(user_url, data,
                 function(code){
                     var type = typeof code;
