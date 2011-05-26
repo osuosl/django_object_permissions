@@ -350,13 +350,21 @@ def all_permissions(request, id, \
         user = get_object_or_404(User, pk=id)
     
     perm_dict = user.get_all_objects_any_perms(groups=False)
-    
+
+    # exclude group permissions from this view.  they are treated special
     try:
         del perm_dict[Group]
     except KeyError:
         pass
+
+    # XXX repack perm_dict so that class names are used as keys instead of the
+    # classes.  Django templates will automatically execute anything callable
+    # if you try to use it, even classes!  #5619
+    repacked = {}
+    for cls, objs in perm_dict.items():
+        repacked[cls.__name__] = objs
     
     return render_to_response(template, \
-            {'persona':user, 'perm_dict':perm_dict}, \
+            {'persona':user, 'perm_dict':repacked}, \
         context_instance=RequestContext(request),
     )

@@ -7,8 +7,7 @@
     table.permissions td.perms {color:#555;}
 </style>
 
-{% for cls, objs in perm_dict.items %}
-    {% with cls|class_name as class_name %}
+{% for class_name, objs in perm_dict.items %}
     {% if persona|is_user %}
         <a class="button add permission" href="{% url user-add-permissions persona.pk class_name %}">
     {% else %}
@@ -21,7 +20,6 @@
             {% include "object_permissions/permissions/object_row.html" %}
         {% endfor %}
     </table>
-    {% endwith %}
 {% endfor %}
 
 <script type="text/javascript">
