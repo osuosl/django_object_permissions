@@ -1286,21 +1286,7 @@ class TestGroupViews(TestCase):
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEqual([], get_user_perms(user0, group))
-        
-        # valid post group
-        data = {'permissions':['admin'], 'group':group1.id, 'obj':object0.pk}
-        response = c.post(url_post % args_post, data)
-        self.assertEqual(200, response.status_code)
-        self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
-        self.assertEqual(['admin'], group1.get_perms(group))
-        
-        # valid post no permissions group
-        data = {'permissions':[], 'group':group1.id, 'obj':object0.pk}
-        response = c.post(url_post % args_post, data)
-        self.assertEqual(200, response.status_code)
-        self.assertEqual([], group1.get_perms(group))
-    
+
     def test_permissions_all(self):
         """ tests groups.permissions_all() """
         group = self.test_save()
