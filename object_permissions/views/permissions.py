@@ -204,10 +204,12 @@ def view_permissions(request, obj, url, user_id=None, group_id=None,
                 # return html to replace existing user row
                 if form_user:
                     return render_to_response(user_template, \
-                                {'object':obj, 'user':form_user, 'url':url})
+                                {'object':obj, 'user_detail':form_user, 'url':url},
+                                context_instance=RequestContext(request))
                 else:
                     return render_to_response(group_template, \
-                                {'object':obj, 'group':group, 'url':url})
+                                {'object':obj, 'group':group, 'url':url},
+                                context_instance=RequestContext(request))
                 
             else:
                 # no permissions, send ajax response to remove user

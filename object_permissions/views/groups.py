@@ -38,7 +38,8 @@ def user_permissions(request, id, user_id=None):
             url = reverse('group-permissions', args=[id])
             return render_to_response( \
                 "object_permissions/permissions/user_row.html", \
-                {'object':group, 'user':user, 'url':url})
+                {'object':group, 'user_detail':user, 'url':url},
+                context_instance=RequestContext(request))
         
         # error in form return ajax response
         content = json.dumps(form.errors)
