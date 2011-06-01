@@ -26,6 +26,9 @@ from ganeti.models import Profile
 from object_log.models import LogItem, LogAction, create_defaults, create_defaults
 
 
+global user1, user2
+
+
 class TestLogActionModel(TestCase):
 
     def setUp(self):
@@ -137,8 +140,8 @@ class TestLogItemModel(TestCase):
         item1.timestamp = timestamp
         item2.timestamp = timestamp
 
-        self.assertEqual('Mod edited user Joe User', str(item1))
-        self.assertEqual('Mod deleted user Joe User', str(item2))
+        self.assertEqual('\n<a href="/user/1">Mod</a> edited user Joe User', str(item1))
+        self.assertEqual('\n<a href="/user/1">Mod</a> deleted user Joe User', str(item2))
 
     def test_data(self):
         """
