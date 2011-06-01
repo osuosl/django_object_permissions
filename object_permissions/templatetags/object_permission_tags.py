@@ -18,10 +18,13 @@ def permissions(user, object):
 
 
 @register.filter
-def group_admin(user):
+def group_admin(user, group=None):
     """
     Returns True or False based on if the user is an admin for any Groups
     """
+    if group:
+        return user.is_superuser or user.has_perm(group, 'admin')
+
     return user.is_superuser or user.has_any_perms(Group, ['admin'])
 
 
