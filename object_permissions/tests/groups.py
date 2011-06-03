@@ -1145,9 +1145,9 @@ class TestGroupViews(TestCase):
         user1.set_password('secret')
         user1.save()
 
-        object0 = TestModel.objects.create(name='test0')
+        object0 = TestModel.objects.create(id=10, name='test0')
         object0.save()
-        object1 = TestModel.objects.create(name='test1')
+        object1 = TestModel.objects.create(id=13, name='test1')
         object1.save()
     
     def tearDown(self):
@@ -1267,6 +1267,7 @@ class TestGroupViews(TestCase):
         view_edit_user.connect(callback)
         
         # valid post user
+
         data = {'permissions':['admin'], 'user':user0.id, 'obj':object0.pk}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
