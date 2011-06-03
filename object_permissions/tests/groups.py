@@ -1208,7 +1208,7 @@ class TestGroupViews(TestCase):
         
         # authorized post (perm granted)
         grant(user0, 'admin', group)
-        response = c.get(url % args, {'user':user0.id, 'obj':object0.pk})
+        response = c.get(url % args, {'user':user0.id, 'obj':group.pk})
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'object_permissions/permissions/form.html')
@@ -1231,28 +1231,28 @@ class TestGroupViews(TestCase):
         self.assertEqual(404, response.status_code)
         
         # invalid user (POST)
-        data = {'permissions':['admin'], 'user':-1, 'obj':object0.pk}
+        data = {'permissions':['admin'], 'user':-1, 'obj':group.pk}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
         # invalid group (POST)
-        data = {'permissions':['admin'], 'group':-1, 'obj':object0.pk}
+        data = {'permissions':['admin'], 'group':-1, 'obj':group.pk}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
         # user and group (POST)
-        data = {'permissions':['admin'], 'user':user0.id, 'group':group1.id, 'obj':object0.pk}
+        data = {'permissions':['admin'], 'user':user0.id, 'group':group1.id, 'obj':group.pk}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
         self.assertNotEquals('1', response.content)
         
         # invalid permission
-        data = {'permissions':['DoesNotExist'], 'user':user0.id, 'obj':object0.pk}
+        data = {'permissions':['DoesNotExist'], 'user':user0.id, 'obj':group.pk}
         response = c.post(url_post % args_post, data)
         self.assertEqual(200, response.status_code)
         self.assertEquals('application/json', response['content-type'])
@@ -1268,8 +1268,9 @@ class TestGroupViews(TestCase):
         
         # valid post user
 
-        data = {'permissions':['admin'], 'user':user0.id, 'obj':object0.pk}
+        data = {'permissions':['admin'], 'user':user0.id, 'obj':group.pk}
         response = c.post(url_post % args_post, data)
+
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
@@ -1283,8 +1284,9 @@ class TestGroupViews(TestCase):
         view_edit_user.disconnect(callback)
         
         # valid post no permissions user
-        data = {'permissions':[], 'user':user0.id, 'obj':object0.pk}
+        data = {'user':user0.id, 'obj':group.pk}
         response = c.post(url_post % args_post, data)
+        self.assertEquals('text/html; charset=utf-8', response['content-type'])
         self.assertEqual(200, response.status_code)
         self.assertEqual([], get_user_perms(user0, group))
 
