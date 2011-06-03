@@ -138,8 +138,8 @@ class TestLogItemModel(TestCase):
         item1.timestamp = timestamp
         item2.timestamp = timestamp
 
-        self.assertEqual('\n<a href="/user/1">Mod</a> edited user Joe User', str(item1))
-        self.assertEqual('\n<a href="/user/1">Mod</a> deleted user Joe User', str(item2))
+        self.assertEqual('\n<a href="/user%s">Mod</a> edited user Joe User'%user1.pk, str(item1))
+        self.assertEqual('\n<a href="/user%s">Mod</a> deleted user Joe User'%user1.pk, str(item2))
 
     def test_data(self):
         """
