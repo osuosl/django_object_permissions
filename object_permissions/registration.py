@@ -168,7 +168,7 @@ def _register(params, model):
         }
 
         for perm in params['perms']:
-            fields[perm] = models.BooleanField(default=False)
+            fields[perm] = models.IntegerField(default=False)
 
         class Meta:
             app_label = "object_permissions"
