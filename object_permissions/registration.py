@@ -111,7 +111,7 @@ def register(params, model):
 
     if isinstance(params, (str, unicode)):
         warn("Using a single permission is deprecated!")
-        perms = [perms]
+        perms = [params]
 
     # REPACK - for backward compatibility repack list of perms as a dict
     if isinstance(params, (list, tuple)):
