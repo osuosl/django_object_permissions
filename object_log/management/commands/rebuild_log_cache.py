@@ -7,12 +7,16 @@ class Command(BaseCommand):
     help = 'Rebuilds object log cache for the given log types.'
 
     def handle(self, *args, **options):
-        if len(args) == 0:
-            args = LogAction.objects.all().values_list('name', flat=True)
+        rebuild_cache(*args)
+
+
+def rebuild_cache(*args):
+    if len(args):
+        args = LogAction.objects.all().values_list('name', flat=True)
         map(rebuild_cache, args)
 
 
-def rebuild_cache(key):
+def _rebuild_cache(key):
     """
     Rebuild the log cache for all entries of the given type.  If the type has no
     cache builder then it is ignored    
