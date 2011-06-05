@@ -96,7 +96,7 @@ Names reserved by Django for Model instances.
 """
 
 _DELAYED = []
-def register(params, model):
+def register(params, model, app_label=None):
     """
     Register permissions for a Model.
 
@@ -112,6 +112,11 @@ def register(params, model):
     if isinstance(params, (str, unicode)):
         warn("Using a single permission is deprecated!")
         perms = [params]
+    
+    if app_label is None:
+        warn("Registration without app_label is deprecated!")
+        warn("Adding %s permissions table to object_permission app.  Note that you may not be able to migrate with south" % model)
+        app_label = "object_permissions"
 
     # REPACK - for backward compatibility repack list of perms as a dict
     if isinstance(params, (list, tuple)):
@@ -134,15 +139,15 @@ def register(params, model):
         params['perms'] = repack
 
     try:
-        return _register(params, model)
+        return _register(params, model, app_label)
     except db.utils.DatabaseError:
         # there was an error, likely due to a missing table.  Delay this
         # registration.
-        _DELAYED.append((params, model))
+        _DELAYED.append((params, model, app_label))
 
 
 @transaction.commit_manually
-def _register(params, model):
+def _register(params, model, app_label):
     """
     Real method for registering permissions.
 
@@ -170,10 +175,7 @@ def _register(params, model):
         for perm in params['perms']:
             fields[perm] = models.IntegerField(default=False)
 
-        class Meta:
-            app_label = "object_permissions"
-
-        fields["Meta"] = Meta
+        fields["Meta"] = type('Meta', (object,), dict(app_label=app_label))
 
         perm_model = type(name, (models.Model,), fields)
         permission_map[model] = perm_model
@@ -240,9 +242,9 @@ if settings.TESTING:
         'url':'test_model-detail',
         'url-params':['name']
     }
-    register(TEST_MODEL_PARAMS, TestModel)
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
+    register(TEST_MODEL_PARAMS, TestModel, 'object_permissions')
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild, 'object_permissions')
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild, 'object_permissions')
 
 
 def get_class(class_name):
