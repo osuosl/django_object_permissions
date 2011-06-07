@@ -3,80 +3,88 @@ import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
+from object_permissions.migrations import db_table_exists
 
 class Migration(SchemaMigration):
     
     def forwards(self, orm):
         
         # Adding model 'TestModel'
-        db.create_table('object_permissions_testmodel', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=32)),
-        ))
-        db.send_create_signal('object_permissions', ['TestModel'])
+        if not db_table_exists('object_permissions_testmodel'):
+            db.create_table('object_permissions_testmodel', (
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+                ('name', self.gf('django.db.models.fields.CharField')(max_length=32)),
+            ))
+            db.send_create_signal('object_permissions', ['TestModel'])
 
         # Adding model 'TestModelChild'
-        db.create_table('object_permissions_testmodelchild', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['object_permissions.TestModel'], null=True)),
-        ))
-        db.send_create_signal('object_permissions', ['TestModelChild'])
+        if not db_table_exists('object_permissions_testmodelchild'):
+            db.create_table('object_permissions_testmodelchild', (
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+                ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['object_permissions.TestModel'], null=True)),
+            ))
+            db.send_create_signal('object_permissions', ['TestModelChild'])
 
         # Adding model 'TestModelChildChild'
-        db.create_table('object_permissions_testmodelchildchild', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['object_permissions.TestModelChild'], null=True)),
-        ))
-        db.send_create_signal('object_permissions', ['TestModelChildChild'])
+        if not db_table_exists('object_permissions_testmodelchildchild'):
+            db.create_table('object_permissions_testmodelchildchild', (
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+                ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['object_permissions.TestModelChild'], null=True)),
+            ))
+            db.send_create_signal('object_permissions', ['TestModelChildChild'])
 
         # Adding model 'TestModel_Perms'
-        db.create_table('object_permissions_testmodel_perms', (
-            ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['object_permissions.TestModel'])),
-            ('Perm3', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm2', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm1', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm4', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModel_uperms', null=True, to=orm['auth.User'])),
-            ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModel_gperms', null=True, to=orm['auth.Group'])),
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-        ))
-        db.send_create_signal('object_permissions', ['TestModel_Perms'])
+        if not db_table_exists('object_permissions_testmodel_perms'):
+            db.create_table('object_permissions_testmodel_perms', (
+                ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['object_permissions.TestModel'])),
+                ('Perm3', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm2', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm1', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm4', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModel_uperms', null=True, to=orm['auth.User'])),
+                ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModel_gperms', null=True, to=orm['auth.Group'])),
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ))
+            db.send_create_signal('object_permissions', ['TestModel_Perms'])
 
         # Adding model 'TestModelChild_Perms'
-        db.create_table('object_permissions_testmodelchild_perms', (
-            ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['object_permissions.TestModelChild'])),
-            ('Perm3', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm2', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm1', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm4', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChild_uperms', null=True, to=orm['auth.User'])),
-            ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChild_gperms', null=True, to=orm['auth.Group'])),
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-        ))
-        db.send_create_signal('object_permissions', ['TestModelChild_Perms'])
+        if not db_table_exists('object_permissions_testmodelchild_perms'):
+            db.create_table('object_permissions_testmodelchild_perms', (
+                ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['object_permissions.TestModelChild'])),
+                ('Perm3', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm2', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm1', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm4', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChild_uperms', null=True, to=orm['auth.User'])),
+                ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChild_gperms', null=True, to=orm['auth.Group'])),
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ))
+            db.send_create_signal('object_permissions', ['TestModelChild_Perms'])
 
         # Adding model 'TestModelChildChild_Perms'
-        db.create_table('object_permissions_testmodelchildchild_perms', (
-            ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['object_permissions.TestModelChildChild'])),
-            ('Perm3', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm2', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm1', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('Perm4', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChildChild_uperms', null=True, to=orm['auth.User'])),
-            ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChildChild_gperms', null=True, to=orm['auth.Group'])),
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-        ))
-        db.send_create_signal('object_permissions', ['TestModelChildChild_Perms'])
+        if not db_table_exists('object_permissions_testmodelchildchild_perms'):
+            db.create_table('object_permissions_testmodelchildchild_perms', (
+                ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['object_permissions.TestModelChildChild'])),
+                ('Perm3', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm2', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm1', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('Perm4', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChildChild_uperms', null=True, to=orm['auth.User'])),
+                ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='TestModelChildChild_gperms', null=True, to=orm['auth.Group'])),
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ))
+            db.send_create_signal('object_permissions', ['TestModelChildChild_Perms'])
 
         # Adding model 'Group_Perms'
-        db.create_table('object_permissions_group_perms', (
-            ('admin', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
-            ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['auth.Group'])),
-            ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='Group_gperms', null=True, to=orm['auth.Group'])),
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='Group_uperms', null=True, to=orm['auth.User'])),
-        ))
-        db.send_create_signal('object_permissions', ['Group_Perms'])
+        if not db_table_exists('object_permissions_group_perms'):
+            db.create_table('object_permissions_group_perms', (
+                ('admin', self.gf('django.db.models.fields.BooleanField')(default=False, blank=True)),
+                ('obj', self.gf('django.db.models.fields.related.ForeignKey')(related_name='operms', to=orm['auth.Group'])),
+                ('group', self.gf('django.db.models.fields.related.ForeignKey')(related_name='Group_gperms', null=True, to=orm['auth.Group'])),
+                ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+                ('user', self.gf('django.db.models.fields.related.ForeignKey')(related_name='Group_uperms', null=True, to=orm['auth.User'])),
+            ))
+            db.send_create_signal('object_permissions', ['Group_Perms'])
     
     
     def backwards(self, orm):
