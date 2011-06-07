@@ -173,7 +173,7 @@ def _register(params, model, app_label):
         }
 
         for perm in params['perms']:
-            fields[perm] = models.IntegerField(default=False)
+            fields[perm] = models.IntegerField(default=0)
 
         fields["Meta"] = type('Meta', (object,), dict(app_label=app_label))
 
