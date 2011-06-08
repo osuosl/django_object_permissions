@@ -9,7 +9,7 @@ class Migration(DataMigration):
     def convert_table(self, table, perms):
         for row in table.objects.all():
             for perm in perms:
-                row.__dict__[perm] = row.__dict__['%s_tmp'%perm] 
+                row.__dict__[perm] = row.__dict__['%s_tmp'%perm]
             row.save()
 
     def revert_table(self, table, perms):
@@ -64,6 +64,7 @@ class Migration(DataMigration):
         'object_permissions.group_perms': {
             'Meta': {'object_name': 'Group_Perms'},
             'admin': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
+            'admin_tmp': ('django.db.models.fields.IntegerField', [], {'default': 'False'}),
             'group': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'Group_gperms'", 'null': 'True', 'to': "orm['auth.Group']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'obj': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'operms'", 'to': "orm['auth.Group']"}),
