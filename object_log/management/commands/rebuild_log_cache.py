@@ -1,3 +1,5 @@
+from sys import stdout
+from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand, CommandError
 
 from object_log.models import LogItem, LogAction
@@ -11,9 +13,15 @@ class Command(BaseCommand):
 
 
 def rebuild_cache(*args):
-    if len(args):
+    """
+    rebuild cache for list of apps passed in.  if no apps specified then
+    all apps will be rebuilt
+    """
+    if not len(args):
         args = LogAction.objects.all().values_list('name', flat=True)
-        map(rebuild_cache, args)
+    map(_rebuild_cache, args)
+    stdout.write('\n')
+    stdout.flush()
 
 
 def _rebuild_cache(key):
@@ -21,11 +29,13 @@ def _rebuild_cache(key):
     Rebuild the log cache for all entries of the given type.  If the type has no
     cache builder then it is ignored    
     """
-    
     action = LogAction.objects.get_from_cache(key)
     if action.build_cache is None:
         return
-    
+
+    write = stdout.write
+    flush = stdout.flush
+
     for entry in action.entries.all().select_related('user').iterator():
         entry.data = action.build_cache(entry.user,
                                         entry.object1,
@@ -33,4 +43,5 @@ def _rebuild_cache(key):
                                         entry.object3,
                                         entry.data)
         entry.save(force_update=True)
-        print '.'
+        write('.')
+        flush()
