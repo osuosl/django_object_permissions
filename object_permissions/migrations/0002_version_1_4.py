@@ -3,91 +3,83 @@ import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
+from object_permissions.migrations import db_table_exists
 
 class Migration(SchemaMigration):
     
     def forwards(self, orm):
-        
-        # Changing field 'TestModel_Perms.Perm3'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm3', self.gf('django.db.models.fields.IntegerField')())
+        # temporarily rename old perm columns
+        db.rename_column('object_permissions_group_perms', 'admin', 'admin_tmp')
+        if db_table_exists('object_permissions_testmodel_perms'):
+            db.rename_column('object_permissions_testmodel_perms', 'Perm3', 'Perm3_tmp')
+            db.rename_column('object_permissions_testmodel_perms', 'Perm2', 'Perm2_tmp')
+            db.rename_column('object_permissions_testmodel_perms', 'Perm1', 'Perm1_tmp')
+            db.rename_column('object_permissions_testmodel_perms', 'Perm4', 'Perm4_tmp')
+        if db_table_exists('object_permissions_testmodelchildchild_perms'):
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm3', 'Perm3_tmp')
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm2', 'Perm2_tmp')
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm1', 'Perm1_tmp')
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm4', 'Perm4_tmp')
+        if db_table_exists('object_permissions_testmodelchild_perms'):
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm3', 'Perm3_tmp')
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm2', 'Perm2_tmp')
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm1', 'Perm1_tmp')
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm4', 'Perm4_tmp')
 
-        # Changing field 'TestModel_Perms.Perm2'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm2', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModel_Perms.Perm1'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm1', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModel_Perms.Perm4'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm4', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'Group_Perms.admin'
-        db.alter_column('object_permissions_group_perms', 'admin', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChildChild_Perms.Perm3'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm3', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChildChild_Perms.Perm2'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm2', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChildChild_Perms.Perm1'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm1', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChildChild_Perms.Perm4'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm4', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChild_Perms.Perm3'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm3', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChild_Perms.Perm2'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm2', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChild_Perms.Perm1'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm1', self.gf('django.db.models.fields.IntegerField')())
-
-        # Changing field 'TestModelChild_Perms.Perm4'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm4', self.gf('django.db.models.fields.IntegerField')())
-    
+        # add new integer type fields
+        db.add_column('object_permissions_group_perms', 'admin', self.gf('django.db.models.fields.IntegerField')(default=0))
+        if db_table_exists('object_permissions_testmodel_perms'):
+            db.add_column('object_permissions_testmodel_perms', 'Perm3', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodel_perms', 'Perm2', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodel_perms', 'Perm1', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodel_perms', 'Perm4', self.gf('django.db.models.fields.IntegerField')(default=0))
+        if db_table_exists('object_permissions_testmodelchildchild_perms'):
+            db.add_column('object_permissions_testmodelchildchild_perms', 'Perm3', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodelchildchild_perms', 'Perm2', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodelchildchild_perms', 'Perm1', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodelchildchild_perms', 'Perm4', self.gf('django.db.models.fields.IntegerField')(default=0))
+        if db_table_exists('object_permissions_testmodelchild_perms'):
+            db.add_column('object_permissions_testmodelchild_perms', 'Perm3', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodelchild_perms', 'Perm2', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodelchild_perms', 'Perm1', self.gf('django.db.models.fields.IntegerField')(default=0))
+            db.add_column('object_permissions_testmodelchild_perms', 'Perm4', self.gf('django.db.models.fields.IntegerField')(default=0))
     
     def backwards(self, orm):
-        
-        # Changing field 'TestModel_Perms.Perm3'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm3', self.gf('django.db.models.fields.BooleanField')(blank=True))
+        # remove new integer type fields
+        db.delete_column('object_permissions_group_perms', 'admin')
+        if db_table_exists('object_permissions_testmodel_perms'):
+            db.delete_column('object_permissions_testmodel_perms', 'Perm3')
+            db.delete_column('object_permissions_testmodel_perms', 'Perm2')
+            db.delete_column('object_permissions_testmodel_perms', 'Perm1')
+            db.delete_column('object_permissions_testmodel_perms', 'Perm4')
+        if db_table_exists('object_permissions_testmodelchildchild_perms'):
+            db.delete_column('object_permissions_testmodelchildchild_perms', 'Perm3')
+            db.delete_column('object_permissions_testmodelchildchild_perms', 'Perm2')
+            db.delete_column('object_permissions_testmodelchildchild_perms', 'Perm1')
+            db.delete_column('object_permissions_testmodelchildchild_perms', 'Perm4')
+        if db_table_exists('object_permissions_testmodelchild_perms'):
+            db.delete_column('object_permissions_testmodelchild_perms', 'Perm3')
+            db.delete_column('object_permissions_testmodelchild_perms', 'Perm2')
+            db.delete_column('object_permissions_testmodelchild_perms', 'Perm1')
+            db.delete_column('object_permissions_testmodelchild_perms', 'Perm4')
 
-        # Changing field 'TestModel_Perms.Perm2'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm2', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModel_Perms.Perm1'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm1', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModel_Perms.Perm4'
-        db.alter_column('object_permissions_testmodel_perms', 'Perm4', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'Group_Perms.admin'
-        db.alter_column('object_permissions_group_perms', 'admin', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChildChild_Perms.Perm3'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm3', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChildChild_Perms.Perm2'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm2', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChildChild_Perms.Perm1'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm1', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChildChild_Perms.Perm4'
-        db.alter_column('object_permissions_testmodelchildchild_perms', 'Perm4', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChild_Perms.Perm3'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm3', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChild_Perms.Perm2'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm2', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChild_Perms.Perm1'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm1', self.gf('django.db.models.fields.BooleanField')(blank=True))
-
-        # Changing field 'TestModelChild_Perms.Perm4'
-        db.alter_column('object_permissions_testmodelchild_perms', 'Perm4', self.gf('django.db.models.fields.BooleanField')(blank=True))
+        # rename old perm columns back to original names
+        db.rename_column('object_permissions_group_perms', 'admin_tmp', 'admin')
+        if db_table_exists('object_permissions_testmodel_perms'):
+            db.rename_column('object_permissions_testmodel_perms', 'Perm3_tmp', 'Perm3')
+            db.rename_column('object_permissions_testmodel_perms', 'Perm2_tmp', 'Perm2')
+            db.rename_column('object_permissions_testmodel_perms', 'Perm1_tmp', 'Perm1')
+            db.rename_column('object_permissions_testmodel_perms', 'Perm4_tmp', 'Perm4')
+        if db_table_exists('object_permissions_testmodelchildchild_perms'):
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm3_tmp', 'Perm3')
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm2_tmp', 'Perm2')
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm1_tmp', 'Perm1')
+            db.rename_column('object_permissions_testmodelchildchild_perms', 'Perm4_tmp', 'Perm4')
+        if db_table_exists('object_permissions_testmodelchild_perms'):
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm3_tmp', 'Perm3')
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm2_tmp', 'Perm2')
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm1_tmp', 'Perm1')
+            db.rename_column('object_permissions_testmodelchild_perms', 'Perm4_tmp', 'Perm4')
     
     
     models = {
