@@ -19,14 +19,9 @@
         var current_td;
         var row_count = 0;
         $('table.object_log .timestamp').each(function(){
-
             var td = $(this);
             var timestamp = new Date(td.html());
-            if (current == undefined
-                || timestamp.getDay() > current.getDay()
-                || timestamp.getMonth() > current.getMonth()
-                || timestamp.getYear() > current.getYear())
-            {
+            if (current == undefined || timestamp > current) {
                 if (current_td != undefined){
                     current_td.attr('rowspan', row_count);
                 }
@@ -42,5 +37,5 @@
             current_td.attr('rowspan', row_count);
         }
     }
-    format_log_timestamps();
+    $(function(){format_log_timestamps();});
 </script>
