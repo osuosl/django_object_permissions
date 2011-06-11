@@ -20,6 +20,7 @@ from datetime import datetime
 from django.test.client import Client
 
 from django.contrib.auth.models import User, Group
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from object_log.models import LogItem, LogAction, create_defaults
@@ -138,7 +139,8 @@ class TestLogItemModel(TestCase):
         item1.timestamp = timestamp
         item2.timestamp = timestamp
 
-        self.assertEqual('\n<a href="/user/%s">Mod</a> edited user Joe User'%user1.pk, str(item1))
+        ct = ContentType.objects.get_for_model(User)
+        self.assertEqual('\n<a href="/user/%s">Mod</a> edited user\n<a href="/object/%s/%s/">Joe User</a>'%(user1.pk, ct.id, item1.object_id1), str(item1))
         self.assertEqual('\n<a href="/user/%s">Mod</a> deleted user Joe User'%user1.pk, str(item2))
 
     def test_data(self):

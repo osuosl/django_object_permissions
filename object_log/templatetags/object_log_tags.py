@@ -1,5 +1,6 @@
-from django.template import Library
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.template import Library, Node, NodeList, Variable
 from django.utils.safestring import SafeString
 
 register = Library()
@@ -30,3 +31,43 @@ def permalink(obj, display=None):
         return '<a href="%s">%s</a>' % (obj.get_absolute_url(), display)
     else:
         return obj
+
+
+@register.tag
+def contenttypelink(parser, token):
+    """
+    Return a link to an object using content types and a pk.  The model must
+    have get_absolute_url() defined.  This tag is useful for rendering links to
+    objects in a log entry, without having to query the object.
+    """
+    bits = token.contents.split()
+    if len(bits) != 3:
+        raise TemplateSyntaxError, "'content_type_link' tag takes two arguments: a content type id and pk"
+    
+    inner_nodelist = parser.parse(('endcontenttypelink',))
+    parser.delete_first_token()
+
+    return ContentTypeLinkNode(bits[1], bits[2], inner_nodelist)
+
+
+LINK_FORMAT = '<a href="%s/object/%%s/%%s/">' % settings.SITE_ROOT
+class ContentTypeLinkNode(Node):
+
+    def __init__(self, content_type_id, pk, inner_nodelist):
+        self.content_type_id = Variable(content_type_id)
+        self.pk = Variable(pk)
+        self.inner_nodelist = inner_nodelist
+
+    def render(self, context):
+        content_type_id = self.content_type_id.resolve(context)
+        content_type = ContentType.objects.get_for_id(content_type_id)
+
+        if hasattr(content_type.model_class(), 'get_absolute_url'):
+            pk = self.pk.resolve(context)
+            nodelist = NodeList()
+            nodelist.append(LINK_FORMAT % (content_type.pk, pk))
+            nodelist.append(self.inner_nodelist.render(context))
+            nodelist.append('</a>')
+            return nodelist.render(context)
+        else:
+            return self.inner_nodelist.render(context)

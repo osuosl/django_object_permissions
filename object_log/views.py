@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.template.context import RequestContext
 from django.db.models.query_utils import Q
 from django.shortcuts import render_to_response, get_object_or_404
@@ -81,3 +81,15 @@ def list_user_actions(request, pk):
     return render_to_response('object_log/log.html',
         {'log':log_items, 'context':{'user':request.user}},
         context_instance=RequestContext(request))
+
+
+def object_detail(request, content_type_id, pk):
+    """
+    Generic view for displaying a detail page for an object.  ContentTypes are
+    used to find a detail url through get_absolute_url().  This isn't the most
+    efficient way to display a detail page, but it will scale well with log
+    messages that might not have the full item loaded.
+    """
+    ct = ContentType.objects.get(pk=content_type_id)
+    obj = ct.get_object_for_this_type(pk=pk)
+    return HttpResponseRedirect(obj.get_absolute_url())
