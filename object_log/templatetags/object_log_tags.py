@@ -1,4 +1,5 @@
 from django.template import Library
+from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import SafeString
 
 register = Library()
@@ -9,6 +10,12 @@ def render_context(log_item, context):
     helper tag needed for adding extra context when rendering a LogItem
     """
     return SafeString(log_item.render(**context))
+
+
+@register.filter()
+def ct_for_id(id):
+    """ returns a content type looked up by id """
+    return ContentType.objects.get_for_id(id)
 
 
 @register.simple_tag

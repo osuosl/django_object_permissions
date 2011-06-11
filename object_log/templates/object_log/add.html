@@ -1,2 +1,2 @@
 {% load object_log_tags %}
-{% permalink log_item.user %} created {{log_item.object_type1}} {{log_item.data.object1_str}}
+{% permalink log_item.user %} created {{log_item.object_type1_id|ct_for_id}}
