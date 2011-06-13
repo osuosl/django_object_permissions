@@ -33,7 +33,12 @@ function bind_form(){
 // Delete user button
 $('.object_permissions .delete').live("click", function() {
     var class_name = this.parentNode.parentNode.parentNode.parentNode.id;
-    var name = $(this).parent().parent().children('.obj').html();
+    var name = $(this).parent().parent().children('.obj');
+    if (name.children('a').size() > 0) {
+        name = name.children('a').html();
+    } else {
+        name = name.html();
+    }
     if (confirm("Remove this " + class_name +": "+ name)) {
         $('.qtip').qtip('destroy');
         var id = this.parentNode.parentNode.id;
