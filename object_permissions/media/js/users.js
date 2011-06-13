@@ -43,7 +43,12 @@ $(document).ready(function() {
     
     // Delete user button
     $('.user .delete').live("click", function() {
-        var name = $(this).parent().parent().children('.name').html();
+        var name = $(this).parent().parent().children('.name');
+        if (name.children('a').size() > 0) {
+            name = name.children('a').html();
+        } else {
+            name = name.html();
+        }
         if (confirm("Remove this user: " + name)) {
             $('.qtip').qtip('destroy');
             var id = this.parentNode.parentNode.id.substring(5);
@@ -61,7 +66,12 @@ $(document).ready(function() {
     
     // Delete group button
     $('.group .delete').live("click", function() {
-        var name = $(this).parent().parent().children('.name').html();
+        var name = $(this).parent().parent().children('.name');
+        if (name.children('a').size() > 0) {
+            name = name.children('a').html();
+        } else {
+            name = name.html();
+        }
         if (confirm("Remove this group: "+ name)) {
             var id = this.parentNode.parentNode.id.substring(6);
             var data = {group:id, obj:obj_id};
