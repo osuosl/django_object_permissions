@@ -2,7 +2,8 @@ var is_user;
 var persona_pk;
 
 // Add object button
-$('.button.add.permission').click(function(){
+$('.button.add.permission').click(function(event){
+    event.preventDefault();
     $('.qtip').qtip('destroy');
     $(this).qtip({
         content: {
@@ -18,12 +19,12 @@ $('.button.add.permission').click(function(){
             bind_form();
         }}
     });
-    return false;
 });
 
 function bind_form(){
     // form submit button
-    $(".object_permissions_form").submit(function(){
+    $(".object_permissions_form").live('submit', function(event){
+        event.preventDefault();
         $("#errors").empty();
         $(this).ajaxSubmit({success: update_object_permission});
         return false;
@@ -31,7 +32,8 @@ function bind_form(){
 }
 
 // Delete user button
-$('.object_permissions .delete').live("click", function() {
+$('.object_permissions .delete').live("click", function(event) {
+    event.preventDefault();
     var class_name = this.parentNode.parentNode.parentNode.parentNode.id;
     var name = $(this).parent().parent().children('.obj');
     if (name.children('a').size() > 0) {
@@ -52,7 +54,6 @@ $('.object_permissions .delete').live("click", function() {
         var href = $(this).children('a').attr('href');
         $.post(href, data, update_object_permission, "json");
     }
-    return false;
 });
 
 function update_object_permission(responseText, statusText, xhr, $form) {
@@ -84,8 +85,9 @@ function update_object_permission(responseText, statusText, xhr, $form) {
     }
 }
 
-$('table.permissions tr td.perms a').live('click', function(){
+$('table.permissions tr td.perms a').live('click', function(event){
     // destroy old qtip before showing new one
+    event.preventDefault();
     $('.qtip').qtip('destroy');
     $(this).qtip({
         content: {
@@ -101,5 +103,4 @@ $('table.permissions tr td.perms a').live('click', function(){
             bind_form();
         }}
     });
-    return false;
 });
