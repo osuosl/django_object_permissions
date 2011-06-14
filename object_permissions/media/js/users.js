@@ -87,7 +87,7 @@ $(document).ready(function() {
     });
     
     // Update Permission Button
-    $(".permissions").live("click", function() {
+    $(".permissions a").live("click", function() {
         // destroy old qtip before showing new one
         $('.qtip').qtip('destroy');
         $(this).qtip({
