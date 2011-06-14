@@ -43,15 +43,15 @@
         });
         
         // submit button
-        $(".add_user_form").live('submit', function(){
+        $(".add_user_form").live('submit', function(event){
+            event.preventDefault();
             $("#errors").empty();
             $(this).ajaxSubmit({success: update_group_user});
-            return false;
         });
         
         // Update Permission Button
-        $("#op_users .permissions").live("click", function() {
-            id = this.parentNode.id.substring(5);
+        $("#op_users .permissions a").live("click", function(event) {
+            event.preventDefault();
             var id = this.parentNode.id.substring(5);
             $('.qtip').qtip('destroy');
             $(this).qtip({
@@ -67,14 +67,13 @@
                     $(".ajax_form input[type!=hidden], .ajax_form select").first().focus();
                     
                     // submit button
-                    $(".object_permissions_form").submit(function(){
+                    $(".object_permissions_form").submit(function(event){
+                        event.preventDefault();
                         $("#errors").empty();
                         $(this).ajaxSubmit({success: update_group_user});
-                        return false;
                     });
                 }}
             });
-            return false;
         });
     });
     
