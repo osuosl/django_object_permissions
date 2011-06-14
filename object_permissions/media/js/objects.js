@@ -14,22 +14,17 @@ $('.button.add.permission').click(function(event){
         style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee'},
         show: {when:false, ready:true},
         hide: {fixed: true, when:false},
-        api:{onShow:function(){
+        api:{onContentLoad:function(){
             $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
-            bind_form();
         }}
     });
 });
 
-function bind_form(){
-    // form submit button
-    $(".object_permissions_form").live('submit', function(event){
-        event.preventDefault();
-        $("#errors").empty();
-        $(this).ajaxSubmit({success: update_object_permission});
-        return false;
-    });
-}
+$(".object_permissions_form").live('submit', function(event){
+    event.preventDefault();
+    $("#errors").empty();
+    $(this).ajaxSubmit({success: update_object_permission});
+});
 
 // Delete user button
 $('.object_permissions .delete').live("click", function(event) {
@@ -98,9 +93,8 @@ $('table.permissions tr td.perms a').live('click', function(event){
         style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
         show: {when:false, ready:true},
         hide: {fixed: true, when:false},
-        api:{onShow:function(){
+        api:{onContentLoad:function(){
             $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
-            bind_form();
         }}
     });
 });
