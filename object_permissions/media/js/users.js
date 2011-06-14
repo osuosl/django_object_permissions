@@ -6,7 +6,7 @@ var obj_id;
 
 $(document).ready(function() {
     // unbind all functions, this ensures that they are never bound more
-    // than once.  This is a problem when using jquery ajax tabs
+    // than once.  This is a problem when using jquery ajax tabs that do not cache
     $('#add_user').unbind();
     $('.object_permissions_form .submit').die();
     $('.user .delete').die();
@@ -14,7 +14,8 @@ $(document).ready(function() {
     $('.permissions').die();
     
     // Add user button
-    $('#add_user').click(function(){
+    $('#add_user').click(function(event){
+        event.preventDefault();
         $('.qtip').qtip('destroy');
         $(this).qtip({
             content: {
@@ -34,15 +35,16 @@ $(document).ready(function() {
     
     // form submit button
     function bind_user_perm_form() {
-        $(".object_permissions_form").submit(function(){
+        $(".object_permissions_form").submit(function(event){
+            event.preventDefault();
             $("#errors").empty();
             $(this).ajaxSubmit({success: update_user_permissions});
-            return false;
         });
     }
     
     // Delete user button
-    $('.user .delete').live("click", function() {
+    $('.user .delete').live("click", function(event) {
+        event.preventDefault();
         var name = $(this).parent().parent().children('.name');
         if (name.children('a').size() > 0) {
             name = name.children('a').html();
@@ -65,7 +67,8 @@ $(document).ready(function() {
     });
     
     // Delete group button
-    $('.group .delete').live("click", function() {
+    $('.group .delete').live("click", function(event) {
+        event.preventDefault();
         var name = $(this).parent().parent().children('.name');
         if (name.children('a').size() > 0) {
             name = name.children('a').html();
@@ -87,7 +90,8 @@ $(document).ready(function() {
     });
     
     // Update Permission Button
-    $(".permissions a").live("click", function() {
+    $(".permissions a").live("click", function(event) {
+        event.preventDefault();
         // destroy old qtip before showing new one
         $('.qtip').qtip('destroy');
         $(this).qtip({
@@ -104,7 +108,6 @@ $(document).ready(function() {
                 bind_user_perm_form();
             }}
         });
-        return false;
     });
 });
 
