@@ -10,6 +10,10 @@ from django.db.models import Model, Q, Sum
 
 from object_permissions.signals import granted, revoked
 
+
+TESTING = settings.TESTING if hasattr(settings, 'TESTING') else False
+
+
 """
 Registration functions.
 
@@ -209,10 +213,10 @@ def _register_delayed(**kwargs):
 models.signals.post_syncdb.connect(_register_delayed)
 
 
-if settings.TESTING:
+if TESTING:
     # XXX Create test tables only when TEST mode.  These models will be used in
-    # various unittests.  This is used so that we do not alter any models used
-    # in production
+    # various unittests.  This is used so that we do add unneeded models in a
+    # production deployment.
     from django.db import models
     class TestModel(models.Model):
         name = models.CharField(max_length=32)
