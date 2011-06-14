@@ -6,7 +6,7 @@ var obj_id;
 
 $(document).ready(function() {
     // unbind all functions, this ensures that they are never bound more
-    // than once.  This is a problem when using jquery ajax tabs
+    // than once.  This is a problem when using jquery ajax tabs that do not cache
     $('#add_user').unbind();
     $('.object_permissions_form .submit').die();
     $('.user .delete').die();
@@ -14,7 +14,8 @@ $(document).ready(function() {
     $('.permissions').die();
     
     // Add user button
-    $('#add_user').click(function(){
+    $('#add_user').click(function(event){
+        event.preventDefault();
         $('.qtip').qtip('destroy');
         $(this).qtip({
             content: {
@@ -25,25 +26,28 @@ $(document).ready(function() {
             style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
-            api:{onShow:function(){
+            api:{onContentLoad:function(){
                 $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
-                bind_user_perm_form();
             }}
         });
     });
     
     // form submit button
-    function bind_user_perm_form() {
-        $(".object_permissions_form").submit(function(){
-            $("#errors").empty();
-            $(this).ajaxSubmit({success: update_user_permissions});
-            return false;
-        });
-    }
-    
+    $(".object_permissions_form").live("submit", function(event){
+        event.preventDefault();
+        $("#errors").empty();
+        $(this).ajaxSubmit({success: update_user_permissions});
+    });
+
     // Delete user button
-    $('.user .delete').live("click", function() {
-        var name = $(this).parent().parent().children('.name').html();
+    $('.user .delete').live("click", function(event) {
+        event.preventDefault();
+        var name = $(this).parent().parent().children('.name');
+        if (name.children('a').size() > 0) {
+            name = name.children('a').html();
+        } else {
+            name = name.html();
+        }
         if (confirm("Remove this user: " + name)) {
             $('.qtip').qtip('destroy');
             var id = this.parentNode.parentNode.id.substring(5);
@@ -60,8 +64,14 @@ $(document).ready(function() {
     });
     
     // Delete group button
-    $('.group .delete').live("click", function() {
-        var name = $(this).parent().parent().children('.name').html();
+    $('.group .delete').live("click", function(event) {
+        event.preventDefault();
+        var name = $(this).parent().parent().children('.name');
+        if (name.children('a').size() > 0) {
+            name = name.children('a').html();
+        } else {
+            name = name.html();
+        }
         if (confirm("Remove this group: "+ name)) {
             var id = this.parentNode.parentNode.id.substring(6);
             var data = {group:id, obj:obj_id};
@@ -77,7 +87,8 @@ $(document).ready(function() {
     });
     
     // Update Permission Button
-    $(".permissions").live("click", function() {
+    $(".permissions a").live("click", function(event) {
+        event.preventDefault();
         // destroy old qtip before showing new one
         $('.qtip').qtip('destroy');
         $(this).qtip({
@@ -89,12 +100,10 @@ $(document).ready(function() {
             style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'leftMiddle'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
-            api:{onShow:function(){
+            api:{onContentLoad:function(){
                 $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
-                bind_user_perm_form();
             }}
         });
-        return false;
     });
 });
 
