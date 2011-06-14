@@ -26,22 +26,19 @@ $(document).ready(function() {
             style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
-            api:{onShow:function(){
+            api:{onContentLoad:function(){
                 $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
-                bind_user_perm_form();
             }}
         });
     });
     
     // form submit button
-    function bind_user_perm_form() {
-        $(".object_permissions_form").submit(function(event){
-            event.preventDefault();
-            $("#errors").empty();
-            $(this).ajaxSubmit({success: update_user_permissions});
-        });
-    }
-    
+    $(".object_permissions_form").live("submit", function(event){
+        event.preventDefault();
+        $("#errors").empty();
+        $(this).ajaxSubmit({success: update_user_permissions});
+    });
+
     // Delete user button
     $('.user .delete').live("click", function(event) {
         event.preventDefault();
@@ -103,9 +100,8 @@ $(document).ready(function() {
             style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'leftMiddle'},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
-            api:{onShow:function(){
+            api:{onContentLoad:function(){
                 $(".object_permissions_form input[type!=hidden], .object_permissions_form select").first().focus();
-                bind_user_perm_form();
             }}
         });
     });
