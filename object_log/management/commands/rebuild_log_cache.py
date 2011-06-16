@@ -35,13 +35,25 @@ def _rebuild_cache(key):
 
     write = stdout.write
     flush = stdout.flush
-
     for entry in action.entries.all().select_related('user').iterator():
+        try:
+            object1 = entry.object1
+        except Exception:
+            object1 = None
+        try:
+            object2 = entry.object2
+        except Exception:
+            object2 = None
+        try:
+            object3 = entry.object3
+        except Exception:
+            object3 = None
+
         entry.data = action.build_cache(entry.user,
-                                        entry.object1,
-                                        entry.object2,
-                                        entry.object3,
-                                        entry.data)
+                                    object1,
+                                    object2,
+                                    object3,
+                                    entry.data)
         entry.save(force_update=True)
         write('.')
         flush()
