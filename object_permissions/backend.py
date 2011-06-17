@@ -72,7 +72,7 @@ class ObjectPermBackend(object):
         rv = set()
         for row in q:
             rv.update(field.name for field in row._meta.fields
-                if isinstance(field, models.BooleanField)
+                if isinstance(field, models.IntegerField)
                 and getattr(row, field.name))
 
         return list(rv)

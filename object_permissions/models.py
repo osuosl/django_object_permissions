@@ -12,4 +12,4 @@ GROUP_PARAMS = {
     }
 }
 
-register(GROUP_PARAMS, Group)
+register(GROUP_PARAMS, Group, 'object_permissions')

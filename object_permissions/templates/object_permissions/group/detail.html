@@ -1,14 +1,12 @@
 {% extends "menu_base.html" %}
-{% block title %} User Group: {{ object.name }}{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Group: " %}{{ object.name }}{% endblock %}
 
 {% block head %}
     <link href="{{MEDIA_URL}}/css/jquery-ui.css" rel="stylesheet" type="text/css"/>
 
     <style>
     #users {width:100%;}
-    #users .permissions {cursor:pointer;}
-    .ui-widget-header {background:none; border-width:0 0 1px 0; -moz-border-radius:0px;}
-    .ui-widget-content {border:0;}
     </style>
     <script src="{{MEDIA_URL}}/js/jquery-ui.min.js"></script>
     <script type="text/javascript">
@@ -31,7 +29,7 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{group.name}}</h1>
+<h1><a class="breadcrumb" href="{%url group-list %}">{% trans "Groups" %}</a> : {{ group.name }}</h1>
 
 
 <div id="tabs">

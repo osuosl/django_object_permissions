@@ -4,6 +4,8 @@ from django.test import TestCase
 
 from object_permissions.backend import ObjectPermBackend
 
+global user, anonymous, object_
+
 
 class TestBackend(TestCase):
 

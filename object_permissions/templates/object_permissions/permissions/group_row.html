@@ -1,7 +1,13 @@
 {% load object_permission_tags %}
 
 <tr id="group_{{group.id}}" class="group">
-<td class="name">{{group.name}}</td>
+<td class="name">
+    {% if user|group_admin:group %}
+        {% permalink group group.name %}
+    {% else %}
+        {{ group.name }}
+    {% endif %}
+</td>
 <td class="permissions">
     <a href="{{url}}/group/{{group.id}}" class="permissions" title="click to edit">
     {% for permission in group|permissions:object %}
