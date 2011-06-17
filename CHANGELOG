@@ -2,6 +2,29 @@
 Changelog
 ==================
 
+v1.4
+----
+
+ * Changes
+
+   * #5583: Group URLs start with "group" instead of "usergroup"
+   * #6021: South migration via app labels
+
+ * Bugfixes
+
+   * #3879: "Add Group" button shouldn't be available without permissions
+   * #4137: User permissions should be deleteable
+   * #5619: Django 1.3 template compatibility
+   * #5985: Pg compatibility
+
+ * Features
+
+   * #339: Widget/form field for selecting user/group during edits
+   * #2967: Context links on all-permissions page
+   * #4119: get_perms_any()
+   * #4131: user_get_perms() optionally can include groups
+   * #5961: Context links on user/group detail pages
+
 v1.3.1
 ------
 

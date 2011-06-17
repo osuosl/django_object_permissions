@@ -42,8 +42,12 @@ Configuring Your Django Project
 ----------------------------------------
 
 1) Add "object_permissions" to INSTALLED_APPS
-2) Run ./manage.py syncdb
-3) Add object_permissions.urls to urls if you wish to add views for editing user_groups
+2) Add "object_permissions.backend.ObjectPermBackend" to AUTHENTICATION_BACKENDS. 
+3) Run ./manage.py syncdb
+
+if South is enabled for your project you will need to create tables using migrate
+
+3b) Run ./manage.py migrate
 
 Using Object Permissions
 ----------------------------------------
