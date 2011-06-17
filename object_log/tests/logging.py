@@ -20,10 +20,13 @@ from datetime import datetime
 from django.test.client import Client
 
 from django.contrib.auth.models import User, Group
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from ganeti.models import Profile
-from object_log.models import LogItem, LogAction, create_defaults, create_defaults
+from object_log.models import LogItem, LogAction, create_defaults
+
+
+global user1, user2
 
 
 class TestLogActionModel(TestCase):
@@ -99,7 +102,6 @@ class TestLogItemModel(TestCase):
 
     def tearDown(self):
         User.objects.all().delete()
-        Profile.objects.all().delete()
         LogItem.objects.all().delete()
 
     def test_log_creation(self):
@@ -137,8 +139,27 @@ class TestLogItemModel(TestCase):
         item1.timestamp = timestamp
         item2.timestamp = timestamp
 
-        self.assertEqual('<td class="timestamp">29/09/2010 15:31</td><td>Mod edited user Joe User</td>', str(item1))
-        self.assertEqual('<td class="timestamp">29/09/2010 15:31</td><td>Mod deleted user Joe User</td>', str(item2))
+        ct = ContentType.objects.get_for_model(User)
+        self.assertEqual('\n<a href="/user/%s">Mod</a> edited user\n<a href="/object/%s/%s/">Joe User</a>'%(user1.pk, ct.id, item1.object_id1), str(item1))
+        self.assertEqual('\n<a href="/user/%s">Mod</a> deleted user Joe User'%user1.pk, str(item2))
+
+    def test_data(self):
+        """
+        Test setting data in a LogItem
+        """
+        item1 = LogItem.objects.log_action('EDIT', user1, user2)
+
+        data = {'a':1, 'b':2}
+        item1.data = data
+
+        # set data
+        self.assertEqual(None, item1.serialized_data)
+        item1.save()
+        self.assertNotEqual(None, item1.serialized_data)
+
+        item = LogItem.objects.get(pk=item1.pk)
+        self.assertEqual(item1.serialized_data, item.serialized_data)
+        self.assertEqual(data, item.data)
 
 
 class TestObjectLogViews(TestCase):

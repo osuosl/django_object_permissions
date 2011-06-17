@@ -2,8 +2,40 @@
 
 <table class="object_log">
     {% for item in log %}
-        <tr>{{ item|render_context:context }}</tr>
+        <tr>
+            <td class="timestamp">{{ item.timestamp|date:"m/d/Y" }}</td>
+            <td>{{ item.timestamp|date:"H:i" }}</td>
+            <td>{{ item|render_context:context }}</td>
+        </tr>
     {% empty %}
         <tr class="none"><td class="none">- empty -</td></tr>
     {% endfor %}
 </table>
+
+
+<script type="text/javascript">
+    function format_log_timestamps() {
+        var current;
+        var current_td;
+        var row_count = 0;
+        $('table.object_log .timestamp').each(function(){
+            var td = $(this);
+            var timestamp = new Date(td.html());
+            if (current == undefined || timestamp > current) {
+                if (current_td != undefined){
+                    current_td.attr('rowspan', row_count);
+                }
+                row_count=1;
+                current_td = td;
+                current = timestamp;
+            } else {
+                row_count++;
+                td.hide();
+            }
+        });
+        if (current_td != undefined){
+            current_td.attr('rowspan', row_count);
+        }
+    }
+    $(function(){format_log_timestamps();});
+</script>

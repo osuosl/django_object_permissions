@@ -63,11 +63,33 @@ Now, that LogAction type can be used whenever that action occurs
 >>> log('EDIT', user, some_object)
 >>> log('DELETE', user, some_object)
 
+Arbitrary data can also be included with each log entry by including a 
+dict  It is available in the LogAction template as {{data}}.  This is
+useful for caching information to reduce related queries when rendering
+logs
+
+>>> log('MY_ACTION', user, {'my_obj':str(obj1})
+
+The data dict can be automatically populated from objects using a cache
+function registered with the LogAction.  The cache function recieves the user, 
+objects, and any data passed to log_Action().  It should return a dict.  This 
+data overwrites manual data, you must merge it manually if you want to use both.
+
+>>> def cache(user, obj1, obj2, obj3, data):
+>>>    return dict(obj_str=str(obj1))
+>>>
+>>> LogAction.objects.register('MY_ACTION', 'path/to/my/template.html', cache)
+
+log_action can then be used as normal.
+
+>>> log('MY_ACTION', user, some_object)
+
+
 See the wiki for more details:
 http://code.osuosl.org/projects/django-object-log/wiki
 
 Authors
 -------
 
-Object Log was originally implemented at the Oregon
-State University Open Source Lab (OSUOSL).
+Object Log was implemented at the Oregon State University Open Source Lab 
+(OSUOSL).  The primary author was Peter Krenesky.

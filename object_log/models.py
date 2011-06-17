@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.template.loader import get_template
 from django.template import Context
+from django.utils import simplejson
 
 
 class LogActionManager(models.Manager):
@@ -16,14 +17,14 @@ class LogActionManager(models.Manager):
     _SYNCED = False
     _DELAYED = []
 
-    def register(self, key, template):
+    def register(self, key, template, build_cache=None):
         if LogActionManager._SYNCED:
-            return LogAction.objects._register(key, template)
+            return LogAction.objects._register(key, template, build_cache)
         else:
-            self._DELAYED.append((key, template))
+            self._DELAYED.append((key, template, build_cache))
 
     @transaction.commit_manually
-    def _register(self, key, template):
+    def _register(self, key, template, build_cache=None):
         """
         Registers and caches an LogAction type
         
@@ -35,12 +36,12 @@ class LogActionManager(models.Manager):
                 action = self.get_from_cache(key)
                 action.template = template
                 action.save()
-
             except LogAction.DoesNotExist:
                 action, new = LogAction.objects.get_or_create(name=key, \
                 template=template)
                 self._cache.setdefault(self.db, {})[key] = action
                 action.save()
+            action.build_cache = build_cache
             return action
         except:
             transaction.rollback()
@@ -80,6 +81,12 @@ class LogActionManager(models.Manager):
         except KeyError:
             action = LogAction.objects.get(name=key)
             self._cache.setdefault(self.db, {})[key]=action
+
+            # update build_cache function if needed
+            for key_, template, build_cache in LogActionManager._DELAYED:
+                if key == key_:
+                    action.build_cache = build_cache
+
         return action
 
 
@@ -100,7 +107,7 @@ class LogAction(models.Model):
 
 class LogItemManager(models.Manager):
 
-    def log_action(self, key, user, object1, object2=None,  object3=None):
+    def log_action(self, key, user, object1, object2=None, object3=None, data=None):
         """
         Creates new log entry
 
@@ -114,7 +121,6 @@ class LogItemManager(models.Manager):
         # Uncomment below:
         #key = smart_unicode(key)
         action = LogAction.objects.get_from_cache(key)
-
         entry = self.model(action=action, user=user, object1=object1)
         
         if object2 is not None:
@@ -122,8 +128,14 @@ class LogItemManager(models.Manager):
         
         if object3 is not None:
             entry.object3 = object3
+        
+        # build cached data and or arbitrary data.
+        if action.build_cache is not None:
+            entry.data = action.build_cache(user, object1, object2, object3, data)
+        elif data is not None:
+            entry.data = data
 
-        entry.save()
+        entry.save(force_insert=True)
         return entry
 
 
@@ -131,7 +143,7 @@ class LogItem(models.Model):
     """
     Single entry in log
     """
-    action = models.ForeignKey(LogAction)
+    action = models.ForeignKey(LogAction, related_name="entries")
     #action = models.CharField(max_length=128)
     timestamp = models.DateTimeField(auto_now_add=True, )
     user = models.ForeignKey(User, related_name='log_items')
@@ -151,12 +163,24 @@ class LogItem(models.Model):
     object_id3 = models.PositiveIntegerField(null=True)
     object3 = GenericForeignKey("object_type3", "object_id3")
 
-    #log_message = models.TextField(blank=True, null=True)
+    serialized_data = models.TextField(null=True)
 
     objects = LogItemManager()
+    _data = None
 
     class Meta:
         ordering = ("timestamp", )
+
+    @property
+    def data(self):
+        if self._data is None and not self.serialized_data is None:
+            self._data = simplejson.loads(self.serialized_data)
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+        self.serialized_data = None
 
     @property
     def template(self):
@@ -165,6 +189,11 @@ class LogItem(models.Model):
         """
         action = LogAction.objects.get_from_cache(self.action_id)
         return get_template(action.template)
+
+    def save(self, *args, **kwargs):
+        if self._data is not None and self.serialized_data is None:
+            self.serialized_data = simplejson.dumps(self._data)
+        super(LogItem, self).save(*args, **kwargs)
 
     def render(self, **context):
         """
@@ -192,9 +221,14 @@ class LogItem(models.Model):
         return self.render()
 
 
+def build_default_cache(user, obj1, obj2, obj3, data):
+    """ build cache for default log types """
+    return {'object1_str':str(obj1)}
+
+
 #Most common log types, registered by default for convenience
 def create_defaults():
-    LogAction.objects.register('EDIT', 'object_log/edit.html')
-    LogAction.objects.register('CREATE', 'object_log/add.html')
-    LogAction.objects.register('DELETE', 'object_log/delete.html')
+    LogAction.objects.register('EDIT', 'object_log/edit.html', build_default_cache)
+    LogAction.objects.register('CREATE', 'object_log/add.html', build_default_cache)
+    LogAction.objects.register('DELETE', 'object_log/delete.html', build_default_cache)
 create_defaults()
