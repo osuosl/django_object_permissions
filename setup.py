@@ -12,12 +12,11 @@ setup(name='django-object-log',
       author_email='peter@osuosl.org',
       maintainer="Peter Krenesky",
       maintainer_email="peter@osuosl.org",
-      url='http://code.osuosl.org/projects/object-log',
+      url='http://code.osuosl.org/projects/django-object-log',
       packages=['object_log'],
       include_package_data=True,
       classifiers=[
           "License :: OSI Approved :: MIT License",
           'Framework :: Django',
-          'Topic :: Logging',
           ],
       )
