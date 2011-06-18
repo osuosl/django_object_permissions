@@ -7,3 +7,34 @@
 .object_permissions_form tr.permission td{padding:5px 0; vertical-align:top;}
 .object_permissions_form .input {white-space:nowrap;}
 .object_permissions_form label {margin-right:3px;}
+#selector_row {display:none;}
+#selector {
+    background:url(/media/images/icons/delete.png) no-repeat 5px 5px white;
+    border:1px solid #666;
+    border-radius:4px;
+    height:25px;
+    margin:0 0 10px 0;
+    width:200px;
+}
+#selector input {
+    background-color:#ffe4c4;
+    background-color:transparent;
+    border:0;
+    color: #a71d10;
+    height:25px;
+    padding:5px 3px 3px 23px;
+    width:200px;}
+#selector.user input, #selector.group input {color:black;}
+#selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 5px white;}
+#selector.group, .search_result.group {background:url(/media/images/icons/group.png) no-repeat 5px 5px white;}
+
+.search_result.user, .search_result.group {
+    background-color:transparent;
+    background-position:0 2px;
+}
+.autocomplete-w1 { background:url(/object_permissions_media/images/shadow.png) no-repeat bottom right; position:absolute; top:0px; left:0px; margin:4px 0 0 -19px; /* IE6 fix: */ _background:none; _margin:1px 0 0 0; }
+.autocomplete { border:1px solid #999; background:#FFF; cursor:default; text-align:left; max-height:350px; overflow:auto; margin:-2px 6px 6px -2px; /* IE6 specific: */ _height:350px;  _margin:0; _overflow-x:hidden; }
+.autocomplete .selected { background:#F0F0F0; }
+.autocomplete div { padding:2px 5px; white-space:nowrap; overflow:hidden; }
+.autocomplete strong { font-weight:normal; color:#3399FF; }
+.search_result {padding:0 0 0 20px !important;}
