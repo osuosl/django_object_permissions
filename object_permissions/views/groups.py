@@ -36,8 +36,8 @@ def user_permissions(request, id, user_id=None):
             
             # return html to replace existing user row
             url = reverse('group-permissions', args=[id])
-            return render_to_response( \
-                "object_permissions/permissions/user_row.html", \
+            return render_to_response(
+                "object_permissions/muddle/group/user_row.html",
                 {'object':group, 'user_detail':user, 'url':url},
                 context_instance=RequestContext(request))
         
@@ -50,14 +50,14 @@ def user_permissions(request, id, user_id=None):
     data = {'permissions':get_user_perms(form_user, group),
             'obj':group, 'user':user_id}
     form = ObjectPermissionForm(Group, data)
-    return render_to_response("object_permissions/permissions/form.html", \
-                {'form':form, 'obj':group, 'user_id':user_id, \
-                'url':reverse('group-permissions', args=[group.id])}, \
+    return render_to_response("object_permissions/permissions/form.html",
+                {'form':form, 'obj':group, 'user_id':user_id,
+                'url':reverse('group-permissions', args=[group.id])},
                 context_instance=RequestContext(request))
     
 
 @login_required
-def all_permissions(request, id, \
+def all_permissions(request, id,
                     template='object_permissions/permissions/objects.html' ):
     """
     Generic view for displaying permissions on all objects.
@@ -87,7 +87,7 @@ def all_permissions(request, id, \
     for cls, objs in perm_dict.items():
         repacked[cls.__name__] = objs
 
-    return render_to_response(template, \
-            {'persona':group, 'perm_dict':repacked}, \
+    return render_to_response(template, 
+            {'persona':group, 'perm_dict':repacked},
         context_instance=RequestContext(request),
     )
