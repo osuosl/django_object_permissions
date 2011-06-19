@@ -3,7 +3,7 @@ $(function(){
     $("#op_users .permissions").live("click", function(event) {
         event.preventDefault();
         var id = this.parentNode.parentNode.id.substring(5);
-        var name = $(this).parent().children('.name');
+        var name = $(this).parent().parent().children('.name');
         if (name.children('a').size() > 0) {
             name = name.children('a').html();
         } else {
