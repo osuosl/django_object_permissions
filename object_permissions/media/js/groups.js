@@ -15,8 +15,8 @@ $(function(){
                url: this.href,
                title: {text:'Permissions: '+name, button:'close'}
             },
-            position: {corner:{ target:"rightMiddle", tooltip:"leftMiddle"}},
-            style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: 'bottomMiddle'},
+            position: {target:$("body"), corner:{ target:"center", tooltip:"center"}},
+            style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee', tip: false},
             show: {when:false, ready:true},
             hide: {fixed: true, when:false},
             api:{onShow:function(){
