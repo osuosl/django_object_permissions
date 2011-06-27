@@ -1,0 +1,10 @@
+{% load object_permission_tags %}
+<td class="permissions">
+    <a href="{{url}}/user/{{user_detail.id}}" class="permissions" title="click to edit">
+    {% for permission in user_detail|permissions:object %}
+        {{permission}}{%if not forloop.last%}, {%endif%}
+    {% empty %}
+    <span class="none">None</span>
+    {% endfor %}
+    </a>
+</td>
