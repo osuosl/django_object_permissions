@@ -1,0 +1,22 @@
+<link rel="stylesheet" type="text/css" href="{{SITE_ROOT}}/object_permissions_media/css/form.css"/>
+<script type="text/javascript">var user_url = "{{url}}"; var obj_id = {{object.pk}};</script>
+<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/jquery.form.js"></script>
+<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/users.js"></script>
+<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/jquery.autocomplete.js"></script>
+{% block head %}{% endblock %}
+
+<div id="add_user" class="button add">Add User</div>
+<table id="op_users">
+    <tr>
+        <th>Name</th>
+        <th>Permissions</th>
+        {% block table_headers%}{% endblock %}
+        <th></th>
+    </tr>
+    {% for user_detail in users %}
+        {%block user_row%}{% include "object_permissions/permissions/user_row.html" %}{%endblock%}
+    {% endfor %}
+    {% for group in groups %}
+        {%block group_row%}{% include "object_permissions/permissions/group_row.html" %}{%endblock%}
+    {% endfor %}
+</table>

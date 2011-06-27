@@ -10,3 +10,14 @@ settings.py
 
 # Any sqlite database files created by the project
 *.db
+
+# vim swap files
+*.swp
+
+# patches
+*.patch
+
+# dist directory and related files
+dist
+django_object_permissions.egg-info
+

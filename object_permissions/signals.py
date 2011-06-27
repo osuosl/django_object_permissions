@@ -18,13 +18,3 @@ view_remove_user = django.dispatch.Signal(providing_args=["editor", "user", "obj
 
 # send when a user's permissions have been edited
 view_edit_user = django.dispatch.Signal(providing_args=["editor", "user", "obj"])
-
-
-#
-# Signals issued when a group is edited
-#
-view_group_created = django.dispatch.Signal(providing_args=["editor"])
-
-view_group_edited = django.dispatch.Signal(providing_args=["editor"])
-
-view_group_deleted = django.dispatch.Signal(providing_args=["editor"])

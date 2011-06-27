@@ -2,6 +2,64 @@
 Changelog
 ==================
 
+v1.4
+----
+
+ * Changes
+
+   * #5583: Group URLs start with "group" instead of "usergroup"
+   * #6021: South migration via app labels
+
+ * Bugfixes
+
+   * #3879: "Add Group" button shouldn't be available without permissions
+   * #4137: User permissions should be deleteable
+   * #5619: Django 1.3 template compatibility
+   * #5985: Pg compatibility
+
+ * Features
+
+   * #339: Widget/form field for selecting user/group during edits
+   * #2967: Context links on all-permissions page
+   * #4119: get_perms_any()
+   * #4131: user_get_perms() optionally can include groups
+   * #5961: Context links on user/group detail pages
+
+v1.3.1
+------
+
+ * Bugfixes
+
+   * #3171: Test bugfixes
+   * #3249: users.js shouldn't remove rows when it removes permissions
+   * #3663: MySQL integrity error when creating anon backend user
+
+ * Features
+
+   * #2973: Generic view for editing any permissions
+   * #2979: Ability to edit permissions on all-permissions view
+
+v1.3
+----
+
+ * Features
+
+   * #1809: List objects a group has permissions on in the supplied Group
+     view/templates
+   * #2289: update supplied views for group editing so that they may
+     support to OSL logging app
+   * #2421: add test models for testing related fields
+   * #2427: add related models for user_get_objects_any_perms
+   * #2433: add related models for group_get_objects_any_perms
+   * #2439: add related models for user_get_objects_all_perms
+   * #2445: add related models for group_get_objects_all_perms
+   * #2637: Add higher level signals for user initiated actions (views)
+     that modify permissions
+   * #2643: Add signal for group editing trigged by users
+   * #2835: add prefix to users table id
+   * #2955: registration should accept a dictionary of parameters instead
+     of a list of perms
+
 v1.2
 ----
 
@@ -15,7 +73,7 @@ v1.2
  * Improvements
 
    * groups=True is now the default for all methods that accept a groups
-   * keyword argument
+     keyword argument
 
  * Bugfixes
 

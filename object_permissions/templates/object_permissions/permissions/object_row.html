@@ -1,0 +1,24 @@
+{% load object_permission_tags %}
+<tr id="{{class_name}}_{{obj.pk}}">
+    <td class="obj">{% permalink obj %}</td>
+    <td class="perms">
+        {% if persona|is_user %}
+            <a href="{% url user-edit-permissions persona.pk class_name obj.pk %}">
+        {% else %}
+            <a href="{% url group-edit-permissions persona.pk class_name obj.pk %}">
+        {% endif %}
+        {% for permission in persona|permissions:obj %}
+            {{permission}}{%if not forloop.last%}, {%endif%}
+        {% endfor %}
+       </a>
+    </td>
+    <td>
+        <div class="icon delete">
+            {% if persona|is_user %}
+                <a href="{% url user-edit-permissions persona.pk class_name obj.pk %}">
+            {% else %}
+                <a href="{% url group-edit-permissions persona.pk class_name obj.pk %}">
+            {% endif %}
+        </a></div>
+    </td>
+</tr>

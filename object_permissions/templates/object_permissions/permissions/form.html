@@ -1,0 +1,93 @@
+{% comment  %} Form for setting user permissions on an object {% endcomment %}
+
+<script>
+    $(function(){
+        $("#selector_row").show();
+        $("#selector input")
+            .autocomplete({
+                serviceUrl:'{% url user-search %}',
+                minChars:2,
+                maxHeight:400,
+                width:300,
+                zIndex: 9999,
+                noCache: false, //default is false, set to true to disable caching
+                onSelect: select_value,
+                fnFormatResult:format_search_result,
+                fnDeselect:deselect_value
+            });
+        $("#id_user, #id_group, ").parent().parent().hide();
+    });
+
+    function deselect_value(){
+        $("#id_user").val('');
+        $("#id_group").val('');
+        $("#selector").removeClass('user').removeClass('group');
+    }
+
+    function select_value(value, data) {
+        var type = data[0];
+        var id = data[1];
+        if (type=="user"){
+            $("#selector")
+                .removeClass('group')
+                .addClass(type);
+            $("#id_user").val(id);
+            $("#id_group").val('');
+        } else {
+            $("#selector")
+                .removeClass('user')
+                .addClass(type);
+            $("#id_group").val(id);
+            $("#id_user").val('');
+        }
+        $("#selector input").val(value);
+    }
+
+    var reEscape = new RegExp('(\\' + ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'].join('|\\') + ')', 'g');
+    function format_search_result(value, data, currentValue) {
+        var type = data[0];
+        var id = data[1];
+        var pattern = '(' + currentValue.replace(reEscape, '\\$1') + ')';
+        value = value.replace(new RegExp(pattern, 'gi'), '<strong>$1<\/strong>');
+
+        return "<div class='search_result "+type+"'>"+value+"</div>";
+    }
+</script>
+
+<form class="object_permissions_form" method="post" action="{{url}}">
+    <ul id="errors"></ul>
+    <table>
+    {# Only show object select when an object hasn't been preselected #}
+    {% if obj %}
+        <input type="hidden" name="obj" value="{{obj.pk|default:''}}"/>
+    {% else %}
+        <tr><td>{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
+    {% endif %}
+
+    {# only show user/group when one hasn't been preselected #}
+    {% if user_id or group_id %}
+        <input type="hidden" name="user" value="{{user_id|default:''}}"/>
+        <input type="hidden" name="group" value="{{group_id|default:''}}"/>
+    {% else %}
+        <tr id="selector_row"><td><label>User/Group:</label></td><td><div id="selector"><input type="text"/></div></td></tr>
+        <tr><td>{{form.user.label}}</td><td>{{form.user}}</td></tr>
+        <tr class="group"><td>{{form.group.label}}</td><td>{{form.group}}</td></tr>
+    {% endif %}
+    
+        {# Manually create permissions checkboxes so we can integrate it into the table #}
+        {% with form.data.permissions as data %}
+        {% for permission in form.fields.permissions.choices %}
+        <tr class="permission">
+            <td class="input">
+                <input id="id_permissions_{{forloop.counter0}}" name="permissions" type="checkbox" value="{{permission.0}}"
+                {%if permission.0 in data %}checked{%endif%}
+                />
+                <label for="id_permissions">{{permission.1.label}}{% if permission.1.description %}:{%endif%}</label>
+            </td>
+            <td>{{permission.1.description}}</td>
+        </tr>
+        {% endfor %}
+        {% endwith %}
+    </table>
+    <input type="submit" class="submit" value="Save"/>
+</form>

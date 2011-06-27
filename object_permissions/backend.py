@@ -22,8 +22,6 @@ class ObjectPermBackend(object):
                 # happened, and it will hopefully LART the user sufficiently.
                 self.anonymous, new = User.objects.get_or_create(
                         username='anonymous')
-            if new:
-                self.anonymous.save()
         else:
             self.anonymous = None
 
@@ -60,7 +58,7 @@ class ObjectPermBackend(object):
             else:
                 return []
 
-        if obj is None:
+        if obj is None or not isinstance(obj, models.Model):
             return []
 
         model = obj.__class__
@@ -74,7 +72,7 @@ class ObjectPermBackend(object):
         rv = set()
         for row in q:
             rv.update(field.name for field in row._meta.fields
-                if isinstance(field, models.BooleanField)
+                if isinstance(field, models.IntegerField)
                 and getattr(row, field.name))
 
         return list(rv)
@@ -90,7 +88,7 @@ class ObjectPermBackend(object):
             else:
                 return []
 
-        if obj is None:
+        if obj is None or not isinstance(obj, models.Model):
             return []
 
         model = obj.__class__

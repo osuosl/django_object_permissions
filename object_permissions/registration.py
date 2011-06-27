@@ -5,11 +5,15 @@ from django.conf import settings
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ObjectDoesNotExist
 from django import db
-from django.db import models
-from django.db.models import Model
+from django.db import models, transaction
+from django.db.models import Model, Q, F, Sum
 from django.db.models import Q, F
 
 from object_permissions.signals import granted, revoked
+
+
+TESTING = settings.TESTING if hasattr(settings, 'TESTING') else False
+
 
 """
 Registration functions.
@@ -54,6 +58,7 @@ class InvalidQueryException(Exception):
 
 __all__ = (
     'register',
+    'get_class',
     'grant', 'grant_group',
     'revoke', 'revoke_group',
     'get_user_perms', 'get_group_perms',
@@ -78,6 +83,16 @@ permissions_for_model = {}
 A mapping of Models to lists of permissions defined for that model.
 """
 
+class_names = {}
+"""
+A mapping of Class name to Class object
+"""
+
+params_for_model = {}
+"""
+A mapping of Models to their param dictionaries.
+"""
+
 forbidden = set([
     "full_clean",
     "clean_fields",
@@ -93,7 +108,7 @@ Names reserved by Django for Model instances.
 """
 
 _DELAYED = []
-def register(perms, model):
+def register(params, model, app_label=None):
     """
     Register permissions for a Model.
 
@@ -106,23 +121,45 @@ def register(perms, model):
     deprecated; please fix your code if you depend on this.
     """
 
-    if isinstance(perms, (str, unicode)):
+    if isinstance(params, (str, unicode)):
         warn("Using a single permission is deprecated!")
-        perms = [perms]
+        perms = [params]
+    
+    if app_label is None:
+        warn("Registration without app_label is deprecated!")
+        warn("Adding %s permissions table to object_permission app.  Note that you may not be able to migrate with south" % model)
+        app_label = "object_permissions"
+
+    # REPACK - for backward compatibility repack list of perms as a dict
+    if isinstance(params, (list, tuple)):
+        perms = params
+        params = {'perms':params}
+    else:
+        perms = params['perms']
 
     for perm in perms:
         if perm in forbidden:
             raise RegistrationException("Permission %s is a reserved name!")
 
+    # REPACK - For backwards compatibility and flexibility with parameters,
+    # repack permissions list to ensure it is a dict of dicts
+    if isinstance(perms, (list, tuple)):
+        # repack perm list as a dictionary
+        repack = {}
+        for perm in perms:
+            repack[perm] = {}
+        params['perms'] = repack
+
     try:
-        return _register(perms, model)
+        return _register(params, model, app_label)
     except db.utils.DatabaseError:
         # there was an error, likely due to a missing table.  Delay this
         # registration.
-        _DELAYED.append((perms, model))
+        _DELAYED.append((params, model, app_label))
 
 
-def _register(perms, model):
+@transaction.commit_manually
+def _register(params, model, app_label):
     """
     Real method for registering permissions.
 
@@ -130,35 +167,39 @@ def _register(perms, model):
     This inner function is required because its logic must also be available
     to call back from _register_delayed for delayed registrations.
     """
+    try:
+        if model in permission_map:
+            warn("Tried to double-register %s for permissions!" % model)
+            return
 
-    if model in permission_map:
-        warn("Tried to double-register %s for permissions!" % model)
-        return
+        name = "%s_Perms" % model.__name__
+        fields = {
+            "__module__": "",
+            # XXX user xor group null?
+            "user": models.ForeignKey(User, null=True,
+                related_name="%s_uperms" % model.__name__),
+            "group": models.ForeignKey(Group, null=True,
+                related_name="%s_gperms" % model.__name__),
+            "obj": models.ForeignKey(model,
+                related_name="operms"),
+        }
 
-    name = "%s_Perms" % model.__name__
-    fields = {
-        "__module__": "",
-        # XXX user xor group null?
-        "user": models.ForeignKey(User, null=True,
-            related_name="%s_uperms" % model.__name__),
-        "group": models.ForeignKey(Group, null=True,
-            related_name="%s_gperms" % model.__name__),
-        "obj": models.ForeignKey(model,
-            related_name="operms"),
-    }
+        for perm in params['perms']:
+            fields[perm] = models.IntegerField(default=0)
 
-    for perm in perms:
-        fields[perm] = models.BooleanField(default=False)
+        fields["Meta"] = type('Meta', (object,), dict(app_label=app_label))
 
-    class Meta:
-        app_label = "object_permissions"
-
-    fields["Meta"] = Meta
-
-    perm_model = type(name, (models.Model,), fields)
-    permission_map[model] = perm_model
-    permissions_for_model[model] = perms
-    return perm_model
+        perm_model = type(name, (models.Model,), fields)
+        permission_map[model] = perm_model
+        permissions_for_model[model] = params['perms']
+        params_for_model[model] = params
+        class_names[model.__name__] = model
+        return perm_model
+    except:
+        transaction.rollback()
+        raise
+    finally:
+        transaction.commit()
 
 
 def _register_delayed(**kwargs):
@@ -180,10 +221,10 @@ def _register_delayed(**kwargs):
 models.signals.post_syncdb.connect(_register_delayed)
 
 
-if settings.DEBUG:
-    # XXX Create test tables only when debug mode.  These models will be used in
-    # various unittests.  This is used so that we do not alter any models used
-    # in production
+if TESTING:
+    # XXX Create test tables only when TEST mode.  These models will be used in
+    # various unittests.  This is used so that we do add unneeded models in a
+    # production deployment.
     from django.db import models
     class TestModel(models.Model):
         name = models.CharField(max_length=32)
@@ -191,9 +232,36 @@ if settings.DEBUG:
         parent = models.ForeignKey(TestModel, null=True, related_name='child')
     class TestModelChildChild(models.Model):
         parent = models.ForeignKey(TestModelChild, null=True, related_name='child')
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModel)
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild)
-    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild)
+
+    TEST_MODEL_PARAMS = {
+        'perms' : {
+            # perm with both params
+            'Perm1': {
+                'description':'The first permission',
+                'label':'Perm One'
+            },
+            # perm with only description
+            'Perm2': {
+                'description':'The second permission',
+            },
+            # perm with only label
+            'Perm3': {
+                'label':'Perm Three'
+            },
+            # perm with no params
+            'Perm4': {}
+        },
+        'url':'test_model-detail',
+        'url-params':['name']
+    }
+    register(TEST_MODEL_PARAMS, TestModel, 'object_permissions')
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChild, 'object_permissions')
+    register(['Perm1', 'Perm2','Perm3','Perm4'], TestModelChildChild, 'object_permissions')
+
+
+def get_class(class_name):
+    return class_names[class_name]
+
 
 def grant(user, perm, obj):
     """
@@ -408,36 +476,82 @@ def revoke_all_group(group, obj):
         pass
 
 
-def get_user_perms(user, obj):
+def get_user_perms(user, obj, groups=True):
     """
     Return the permissions that the User has on the given object.
     """
-
-    model = obj.__class__
-    permissions = permission_map[model]
-
+    klass = obj.__class__
+    permissions = permission_map[klass]
     try:
-        q = permissions.objects.get(user=user, obj=obj)
-        return [field.name for field in q._meta.fields
-                if isinstance(field, models.BooleanField)
-                and getattr(q, field.name)]
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        if groups:
+            q = permissions.objects.filter(Q(user=user) | Q(group__user=user))
+        else:
+            q = permissions.objects.filter(user=user)
+        q = q.filter(obj=obj).aggregate(**kwargs)
+        return [field for field, value in q.items() if value]
+
     except permissions.DoesNotExist:
         return []
 
 
-def get_group_perms(group, obj):
+def get_user_perms_any(user, klass, groups=True):
+    """
+    return permission types that the user has on a given Model
+    """
+    permissions = permission_map[klass]
+    try:
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        if groups:
+            q = permissions.objects.filter(Q(user=user) | Q(group__user=user))
+        else:
+            q = permissions.objects.filter(user=user)
+        q = q.aggregate(**kwargs)
+        return [field for field, value in q.items() if value]
+
+    except permissions.DoesNotExist:
+        return []
+
+
+def get_group_perms(group, obj, groups=True):
     """
     Return the permissions that the Group has on the given object.
+
+    @param groups - does nothing, compatibility with user version
     """
-
-    model = obj.__class__
-    permissions = permission_map[model]
-
+    klass = obj.__class__
+    permissions = permission_map[klass]
     try:
-        q = permissions.objects.get(group=group, obj=obj)
-        return [field.name for field in q._meta.fields
-                if isinstance(field, models.BooleanField)
-                and getattr(q, field.name)]
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        q = permissions.objects.filter(group=group, obj=obj).aggregate(**kwargs)
+        return [field for field, value in q.items() if value]
+
+    except permissions.DoesNotExist:
+        return []
+
+
+def get_group_perms_any(group, klass):
+    """
+    return permission types that the user has on a given Model
+    """
+    permissions = permission_map[klass]
+    try:
+        fields = get_model_perms(klass)
+        kwargs = {}
+        for field in fields:
+            kwargs[field] = Sum(field)
+        q = permissions.objects.filter(group=group).aggregate(**kwargs)
+        return [field for field, value in q.items() if value]
+
     except permissions.DoesNotExist:
         return []
 
@@ -476,7 +590,12 @@ def user_has_perm(user, perm, obj, groups=True):
      * The permission does not exist on this model
     """
     model = obj.__class__
-    if perm not in get_model_perms(model):
+    try:
+        perms = get_model_perms(model)
+    except RegistrationException:
+        return False
+
+    if perm not in perms:
         # not a valid permission
         return False
 
@@ -1062,7 +1181,7 @@ def get_users(obj, groups=True):
     Retrieve the list of Users that have permissions on the given object.
     """
     
-    return get_users_any(obj)
+    return get_users_any(obj, groups=groups)
 
 
 def get_groups_any(obj, perms=None, **related):
@@ -1443,6 +1562,7 @@ setattr(User, 'has_object_perm', user_has_perm)
 setattr(User, 'has_any_perms', user_has_any_perms)
 setattr(User, 'has_all_perms', user_has_all_perms)
 setattr(User, 'get_perms', get_user_perms)
+setattr(User, 'get_perms_any', get_user_perms_any)
 setattr(User, 'set_perms', set_user_perms)
 setattr(User, 'get_objects_any_perms', user_get_objects_any_perms)
 setattr(User, 'get_objects_all_perms', user_get_objects_all_perms)
@@ -1459,6 +1579,7 @@ setattr(Group, 'has_perm', group_has_perm)
 setattr(Group, 'has_any_perms', group_has_any_perms)
 setattr(Group, 'has_all_perms', group_has_all_perms)
 setattr(Group, 'get_perms', get_group_perms)
+setattr(Group, 'get_perms_any', get_group_perms_any)
 setattr(Group, 'set_perms', set_group_perms)
 setattr(Group, 'get_objects_any_perms', group_get_objects_any_perms)
 setattr(Group, 'get_objects_all_perms', group_get_objects_all_perms)

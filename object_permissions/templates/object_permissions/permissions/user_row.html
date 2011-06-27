@@ -1,0 +1,21 @@
+{% load object_permission_tags %}
+<tr id="user_{{user_detail.id}}" class="user">
+<td class="name">
+    {% if user.is_superuser %}
+        {% permalink user_detail user_detail.username %}
+    {% else %}
+        {{ user_detail.username }}
+    {% endif %}
+</td>
+<td class="permissions">
+    <a href="{{url}}/user/{{user_detail.id}}" class="permissions" title="click to edit">
+    {% for permission in user_detail|permissions:object %}
+        {{permission}}{%if not forloop.last%}, {%endif%}
+    {% empty %}
+    <span class="none">None</span>
+    {% endfor %}
+    </a>
+</td>
+{%block table_cells%}{%endblock%}
+<td><div class="delete" title="delete"></div></td>
+</tr>
