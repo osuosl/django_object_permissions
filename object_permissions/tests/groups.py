@@ -8,8 +8,6 @@ from object_permissions.registration import TestModel, TestModelChild, \
     TestModelChildChild, UnknownPermissionException
 from object_permissions.signals import view_edit_user
 
-from object_permissions.templatetags.object_permission_tags import \
-                number_group_admins
 
 __all__ = ('TestGroups','TestGroupViews')
 
@@ -1273,7 +1271,6 @@ class TestGroupViews(TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertEquals('text/html; charset=utf-8', response['content-type'])
-        self.assertTemplateUsed(response, 'object_permissions/permissions/user_row.html')
         self.assert_(user0.has_perm('admin', group))
         self.assertEqual(['admin'], get_user_perms(user0, group))
         

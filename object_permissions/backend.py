@@ -58,7 +58,7 @@ class ObjectPermBackend(object):
             else:
                 return []
 
-        if obj is None:
+        if obj is None or not isinstance(obj, models.Model):
             return []
 
         model = obj.__class__
@@ -88,7 +88,7 @@ class ObjectPermBackend(object):
             else:
                 return []
 
-        if obj is None:
+        if obj is None or not isinstance(obj, models.Model):
             return []
 
         model = obj.__class__
