@@ -37,7 +37,7 @@ class TestBackend(TestCase):
         self.assertFalse(hasattr(settings, 'ANONYMOUS_USER_ID'))
         backend = ObjectPermBackend()
         self.assertFalse(anonymous.has_perm('admin', object_))
-        self.assert_(user.has_perm('admin', object_))
+        self.assertTrue(user.has_perm('admin', object_))
 
     def test_anonymous_user_does_not_exist(self):
         """
@@ -46,7 +46,7 @@ class TestBackend(TestCase):
         """
         backend = ObjectPermBackend()
         self.assertFalse(anonymous.has_perm('admin', object_))
-        self.assert_(backend.has_perm(user, 'admin', object_))
+        self.assertTrue(backend.has_perm(user, 'admin', object_))
 
     def test_has_perm(self):
         """
