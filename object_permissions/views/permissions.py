@@ -343,13 +343,11 @@ def all_permissions(request, id,
     """
     user = request.user
     
-    if not (user.is_superuser or id==user.pk):
+    if not user.is_superuser:
         return HttpResponseForbidden('You do not have sufficient privileges')
     
-    if user.is_superuser:
-        user = get_object_or_404(User, pk=id)
-    
-    perm_dict = user.get_all_objects_any_perms(groups=False)
+    user_detail = get_object_or_404(User, pk=id)
+    perm_dict = user_detail.get_all_objects_any_perms(groups=False)
 
     # exclude group permissions from this view.  they are treated special
     try:
@@ -365,6 +363,6 @@ def all_permissions(request, id,
         repacked[cls.__name__] = objs
     
     return render_to_response(template,
-            {'persona':user, 'perm_dict':repacked},
+            {'persona':user_detail, 'perm_dict':repacked},
         context_instance=RequestContext(request),
     )
