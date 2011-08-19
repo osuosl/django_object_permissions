@@ -1,9 +1,9 @@
 {% comment  %} Form for setting user permissions on an object {% endcomment %}
 
-<script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/ajax_user_search.js"></script>
+<script type="text/javascript" src="{{SITE_ROOT}}/ganeti_web_media/js/autocomplete_user_search.js"></script>
 <script>
      $(function(){
-        $('#id_user').ajax_user_search('{% url user-search %}', true);
+        autocomplete_user_search($("#id_user"),'{% url user-search %}',{'group':$("#id_group")});
      });
 </script>
 
@@ -22,7 +22,7 @@
         <input type="hidden" name="user" value="{{user_id|default:''}}"/>
         <input type="hidden" name="group" value="{{group_id|default:''}}"/>
     {% else %}
-        <tr><td><b>{{form.user.label}}:</b></td><td>{{form.user}}</td></tr>
+        <tr class="user"><td><b>{{form.user.label}}:</b></td><td>{{form.user}}</td></tr>
         <tr class="group"><td><b>{{form.group.label}}:</b></td><td>{{form.group}}</td></tr>
     {% endif %}
     

@@ -24,7 +24,8 @@ urlpatterns += patterns('object_permissions.views.permissions',
 )
 
 urlpatterns += patterns('object_permissions.views.widgets',
-    url(r'^user/search/?$', 'search_users', name='user-search')
+    url(r'^user/search/?$', 'search_users', name='user-search'),
+    url(r'^user/search/owners/?$', 'search_owners', name='owner-search')
 )
 
 #The following is used to serve up local media files like images
