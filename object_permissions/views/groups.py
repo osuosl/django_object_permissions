@@ -58,7 +58,7 @@ def user_permissions(request, id, user_id=None):
 
 @login_required
 def all_permissions(request, id, \
-                    template='object_permissions/permissions/objects.html' ):
+                    template='object_permissions/permissions/objects.html', rest=False):
     """
     Generic view for displaying permissions on all objects.
     
@@ -70,7 +70,10 @@ def all_permissions(request, id, \
     group = get_object_or_404(Group, pk=id)
     
     if not (user.is_superuser or group.user_set.filter(pk=user.pk).exists()):
-        return HttpResponseForbidden('You do not have sufficient privileges')
+        if not (rest):
+            return HttpResponseForbidden('You do not have sufficient privileges')
+        else:
+            return {'error':'You do not have sufficient privileges'}
     
     perm_dict = group.get_all_objects_any_perms()
 
@@ -87,7 +90,10 @@ def all_permissions(request, id, \
     for cls, objs in perm_dict.items():
         repacked[cls.__name__] = objs
 
-    return render_to_response(template, \
+    if not (rest):
+        return render_to_response(template, \
             {'persona':group, 'perm_dict':repacked}, \
         context_instance=RequestContext(request),
     )
+    else:
+        return {'persona':group, 'perm_dict':repacked}
