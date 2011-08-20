@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from object_log.models import LogItem
 
 
-def list_for_object(request, obj):
+def list_for_object(request, obj, rest = False):
     """
     Lists all actions that involve a given object.  This will check
     LogItem.object1, LogItem.object2, and LogItem.object3.
@@ -28,43 +28,54 @@ def list_for_object(request, obj):
 
     log = LogItem.objects.filter(q).select_related('user').distinct()
 
-    return render_to_response('object_log/log.html',
-        {'log':log,
-         'context':{'user':request.user}
-         },
-        context_instance=RequestContext(request))
+    if not (rest):
+        return render_to_response('object_log/log.html',
+            {'log':log,
+             'context':{'user':request.user}
+             },
+            context_instance=RequestContext(request))
+    else:
+        return log
 
 
 @login_required
-def list_for_user(request, pk):
+def list_for_user(request, pk, rest=False):
     """
     Provided view for listing actions performed on a user.
 
     This may only be used by superusers
     """
     if not request.user.is_superuser:
-        return HttpResponseForbidden('You are not authorized to view this page')
+        if not (rest):
+            return HttpResponseForbidden('You are not authorized to view this page')
+        else:
+            return {'error':'You are not authorized to view this page'}
 
     user = get_object_or_404(User, pk=pk)
-    return list_for_object(request, user)
+    return list_for_object(request, user, rest)
 
 
 @login_required
-def list_for_group(request, pk):
+def list_for_group(request, pk, rest = False):
     """
     Provided view for listing actions performed on a group.
 
     This may only be used by superusers
     """
     if not request.user.is_superuser:
-        return HttpResponseForbidden('You are not authorized to view this page')
+        if not (rest):
+            return HttpResponseForbidden('You are not authorized to view this page')
+        else:
+            return {'error':'You are not authorized to view this page'}
 
     group = get_object_or_404(Group, pk=pk)
-    return list_for_object(request, group)
+
+    return list_for_object(request, group, rest)
+
 
 
 @login_required
-def list_user_actions(request, pk):
+def list_user_actions(request, pk, rest=False):
     """
     List all actions a user has performed.  This view can only be used by
     superusers.
@@ -73,14 +84,20 @@ def list_user_actions(request, pk):
     @param pk: Primary Key of User to get log for.
     """
     if not request.user.is_superuser:
-        return HttpResponseForbidden('You are not authorized to view this page')
+        if not (rest):
+            return HttpResponseForbidden('You are not authorized to view this page')
+        else:
+            return {'error':'You are not authorized to view this page'}
 
     user = get_object_or_404(User, pk=pk)
     log_items = LogItem.objects.filter(user=user).select_related('user')
 
-    return render_to_response('object_log/log.html',
-        {'log':log_items, 'context':{'user':request.user}},
-        context_instance=RequestContext(request))
+    if not (rest):
+        return render_to_response('object_log/log.html',
+            {'log':log_items, 'context':{'user':request.user}},
+            context_instance=RequestContext(request))
+    else:
+        return log_items
 
 
 def object_detail(request, content_type_id, pk):
