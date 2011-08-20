@@ -141,7 +141,7 @@ class ObjectPermissionFormNewUsers(ObjectPermissionForm):
 
 
 def view_users(request, object_, url, \
-               template='object_permissions/permissions/users.html'):
+               template='object_permissions/permissions/users.html', rest=False):
     """
     Generic view for rendering a list of Users who have permissions on an
     object.
@@ -156,13 +156,19 @@ def view_users(request, object_, url, \
     """
     users = get_users(object_, groups=False)
     groups = get_groups(object_)
-    return render_to_response(template, \
+    if not (rest):
+        return render_to_response(template, \
             {'object': object_,
              'users':users,
              'groups':groups,
              'url':url}, \
         context_instance=RequestContext(request),
     )
+    else:
+        return {'object': object_,
+             'users':users,
+             'groups':groups,
+             'url':url}
 
 
 def view_permissions(request, obj, url, user_id=None, group_id=None,
