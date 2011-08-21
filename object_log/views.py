@@ -28,7 +28,7 @@ def list_for_object(request, obj, rest = False):
 
     log = LogItem.objects.filter(q).select_related('user').distinct()
 
-    if not (rest):
+    if not rest:
         return render_to_response('object_log/log.html',
             {'log':log,
              'context':{'user':request.user}
@@ -46,7 +46,7 @@ def list_for_user(request, pk, rest=False):
     This may only be used by superusers
     """
     if not request.user.is_superuser:
-        if not (rest):
+        if not rest:
             return HttpResponseForbidden('You are not authorized to view this page')
         else:
             return {'error':'You are not authorized to view this page'}
@@ -63,7 +63,7 @@ def list_for_group(request, pk, rest = False):
     This may only be used by superusers
     """
     if not request.user.is_superuser:
-        if not (rest):
+        if not rest:
             return HttpResponseForbidden('You are not authorized to view this page')
         else:
             return {'error':'You are not authorized to view this page'}
@@ -84,7 +84,7 @@ def list_user_actions(request, pk, rest=False):
     @param pk: Primary Key of User to get log for.
     """
     if not request.user.is_superuser:
-        if not (rest):
+        if not rest:
             return HttpResponseForbidden('You are not authorized to view this page')
         else:
             return {'error':'You are not authorized to view this page'}
@@ -92,7 +92,7 @@ def list_user_actions(request, pk, rest=False):
     user = get_object_or_404(User, pk=pk)
     log_items = LogItem.objects.filter(user=user).select_related('user')
 
-    if not (rest):
+    if not rest:
         return render_to_response('object_log/log.html',
             {'log':log_items, 'context':{'user':request.user}},
             context_instance=RequestContext(request))
