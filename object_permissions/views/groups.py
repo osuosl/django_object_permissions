@@ -70,7 +70,7 @@ def all_permissions(request, id, \
     group = get_object_or_404(Group, pk=id)
     
     if not (user.is_superuser or group.user_set.filter(pk=user.pk).exists()):
-        if not (rest):
+        if not rest:
             return HttpResponseForbidden('You do not have sufficient privileges')
         else:
             return {'error':'You do not have sufficient privileges'}
@@ -90,7 +90,7 @@ def all_permissions(request, id, \
     for cls, objs in perm_dict.items():
         repacked[cls.__name__] = objs
 
-    if not (rest):
+    if not rest:
         return render_to_response(template, \
             {'persona':group, 'perm_dict':repacked}, \
         context_instance=RequestContext(request),

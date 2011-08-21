@@ -156,7 +156,7 @@ def view_users(request, object_, url, \
     """
     users = get_users(object_, groups=False)
     groups = get_groups(object_)
-    if not (rest):
+    if not rest:
         return render_to_response(template, \
             {'object': object_,
              'users':users,
