@@ -36,8 +36,8 @@ def user_permissions(request, id, user_id=None):
             
             # return html to replace existing user row
             url = reverse('group-permissions', args=[id])
-            return render_to_response( \
-                "object_permissions/permissions/user_row.html", \
+            return render_to_response(
+                "object_permissions/muddle/group/user_row.html",
                 {'object':group, 'user_detail':user, 'url':url},
                 context_instance=RequestContext(request))
         
@@ -50,9 +50,9 @@ def user_permissions(request, id, user_id=None):
     data = {'permissions':get_user_perms(form_user, group),
             'obj':group, 'user':user_id}
     form = ObjectPermissionForm(Group, data)
-    return render_to_response("object_permissions/permissions/form.html", \
-                {'form':form, 'obj':group, 'user_id':user_id, \
-                'url':reverse('group-permissions', args=[group.id])}, \
+    return render_to_response("object_permissions/permissions/form.html",
+                {'form':form, 'obj':group, 'user_id':user_id,
+                'url':reverse('group-permissions', args=[group.id])},
                 context_instance=RequestContext(request))
     
 

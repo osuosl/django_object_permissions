@@ -582,7 +582,12 @@ def user_has_perm(user, perm, obj, groups=True):
      * The permission does not exist on this model
     """
     model = obj.__class__
-    if perm not in get_model_perms(model):
+    try:
+        perms = get_model_perms(model)
+    except RegistrationException:
+        return False
+
+    if perm not in perms:
         # not a valid permission
         return False
 
