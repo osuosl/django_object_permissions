@@ -98,7 +98,7 @@ class LogAction(models.Model):
     """
     
     name = models.CharField(max_length=128, unique=True, primary_key=True)
-    template = models.CharField(max_length=128, unique=True)
+    template = models.CharField(max_length=128)
     objects = LogActionManager()
     
     def __str__(self):
