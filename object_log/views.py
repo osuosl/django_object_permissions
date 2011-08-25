@@ -9,7 +9,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from object_log.models import LogItem
 
 
-def list_for_object(request, obj, rest = False):
+def list_for_object(request, obj, rest=False):
     """
     Lists all actions that involve a given object.  This will check
     LogItem.object1, LogItem.object2, and LogItem.object3.
@@ -56,7 +56,7 @@ def list_for_user(request, pk, rest=False):
 
 
 @login_required
-def list_for_group(request, pk, rest = False):
+def list_for_group(request, pk, rest=False):
     """
     Provided view for listing actions performed on a group.
 
