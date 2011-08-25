@@ -219,12 +219,12 @@ class TestObjectLogViews(TestCase):
         self.assertTemplateUsed(response, 'registration/login.html')
 
         # unauthorized user
-        self.assert_(c.login(username=unauthorized.username, password='secret'))
+        self.assertTrue(c.login(username=unauthorized.username, password='secret'))
         response = c.get(url % args)
         self.assertEqual(403, response.status_code)
 
         # superuser - unknown user
-        self.assert_(c.login(username=superuser.username, password='secret'))
+        self.assertTrue(c.login(username=superuser.username, password='secret'))
         response = c.get(url % -1)
         self.assertEqual(404, response.status_code)
 
@@ -252,12 +252,12 @@ class TestObjectLogViews(TestCase):
         self.assertTemplateUsed(response, 'registration/login.html')
 
         # unauthorized user
-        self.assert_(c.login(username=unauthorized.username, password='secret'))
+        self.assertTrue(c.login(username=unauthorized.username, password='secret'))
         response = c.get(url % args)
         self.assertEqual(403, response.status_code)
 
         # superuser - unknown user
-        self.assert_(c.login(username=superuser.username, password='secret'))
+        self.assertTrue(c.login(username=superuser.username, password='secret'))
         response = c.get(url % -1)
         self.assertEqual(404, response.status_code)
 
@@ -287,12 +287,12 @@ class TestObjectLogViews(TestCase):
         self.assertTemplateUsed(response, 'registration/login.html')
 
         # unauthorized user
-        self.assert_(c.login(username=unauthorized.username, password='secret'))
+        self.assertTrue(c.login(username=unauthorized.username, password='secret'))
         response = c.get(url % args)
         self.assertEqual(403, response.status_code)
 
         # superuser - unknown user
-        self.assert_(c.login(username=superuser.username, password='secret'))
+        self.assertTrue(c.login(username=superuser.username, password='secret'))
         response = c.get(url % -1)
         self.assertEqual(404, response.status_code)
 
