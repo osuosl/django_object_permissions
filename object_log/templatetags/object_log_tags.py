@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.template import Library, Node, NodeList, Variable
+from django.template import Library, Node, NodeList, Variable, TemplateSyntaxError
 from django.utils.safestring import SafeString
 
 register = Library()
