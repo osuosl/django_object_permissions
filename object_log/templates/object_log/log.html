@@ -2,7 +2,7 @@
 <table class="object_log">
     {% for item in log %}
         <tr>
-            <td class="timestamp">{{ item.timestamp|date:"m/d/Y" }}</td>
+            <td class="timestamp">{{ item.timestamp|date }}</td>
             <td>{{ item.timestamp|date:"H:i" }}</td>
             <td>{{ item|render_context:context }}</td>
         </tr>
