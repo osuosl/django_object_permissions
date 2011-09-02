@@ -28,17 +28,22 @@ function autocomplete_user_search(search_box, search_url, handlers) {
     
     // Hide the primary search box, leaving its parent visible
     // Then hide the parent element with class equal to each handler type
-    search_box.hide().parent().append("<span id=\"selector\"><input type=\"text\"/></span>");
+    search_box.hide().parent().append("<span id=\"selector\"><input type=\"text\" name=\""+search_box.attr("name")+"_\"/></span>");
     for(type in handlers)
     {   handlers[type].parents("."+type).hide();
     }
+    if( search_box.val() > 0 )
+    {   selectOption( search_box.find("option:selected").text(), "other" );
+    }
+    var first = null; 
     $("#selector input").autocomplete({
             source: function(request, response) {
                 $.getJSON(search_url,{
                         term: request.term
                     }, 
                     function(data) {
-                        $("#selector").removeClass("user").removeClass("group").removeClass("other");
+                        first = data.results[0];
+                        
                         if(data.results[0] && !data.results[1] && data.query.toLowerCase() == data.results[0][0].toLowerCase())
                         {   selectOption(data.results[0][0], data.results[0][1]); 
                         } 
@@ -57,15 +62,15 @@ function autocomplete_user_search(search_box, search_url, handlers) {
                 );
             },
             select: function(event, ui) { 
-                selectOption(ui.item.value, ui.item.type);            
-            },
-            focus: function(event, ui) {
-                //search_box.children("option:contains('"+ui.item.value+"')").attr("selected", "selected");
-                //$("#selector").removeClass("user").removeClass("group").removeClass("other");
-                //$("#selector input").val(ui.item.value);
-                //$("#selector").addClass(ui.item.type);
-                return false;
+                selectOption(ui.item.value, ui.item.type);
+                first = null;            
             }
+
+    }).keydown(function(event){
+            if( first && event.keyCode == 9 )
+            {   selectOption( first[0], first[1] );
+            }        
+
     }).data("autocomplete")._renderItem = function(ul, item){
             var type = item.type;
             var value = item.value;
