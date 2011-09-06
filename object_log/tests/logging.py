@@ -140,8 +140,10 @@ class TestLogItemModel(TestCase):
         item2.timestamp = timestamp
 
         ct = ContentType.objects.get_for_model(User)
-        self.assertEqual('\n<a href="/user/%s">Mod</a> edited user\n<a href="/object/%s/%s/">Joe User</a>'%(user1.pk, ct.id, item1.object_id1), str(item1))
-        self.assertEqual('\n<a href="/user/%s">Mod</a> deleted user Joe User'%user1.pk, str(item2))
+        self.assertEqual('\n<a href="%s">Mod</a> edited user\n<a href="/object/%s/%s/">Joe User</a>' %
+            (user1.get_absolute_url(), ct.id, item1.object_id1), str(item1))
+        self.assertEqual('\n<a href="%s">Mod</a> deleted user Joe User' %
+            (user1.get_absolute_url()), str(item2))
 
     def test_data(self):
         """
