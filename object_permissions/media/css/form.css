@@ -9,12 +9,13 @@
 .object_permissions_form label {margin-right:3px;}
 #selector_row {display:none;}
 #selector {
-    background:url(/media/images/icons/delete.png) no-repeat 5px 0px white;
+    background:url(/media/images/icons/delete.png) no-repeat 5px 5px white;
     border:1px solid #666;
     border-radius:4px;
     height:25px;
     margin:0 0 10px 0;
     width:200px;
+    font-size:20px;
 }
 #selector input {
     background-color:#ffe4c4;
@@ -25,9 +26,9 @@
     padding:5px 3px 3px 23px;
     width:200px;}
 #selector.user input, #selector.group input, #selector.other input {color:black;}
-#selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 0px white;}
-#selector.group, .search_result.group {background:url(/media/images/icons/group.png) no-repeat 5px 0px white;}
-#selector.other, .search_result.other {background:url(/media/images/icons/check.png) no-repeat 5px 0px white;}
+#selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 5px white;}
+#selector.group, .search_result.group {background:url(/media/images/icons/group.png) no-repeat 5px 5px white;}
+#selector.other, .search_result.other {background:url(/media/images/icons/check.png) no-repeat 5px 5px white;}
 
 .search_result.user, .search_result.group {
     background-color:transparent;
