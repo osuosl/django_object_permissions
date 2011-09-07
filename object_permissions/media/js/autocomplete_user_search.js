@@ -18,7 +18,7 @@ function autocomplete_user_search(search_box, search_url, handlers) {
         }
     } 
 
-    function selectOption(value, type)
+    function selectOption(value, type, id)
     {   deselectOption(); 
         $("#selector").addClass(type);
         $("#selector input").val(value);
@@ -26,8 +26,11 @@ function autocomplete_user_search(search_box, search_url, handlers) {
         if(handlers && handlers[type]) 
         {   handlers[type].children("option:contains('"+value+"')").attr("selected", "selected");
         }
-        else
+        else if(handlers)
         {   search_box.children("option:contains('"+value+"')").attr("selected", "selected");
+        }
+        else
+        {   search_box.val(id);
         }
     }
     
@@ -47,7 +50,7 @@ function autocomplete_user_search(search_box, search_url, handlers) {
 
     // Create, initialize, and manage the new autocompleting search field
     if( search_box.val() > 0 )
-    {   selectOption( search_box.find("option:selected").text(), "other" );
+    {   selectOption( search_box.find("option:selected").text(), "other", search_box.val() );
     }
     var first = null; 
     $("#selector input").autocomplete({
@@ -59,7 +62,7 @@ function autocomplete_user_search(search_box, search_url, handlers) {
                         first = data.results[0];
                         
                         if(data.results[0] && !data.results[1] && data.query.toLowerCase() == data.results[0][0].toLowerCase())
-                        {   selectOption(data.results[0][0], data.results[0][1]); 
+                        {   selectOption(data.results[0][0], data.results[0][1], data.results[0][2]); 
                         } 
                         else
                         {   deselectOption();
@@ -76,13 +79,13 @@ function autocomplete_user_search(search_box, search_url, handlers) {
                 );
             },
             select: function(event, ui) { 
-                selectOption(ui.item.value, ui.item.type);
+                selectOption(ui.item.value, ui.item.type, ui.item.id);
                 first = null;            
             }
 
     }).keydown(function(event){
             if( first && event.keyCode == 9 )
-            {   selectOption( first[0], first[1] );
+            {   selectOption( first[0], first[1], first[2]);
             }        
 
     }).data("autocomplete")._renderItem = function(ul, item){
