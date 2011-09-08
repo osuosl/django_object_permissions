@@ -86,11 +86,14 @@ function autocomplete_user_search(search_box, search_url, handlers) {
     }).keydown(function(event){
             if( first && event.keyCode == 9 )
             {   selectOption( first[0], first[1], first[2]);
-            }        
+            }       
 
     }).data("autocomplete")._renderItem = function(ul, item){
             var type = item.type;
             var value = item.value;
+            var reEscape = new RegExp('(\\' + ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'].join('|\\') + ')', 'g');
+            var pattern = item.term.replace(reEscape, "\\$1");
+            value = value.replace(new RegExp("(^"+pattern+")", "gim"), "<strong>$1</strong>");
             return $("<li></li>")
             .data("item.autocomplete", item)
             .append("<a><div class='search_result "+type+"'>"+value+"</div></a>")
