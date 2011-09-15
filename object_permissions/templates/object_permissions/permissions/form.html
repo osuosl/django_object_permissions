@@ -1,11 +1,16 @@
 {% comment  %} Form for setting user permissions on an object {% endcomment %}
 
 <script type="text/javascript" src="{{SITE_ROOT}}/object_permissions_media/js/autocomplete_user_search.js"></script>
-<script>
-     $(function(){
-        autocomplete_user_search($("#id_user"),'{% url user-search %}',{'group':$("#id_group")});
-     });
-</script>
+{# Only run autocomplete script if a user or group needs to be selected #}
+{% if user_id or group_id %}
+    <script> </script>
+{% else %}
+    <script>
+         $(function(){
+            autocomplete_user_search($("#id_user"),'{% url user-search %}',{'group':$("#id_group")});
+         });
+    </script>
+{% endif %}
 
 <form class="object_permissions_form" method="post" action="{{url}}">
     <ul id="errors"></ul>
