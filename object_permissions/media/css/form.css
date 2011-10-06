@@ -15,7 +15,7 @@
     height:25px;
     margin:0 0 10px 0;
     width:200px;
-    font-size:20px;
+    font-size:21px;
 }
 #selector input {
     background-color:#ffe4c4;
@@ -23,7 +23,8 @@
     border:0;
     color: #a71d10;
     height:25px;
-    padding:5px 3px 3px 23px;
+    padding:4px 3px 3px 23px;
+    vertical-align:text-top;
     width:200px;}
 #selector.user input, #selector.group input, #selector.other input {color:black;}
 #selector.user, .search_result.user {background:url(/media/images/icons/user.png) no-repeat 5px 5px white;}
