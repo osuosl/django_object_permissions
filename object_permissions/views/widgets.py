@@ -4,18 +4,25 @@ from django.utils import simplejson
 
 def search_users(request):
     """ search users and groups and return results as json """
-    if 'term' not in request.GET:
-        return HttpResponse()
+    if 'term' in request.GET:
+        term = request.GET['term']
+    else:
+        term = None
 
-    term = request.GET['term']
+    if 'pk' in request.GET:
+        pk = request.GET['pk']
+    else:
+        pk = None
+
     limit = 10
     if request.GET.get("groups", 'True') == 'True':
-        data = simplejson.dumps(search_users_and_groups(term, limit))
+        data = simplejson.dumps(search_users_and_groups(term, pk, limit))
     else:
-        data = simplejson.dumps(search_users_only(term, limit))
+        data = simplejson.dumps(search_users_only(term, pk, limit))
     return HttpResponse(data, mimetype="application/json")
 
-def search_users_only(term=None, limit=10):
+
+def search_users_only(term=None, pk=None, limit=10):
     """
     Returns a list of the top N matches from Users with a name
     starting with term
@@ -23,14 +30,22 @@ def search_users_only(term=None, limit=10):
     @param term: the term to search for
     @param limit: the number of results to return
     """
-     
-    if term:
+    if pk:
+        users = User.objects.filter(id=int(pk)) 
+    elif term:
         users = User.objects.filter(username__istartswith=term)
     else:
         users = User.objects.all()
      
     users = users.values('pk', 'username')
-     
+
+    if pk:
+        query = users[0]['username']     
+    elif term:
+        query = term
+    else:
+        query = ""
+
     if limit: 
         users = users[:limit]
      
@@ -43,20 +58,25 @@ def search_users_only(term=None, limit=10):
     users = users if len(users) < limit else users[:limit]
  
     return {
-        'query':term,
+        'query':query,
         'results':users
     }
 
-def search_users_and_groups(term=None, limit=10):
+def search_users_and_groups(term=None, pk=None, limit=10):
     """
     Returns a list of the top N matches from Groups and Users with a name
-    starting with term
+    starting with term.
+    Warning: Searching for users and groups using a primary key will return
+    a match from both users AND groups
 
     @param term: the term to search for
+    @param pk: the primary key of the user/group to search for
     @param limit: the number of results to return
     """
-    
-    if term:
+    if pk:
+        users = User.objects.filter(id=int(pk))
+        groups = Group.objects.filter(id=int(pk))
+    elif term:
         users = User.objects.filter(username__istartswith=term)
         groups = Group.objects.filter(name__istartswith=term)
     else:
@@ -65,6 +85,13 @@ def search_users_and_groups(term=None, limit=10):
 
     users = users.values('pk', 'username')
     groups = groups.values('pk', 'name')
+
+    if pk:
+        query = ""
+    elif term:
+        query = term
+    else:
+        query = ""
 
     if limit:
         users = users[:limit]
@@ -83,6 +110,6 @@ def search_users_and_groups(term=None, limit=10):
     merged = merged if len(merged) < limit else merged[:limit]
 
     return {
-        'query':term,
+        'query':query,
         'results':merged
     }

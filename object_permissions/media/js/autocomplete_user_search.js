@@ -3,7 +3,8 @@
 //*
 //*     Arguments:
 //* search_box is the jquery object that will be replaced by the new search box
-//* search_url is a url that returns search suggestions given the user-given search tem
+//* search_url is a url that returns JSON search results provided either a search term or primary key
+//*     which should return JSON results of the form { 'query':termToHighlight, 'results':[['user1','userType',id],[etc]] }
 //* handlers is an object of the format {'userTypeToHandle':$('jqueryObjectToHandleThatType'),etc:etc}
 //*     and is used in the event that the search needs to encompass more than one existing selector field
 //*     where each listed jquery object will be used when selecting a user of the corresponding type
@@ -48,10 +49,43 @@ function autocomplete_user_search(search_box, search_url, handlers) {
     {   handlers[type].parents("."+type).hide();
     }
 
-    // Create, initialize, and manage the new autocompleting search field
-    if( search_box.val() > 0 )
-    {   selectOption( search_box.find("option:selected").text(), "other", search_box.val() );
+    // Initialize the search box with any preselected values
+    var userid = search_box.val();
+    var usertype = "";
+    var userval = "";
+    if( handlers )
+    {   for( type in handlers )
+        {   if( handlers[type].val() > 0 ) // if any secondary search field is preselected
+            {   userid = handlers[type].val();
+                usertype = type;
+                userval = handlers[type].find("option:selected").text();
+            }
+        }
     }
+    if( userid > 0 )
+    {   $.getJSON(search_url, { pk: userid }, function(data){ 
+                if( !usertype )  // search_box was preselected, and we need to query for the user type
+                {   // If more than one user is found, and any of the users found are of a type 
+                    // that is not handled, then that is the type of the main search_box
+                    if( data.results[1] && handlers )
+                    {   for( i=0; i < data.results.length; i=i+1 )
+                        {   user = data.results[i];
+                            if( !(user[1] in handlers) )
+                            {   usertype = user[1];
+                                userval = search_box.find("option:selected").text();
+                            }
+                        }
+                    }
+                    else
+                    {   usertype = data.results[0][1];
+                        userval = data.query;
+                    }
+                }
+                selectOption( userval, usertype, userid);
+        });
+    }
+    
+    // Set up and maintain the new autocompleting search box
     var first = null; 
     $("#selector input").autocomplete({
             source: function(request, response) {
