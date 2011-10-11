@@ -48,7 +48,7 @@ function autocomplete_user_search(search_box, search_url, handlers) {
     for(type in handlers)
     {   handlers[type].parents("."+type).hide();
     }
-
+    
     // Initialize the search box with any preselected values
     var userid = search_box.val();
     var usertype = "";
@@ -67,7 +67,7 @@ function autocomplete_user_search(search_box, search_url, handlers) {
                 if( !usertype )  // search_box was preselected, and we need to query for the user type
                 {   // If more than one user is found, and any of the users found are of a type 
                     // that is not handled, then that is the type of the main search_box
-                    if( data.results[1] && handlers )
+                    if( data && data.results && data.results[1] && handlers )
                     {   for( i=0; i < data.results.length; i=i+1 )
                         {   user = data.results[i];
                             if( !(user[1] in handlers) )
@@ -75,6 +75,11 @@ function autocomplete_user_search(search_box, search_url, handlers) {
                                 userval = search_box.find("option:selected").text();
                             }
                         }
+                    }
+                    else if( !data || !data.results || !data.results[0] || (data.results[1] && !handlers ))  
+                    {   // No unambiguous responses; can't determine user type
+                        usertype = 'other';
+                        userval = search_box.find("option:selected").text();
                     }
                     else
                     {   usertype = data.results[0][1];
