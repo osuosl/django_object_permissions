@@ -5,11 +5,20 @@ $(function(){
     // Add object button
     $('.button.add.permission').click(function(event){
         event.preventDefault();
+
+        // Check for specific object type, or use default "Add Object" instead
+        // Uses the id of the next permissions table (if any) as the object type
+        var permissions_table = $(this).next("table.permissions");
+        var qtip_header = "Add Object: ";
+        if (permissions_table) {
+            qtip_header = "Add " + permissions_table.attr("id") + ": ";
+        }
+        
         $('.qtip').qtip('destroy');
         $(this).qtip({
             content: {
                url: this.href,
-               title: {text:'Add Object: ', button:'close'}
+               title: {text:qtip_header, button:'close'}
             },
             position: {  corner:{target:'center', tooltip:'center'}},
             style: {name: 'dark', border:{radius:5}, width:400, background:'#eeeeee'},

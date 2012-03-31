@@ -19,7 +19,7 @@
     {% if obj %}
         <input type="hidden" name="obj" value="{{obj.pk|default:''}}"/>
     {% else %}
-        <tr><td>{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
+        <tr><td width="25%">{{form.obj.label}}</td><td>{{form.obj}}</td></tr>
     {% endif %}
 
     {# only show user/group when one hasn't been preselected #}
