@@ -28,7 +28,7 @@ urlpatterns += patterns('object_permissions.views.widgets',
 )
 
 #The following is used to serve up local media files like images
-root = '%s/media' % os.path.dirname(os.path.realpath(__file__))
+root = '%s/static' % os.path.dirname(os.path.realpath(__file__))
 urlpatterns += patterns('',
     (r'^object_permissions_media/(?P<path>.*)', 'django.views.static.serve',\
      {'document_root':  root}),
