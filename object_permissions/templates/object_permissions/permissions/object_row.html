@@ -1,6 +1,6 @@
 {% load object_permission_tags %}
 <tr id="{{class_name}}_{{obj.pk}}">
-    <td class="obj">{% permalink obj %}</td>
+    <td class="obj">{% permalink obj obj.pk %}</td>
     <td class="perms">
         {% if persona|is_user %}
             <a href="{% url user-edit-permissions persona.pk class_name obj.pk %}">
