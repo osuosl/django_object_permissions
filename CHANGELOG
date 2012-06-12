@@ -2,6 +2,19 @@
 Changelog
 ==================
 
+v1.4.4
+------
+
+ * Changes
+
+   * #11331: Use STATIC for static files
+
+ * Bugfixes
+
+   * #6549: Only load CSS and JS once
+   * #10017: Improve formatting when adding objects
+   * #11295: Error adding object permissions through view
+
 v1.4
 ----
 
