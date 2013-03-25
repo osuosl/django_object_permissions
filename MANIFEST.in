@@ -1,1 +1,1 @@
-recursive-include object_permissions *.py *.png *.js
+recursive-include object_permissions *.py *.png *.js *.html
