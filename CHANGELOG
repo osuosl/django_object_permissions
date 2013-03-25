@@ -2,6 +2,13 @@
 Changelog
 ==================
 
+v1.4.5
+------
+
+ * Changes
+
+   * #11913: templates missing from distribution on pypi
+
 v1.4.4
 ------
 
