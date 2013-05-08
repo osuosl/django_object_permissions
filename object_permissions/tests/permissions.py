@@ -4,10 +4,10 @@ from django.test import TestCase
 from django.test.client import Client
 
 from object_permissions import *
-from object_permissions.registration import TestModel, TestModelChild, \
-    TestModelChildChild, UnknownPermissionException
 from object_permissions.views.permissions import ObjectPermissionForm, \
     ObjectPermissionFormNewUsers
+from object_permissions.tests.models import TestModel, TestModelChild, \
+    TestModelChildChild, UnknownPermissionException
 
 # XXX set global vars to make test code a bit cleaner
 user0 = None

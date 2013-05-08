@@ -3,7 +3,7 @@ from django.test import TestCase
 
 
 from object_permissions import register
-from object_permissions.registration import TestModel
+from object_permissions.tests.models import TestModel
 from object_permissions.signals import granted, revoked
 
 

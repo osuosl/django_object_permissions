@@ -4,9 +4,9 @@ from django.test import TestCase
 from django.test.client import Client
 
 from object_permissions import *
-from object_permissions.registration import TestModel, TestModelChild, \
-    TestModelChildChild, UnknownPermissionException
 from object_permissions.signals import view_edit_user
+from object_permissions.tests.models import TestModel, TestModelChild, \
+    TestModelChildChild, UnknownPermissionException
 
 
 __all__ = ('TestGroups','TestGroupViews')
