@@ -7,7 +7,8 @@ from object_permissions import *
 from object_permissions.views.permissions import ObjectPermissionForm, \
     ObjectPermissionFormNewUsers
 from object_permissions.tests.models import TestModel, TestModelChild, \
-    TestModelChildChild, UnknownPermissionException
+    TestModelChildChild
+from object_permissions.registration import UnknownPermissionException
 
 # XXX set global vars to make test code a bit cleaner
 user0 = None
