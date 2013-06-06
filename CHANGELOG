@@ -2,6 +2,14 @@
 Changelog
 ==================
 
+v1.4.6
+------
+
+ * Changes
+
+   * #12999 Fix permalinks to show repr instead of pk in templates
+   * #11913 MANIFEST.in file was not including html templates
+
 v1.4.5
 ------
 
