@@ -23,12 +23,12 @@ function autocomplete_user_search(search_box, search_url, handlers) {
     {   deselectOption(); 
         $("#selector").addClass(type);
         $("#selector input").val(value);
-        
-        if(handlers && handlers[type]) 
-        {   handlers[type].children("option:contains('"+value+"')").attr("selected", "selected");
+
+        if(handlers && handlers[type])
+        {   handlers[type].children("option[text='"+value+"']").attr("selected", "selected");
         }
         else if(handlers)
-        {   search_box.children("option:contains('"+value+"')").attr("selected", "selected");
+        {   search_box.children("option[text='"+value+"']").attr("selected", "selected");
         }
         else
         {   search_box.val(id);
